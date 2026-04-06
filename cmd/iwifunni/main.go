@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -28,78 +27,74 @@ import (
 )
 
 func main() {
-    zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-    cfg, err := config.Load()
-    if err != nil {
-        log.Fatal().Err(err).Msg("failed to load configuration")
-    }
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to load configuration")
+	}
 
-    ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-    defer cancel()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
-    pgPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
-    if err != nil {
-        log.Fatal().Err(err).Msg("failed to connect to postgres")
-    }
-    defer pgPool.Close()
+	store := storage.NewStore(ctx, cfg)
+	defer store.Pool.Close()
 
-    redisClient := redis.NewClient(&redis.Options{
-        Addr:     cfg.RedisAddr,
-        Password: cfg.RedisPassword,
-    })
-    if err := redisClient.Ping(ctx).Err(); err != nil {
-        log.Fatal().Err(err).Msg("failed to connect to redis")
-    }
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisAddr,
+		Password: cfg.RedisPassword,
+	})
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to redis")
+	}
 
-    store := storage.NewStore(pgPool)
-    wsServer := ws.NewServer()
-    rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
-    notifier := notifications.NewManager(store, wsServer, cfg)
-    queue := worker.NewProducer(redisClient)
-    consumer := worker.NewConsumer(redisClient, notifier)
+	wsServer := ws.NewServer()
+	rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
+	notifier := notifications.NewManager(*store.Queries, wsServer, cfg)
+	queue := worker.NewProducer(redisClient)
+	consumer := worker.NewConsumer(redisClient, notifier)
 
-    apiHandler := rest.NewHandler(store, queue, rateLimiter)
-    router := apiHandler.Router(wsServer)
+	apiHandler := rest.NewHandler(store.Queries, queue, rateLimiter)
+	router := apiHandler.Router(wsServer)
 
-    grpcServer := grpc.NewServer()
-    proto.RegisterNotificationServiceServer(grpcServer, grpcapi.NewService(store, queue, rateLimiter))
+	grpcServer := grpc.NewServer()
+	proto.RegisterNotificationServiceServer(grpcServer, grpcapi.NewService(store.Queries, queue, rateLimiter))
 
-    httpServer := &http.Server{
-        Addr:    fmt.Sprintf(":%s", cfg.APIServicePort),
-        Handler: router,
-    }
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.APIServicePort),
+		Handler: router,
+	}
 
-    go func() {
-        log.Info().Msgf("starting REST API on %s", httpServer.Addr)
-        if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatal().Err(err).Msg("REST server failed")
-        }
-    }()
+	go func() {
+		log.Info().Msgf("starting REST API on %s", httpServer.Addr)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("REST server failed")
+		}
+	}()
 
-    go func() {
-        grpcAddr := fmt.Sprintf(":%s", cfg.GRPCServicePort)
-        listener, err := net.Listen("tcp", grpcAddr)
-        if err != nil {
-            log.Fatal().Err(err).Msg("gRPC listener failed")
-        }
-        log.Info().Msgf("starting gRPC API on %s", grpcAddr)
-        if err := grpcServer.Serve(listener); err != nil {
-            log.Fatal().Err(err).Msg("gRPC server failed")
-        }
-    }()
+	go func() {
+		grpcAddr := fmt.Sprintf(":%s", cfg.GRPCServicePort)
+		listener, err := net.Listen("tcp", grpcAddr)
+		if err != nil {
+			log.Fatal().Err(err).Msg("gRPC listener failed")
+		}
+		log.Info().Msgf("starting gRPC API on %s", grpcAddr)
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Fatal().Err(err).Msg("gRPC server failed")
+		}
+	}()
 
-    go func() {
-        log.Info().Msg("starting notification consumer")
-        if err := consumer.Run(ctx); err != nil {
-            log.Error().Err(err).Msg("consumer stopped")
-        }
-    }()
+	go func() {
+		log.Info().Msg("starting notification consumer")
+		if err := consumer.Run(ctx); err != nil {
+			log.Error().Err(err).Msg("consumer stopped")
+		}
+	}()
 
-    <-ctx.Done()
-    log.Info().Msg("shutting down")
+	<-ctx.Done()
+	log.Info().Msg("shutting down")
 
-    shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer shutdownCancel()
-    _ = httpServer.Shutdown(shutdownCtx)
-    grpcServer.GracefulStop()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	_ = httpServer.Shutdown(shutdownCtx)
+	grpcServer.GracefulStop()
 }
