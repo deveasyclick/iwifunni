@@ -21,6 +21,7 @@ type Config struct {
     TermiiAPIKey    string
     TermiiSenderID  string
     RateLimitPerMin int
+	Environment     string
 }
 
 func Load() (*Config, error) {
@@ -44,6 +45,7 @@ func Load() (*Config, error) {
         TermiiAPIKey:    os.Getenv("TERMII_API_KEY"),
         TermiiSenderID:  getenvDefault("TERMII_SENDER_ID", "iwifunni"),
         RateLimitPerMin: rateLimit,
+		Environment:     getenvDefault("ENVIRONMENT", "development"),
     }, nil
 }
 
