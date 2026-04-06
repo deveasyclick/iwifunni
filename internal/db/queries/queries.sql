@@ -20,3 +20,6 @@ WHERE user_id = $1;
 SELECT id, user_id, channel, endpoint, created_at
 FROM push_subscriptions
 WHERE user_id = $1;
+
+-- name: UpsertInAppNotification :exec
+INSERT INTO in_app_notifications (id, user_id, title, message, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6);
