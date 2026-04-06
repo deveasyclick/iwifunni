@@ -1,4 +1,4 @@
-# Pingora Notification Service
+# Iwifunni Notification Service
 
 A secure, multi-channel notification service in Go.
 
@@ -44,7 +44,7 @@ sqlc generate
 ### Run the Service
 
 ```bash
-go run ./cmd/notification-service
+go run ./cmd/iwifunni
 ```
 
 ### Docker Compose
@@ -68,7 +68,7 @@ Use `grpcurl` or generated client from `api/proto/notifications.pb.go`.
 
 ## Project Structure
 
-- `cmd/notification-service`: application entrypoint
+- `cmd/iwifunni`: application entrypoint
 - `internal/api/rest`: REST handler and middleware
 - `internal/api/grpc`: gRPC service implementation
 - `internal/auth`: API key authentication and rate limiting

@@ -13,7 +13,7 @@ func SendSMS(ctx context.Context, apiKey, sender, userID, title, message string,
         return fmt.Errorf("missing Termii API key")
     }
     if sender == "" {
-        sender = "Pingora"
+        sender = "Iwifunni"
     }
     fmt.Printf("sms sent via Termii from=%s to=%s title=%s message=%s\n", sender, userID, title, message)
     return nil

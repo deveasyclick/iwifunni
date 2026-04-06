@@ -32,7 +32,7 @@ func Load() (*Config, error) {
     }
 
     return &Config{
-        DatabaseURL:     getenvDefault("DATABASE_URL", "postgres://pingora:pingora@localhost:5432/pingora?sslmode=disable"),
+        DatabaseURL:     getenvDefault("DATABASE_URL", "postgres://iwifunni:iwifunni@localhost:5432/iwifunni?sslmode=disable"),
         RedisAddr:       getenvDefault("REDIS_ADDR", "localhost:6379"),
         RedisPassword:   os.Getenv("REDIS_PASSWORD"),
         APIServicePort:  getenvDefault("API_PORT", "8080"),
@@ -42,7 +42,7 @@ func Load() (*Config, error) {
         WebPushSecret:   os.Getenv("WEBPUSH_PRIVATE_KEY"),
         BrevoAPIKey:     os.Getenv("BREVO_API_KEY"),
         TermiiAPIKey:    os.Getenv("TERMII_API_KEY"),
-        TermiiSenderID:  getenvDefault("TERMII_SENDER_ID", "Pingora"),
+        TermiiSenderID:  getenvDefault("TERMII_SENDER_ID", "iwifunni"),
         RateLimitPerMin: rateLimit,
     }, nil
 }
