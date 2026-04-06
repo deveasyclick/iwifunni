@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package notifications;
+
+option go_package = "github.com/deveasyclick/iwifunni/api/proto;proto";
+
+message SendNotificationRequest {
+  string service_id = 1;
+  string api_key = 2;
+  string user_id = 3;
+  string title = 4;
+  string message = 5;
+  repeated string channels = 6;
+  map<string, string> metadata = 7;
+}
+
+message SendNotificationResponse {
+  string job_id = 1;
+  string status = 2;
+}
+
+service NotificationService {
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+}

@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yusuf
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: iwifunni
+    ports:
+      - "5432:5432"
+    volumes:
+      - iwifunni-postgres-data:/var/lib/postgresql/data
+
+    networks:
+      - iwifunni-network
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - iwifunni-network
+
+volumes:
+  iwifunni-postgres-data:
+
+networks:
+  iwifunni-network:

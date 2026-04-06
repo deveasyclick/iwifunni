@@ -1,0 +1,11 @@
+version: "2"
+packages:
+  - name: "storage"
+    path: "internal/storage/sqlc"
+    engine: "postgresql"
+    schema: "migrations"
+    queries: "sql"
+    emit_json_tags: true
+    emit_db_tags: true
+    emit_interface: false
+    out: "internal/storage/sqlc"
