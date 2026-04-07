@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -47,11 +48,30 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to connect to redis")
 	}
 
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     cfg.RedisAddr,
+		Password: cfg.RedisPassword,
+	})
+	asynqServer := asynq.NewServer(
+		asynq.RedisClientOpt{
+			Addr:     cfg.RedisAddr,
+			Password: cfg.RedisPassword,
+		},
+		asynq.Config{
+			Concurrency: 10,
+			Queues: map[string]int{
+				"critical": 6,
+				"default":  3,
+				"low":      1,
+			},
+		},
+	)
+
 	wsServer := ws.NewServer()
 	rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
 	notifier := notifications.NewManager(*store.Queries, wsServer, cfg)
-	queue := worker.NewProducer(redisClient)
-	consumer := worker.NewConsumer(redisClient, notifier)
+	queue := worker.NewProducer(asynqClient)
+	consumer := worker.NewConsumer(asynqServer, notifier)
 
 	apiHandler := rest.NewHandler(store.Queries, queue, rateLimiter)
 	router := apiHandler.Router(wsServer)
@@ -97,4 +117,7 @@ func main() {
 	defer shutdownCancel()
 	_ = httpServer.Shutdown(shutdownCtx)
 	grpcServer.GracefulStop()
+	asynqServer.Stop()
+	_ = asynqClient.Close()
+	_ = redisClient.Close()
 }

@@ -6,25 +6,28 @@ import (
 
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
+	"github.com/hibiken/asynq"
 )
 
+const TaskTypeNotificationSend = "notification:send"
+
 type Producer struct {
-    client *redis.Client
-    queue  string
+	client *asynq.Client
 }
 
-func NewProducer(client *redis.Client) *Producer {
-    return &Producer{client: client, queue: "notifications:queue"}
+func NewProducer(client *asynq.Client) *Producer {
+	return &Producer{client: client}
 }
 
 func (p *Producer) Enqueue(ctx context.Context, job *types.NotificationJob) error {
-    if job.JobID == "" {
-        job.JobID = uuid.NewString()
-    }
-    payload, err := json.Marshal(job)
-    if err != nil {
-        return err
-    }
-    return p.client.RPush(ctx, p.queue, payload).Err()
+	if job.JobID == "" {
+		job.JobID = uuid.NewString()
+	}
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	task := asynq.NewTask(TaskTypeNotificationSend, payload)
+	_, err = p.client.Enqueue(task)
+	return err
 }
