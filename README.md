@@ -6,14 +6,25 @@ Iwifunni is a backend service that lets other applications send notifications to
 
 It is designed for product teams that want one place to manage notification delivery instead of wiring each channel directly into every application.
 
+## Supported Delivery Channels
+
+Iwifunni currently supports these delivery channels:
+
+- In-app notifications broadcast over WebSocket.
+- Push notifications through Firebase Cloud Messaging (FCM).
+- Browser push notifications through Web Push subscriptions.
+- Email delivery through Brevo.
+- SMS delivery through Termii.
+
+The service can also combine channels in a single notification request and use email or SMS as fallback delivery when push is unavailable and the user has opted in.
+
 ## What The App Does
 
 - Accepts notification requests from internal or external services over REST and gRPC.
 - Authenticates each calling service with an API key and enforces per-service rate limits.
 - Queues notification jobs in Redis-backed Asynq workers so API requests return quickly.
 - Persists notification records and user delivery preferences in PostgreSQL.
-- Delivers in-app notifications over WebSocket for real-time client updates.
-- Sends push notifications to FCM and browser Web Push subscribers.
+- Delivers notifications through in-app, FCM push, browser push, email, and SMS channels.
 - Falls back to email and SMS when push delivery is unavailable and the user has opted in.
 
 ## Delivery Flow
