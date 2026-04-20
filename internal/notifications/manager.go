@@ -10,8 +10,8 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/internal/ws"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
@@ -64,7 +64,7 @@ func (m *Manager) Send(ctx context.Context, job *types.NotificationJob) error {
 	success := true
 	if contains(deliveryChannels, "push") {
 		if err := m.sendPush(ctx, job); err != nil {
-			log.Warn().Err(err).Msg("push failed")
+			logger.Get().Warn().Err(err).Msg("push failed")
 			success = false
 		}
 	}
@@ -76,12 +76,12 @@ func (m *Manager) Send(ctx context.Context, job *types.NotificationJob) error {
 		}
 		if prefs.EmailOptIn {
 			if err := channels.SendEmail(ctx, m.cfg.BrevoAPIKey, job.UserID, job.Title, job.Message, job.Metadata); err != nil {
-				log.Warn().Err(err).Msg("email fallback failed")
+				logger.Get().Warn().Err(err).Msg("email fallback failed")
 			}
 		}
 		if prefs.SmsOptIn {
 			if err := channels.SendSMS(ctx, m.cfg.TermiiAPIKey, m.cfg.TermiiSenderID, job.UserID, job.Title, job.Message, job.Metadata); err != nil {
-				log.Warn().Err(err).Msg("sms fallback failed")
+				logger.Get().Warn().Err(err).Msg("sms fallback failed")
 			}
 		}
 	}

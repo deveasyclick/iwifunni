@@ -12,8 +12,6 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 
 	"github.com/deveasyclick/iwifunni/api/proto"
@@ -25,13 +23,14 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/storage"
 	"github.com/deveasyclick/iwifunni/internal/worker"
 	"github.com/deveasyclick/iwifunni/internal/ws"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	l := logger.Get()
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to load configuration")
+		l.Fatal().Err(err).Msg("failed to load configuration")
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -45,7 +44,7 @@ func main() {
 		Password: cfg.RedisPassword,
 	})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to redis")
+		l.Fatal().Err(err).Msg("failed to connect to redis")
 	}
 
 	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
@@ -85,9 +84,9 @@ func main() {
 	}
 
 	go func() {
-		log.Info().Msgf("starting REST API on %s", httpServer.Addr)
+		l.Info().Msgf("starting REST API on %s", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("REST server failed")
+			l.Fatal().Err(err).Msg("REST server failed")
 		}
 	}()
 
@@ -95,23 +94,23 @@ func main() {
 		grpcAddr := fmt.Sprintf(":%s", cfg.GRPCServicePort)
 		listener, err := net.Listen("tcp", grpcAddr)
 		if err != nil {
-			log.Fatal().Err(err).Msg("gRPC listener failed")
+			l.Fatal().Err(err).Msg("gRPC listener failed")
 		}
-		log.Info().Msgf("starting gRPC API on %s", grpcAddr)
+		l.Info().Msgf("starting gRPC API on %s", grpcAddr)
 		if err := grpcServer.Serve(listener); err != nil {
-			log.Fatal().Err(err).Msg("gRPC server failed")
+			l.Fatal().Err(err).Msg("gRPC server failed")
 		}
 	}()
 
 	go func() {
-		log.Info().Msg("starting notification consumer")
+		l.Info().Msg("starting notification consumer")
 		if err := consumer.Run(ctx); err != nil {
-			log.Error().Err(err).Msg("consumer stopped")
+			l.Error().Err(err).Msg("consumer stopped")
 		}
 	}()
 
 	<-ctx.Done()
-	log.Info().Msg("shutting down")
+	l.Info().Msg("shutting down")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()

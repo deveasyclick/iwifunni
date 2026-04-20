@@ -9,8 +9,8 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/internal/worker"
 	"github.com/deveasyclick/iwifunni/internal/ws"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 )
 
 type RequestPayload struct {
@@ -65,7 +65,7 @@ func (h *Handler) createNotification(w http.ResponseWriter, r *http.Request) {
 		Metadata:  payload.Metadata,
 	}
 	if err := h.producer.Enqueue(r.Context(), &job); err != nil {
-		log.Error().Err(err).Msg("failed to enqueue notification job")
+		logger.Get().Error().Err(err).Msg("failed to enqueue notification job")
 		http.Error(w, "failed to queue notification", http.StatusInternalServerError)
 		return
 	}

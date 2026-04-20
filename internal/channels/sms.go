@@ -4,17 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 )
 
 func SendSMS(ctx context.Context, apiKey, sender, userID, title, message string, metadata map[string]string) error {
-    log.Info().Str("user", userID).Str("title", title).Msg("sending Termii SMS")
-    if apiKey == "" {
-        return fmt.Errorf("missing Termii API key")
-    }
-    if sender == "" {
-        sender = "Iwifunni"
-    }
-    fmt.Printf("sms sent via Termii from=%s to=%s title=%s message=%s\n", sender, userID, title, message)
-    return nil
+	logger.Get().Info().Str("user", userID).Str("title", title).Msg("sending Termii SMS")
+	if apiKey == "" {
+		return fmt.Errorf("missing Termii API key")
+	}
+	return nil
 }

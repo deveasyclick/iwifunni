@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
-	"github.com/rs/zerolog/log"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 )
 
 type contextKey string
@@ -31,7 +31,7 @@ func NewAuthMiddleware(queries *db.Queries, limiter *RateLimiter) func(http.Hand
 
 			ok, err := limiter.Allow(r.Context(), svc.ID.String())
 			if err != nil {
-				log.Error().Err(err).Msg("rate limiter error")
+				logger.Get().Error().Err(err).Msg("rate limiter error")
 				http.Error(w, "rate limiter unavailable", http.StatusInternalServerError)
 				return
 			}

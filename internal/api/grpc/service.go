@@ -9,7 +9,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/internal/worker"
-	"github.com/rs/zerolog/log"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 )
 
 type Service struct {
@@ -35,7 +35,7 @@ func (s *Service) SendNotification(ctx context.Context, req *proto.SendNotificat
 
 	ok, err := s.rateLimiter.Allow(ctx, svc.ID.String())
 	if err != nil {
-		log.Error().Err(err).Msg("rate limiter error")
+		logger.Get().Error().Err(err).Msg("rate limiter error")
 		return nil, fmt.Errorf("rate limiter unavailable")
 	}
 	if !ok {

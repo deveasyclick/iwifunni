@@ -6,8 +6,8 @@ import (
 
 	"github.com/deveasyclick/iwifunni/internal/notifications"
 	"github.com/deveasyclick/iwifunni/internal/types"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
-	"github.com/rs/zerolog/log"
 )
 
 type Consumer struct {
@@ -29,7 +29,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 func (c *Consumer) handleNotificationSend(ctx context.Context, t *asynq.Task) error {
 	var job types.NotificationJob
 	if err := json.Unmarshal(t.Payload(), &job); err != nil {
-		log.Error().Err(err).Msg("invalid job payload")
+		logger.Get().Error().Err(err).Msg("invalid job payload")
 		return err
 	}
 
