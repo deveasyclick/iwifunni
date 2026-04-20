@@ -2,6 +2,29 @@
 
 A secure, multi-channel notification service in Go.
 
+Iwifunni is a backend service that lets other applications send notifications to users through a single API. Client services submit a notification request over REST or gRPC, the service authenticates and rate-limits the caller, queues the job for asynchronous processing, stores the notification in PostgreSQL, and then delivers it through one or more channels such as push, in-app, email, or SMS.
+
+It is designed for product teams that want one place to manage notification delivery instead of wiring each channel directly into every application.
+
+## What The App Does
+
+- Accepts notification requests from internal or external services over REST and gRPC.
+- Authenticates each calling service with an API key and enforces per-service rate limits.
+- Queues notification jobs in Redis-backed Asynq workers so API requests return quickly.
+- Persists notification records and user delivery preferences in PostgreSQL.
+- Delivers in-app notifications over WebSocket for real-time client updates.
+- Sends push notifications to FCM and browser Web Push subscribers.
+- Falls back to email and SMS when push delivery is unavailable and the user has opted in.
+
+## Delivery Flow
+
+1. A service sends a notification request with user ID, title, message, channels, and metadata.
+2. Iwifunni validates the payload, verifies the API key, and checks the rate limit.
+3. The request is enqueued for background processing.
+4. A worker stores the notification and attempts delivery on the requested channels.
+5. If in-app delivery is enabled, connected clients receive the event over WebSocket.
+6. If push delivery fails, the service can fall back to email or SMS based on user preferences.
+
 ## Features
 
 - REST API + gRPC API
