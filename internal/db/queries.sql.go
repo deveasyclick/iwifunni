@@ -138,6 +138,28 @@ func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotification
 	return err
 }
 
+const insertService = `-- name: InsertService :exec
+INSERT INTO services (id, name, api_key, description)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertServiceParams struct {
+	ID          uuid.UUID `db:"id" json:"id"`
+	Name        string    `db:"name" json:"name"`
+	ApiKey      string    `db:"api_key" json:"api_key"`
+	Description *string   `db:"description" json:"description"`
+}
+
+func (q *Queries) InsertService(ctx context.Context, arg InsertServiceParams) error {
+	_, err := q.db.Exec(ctx, insertService,
+		arg.ID,
+		arg.Name,
+		arg.ApiKey,
+		arg.Description,
+	)
+	return err
+}
+
 const upsertInAppNotification = `-- name: UpsertInAppNotification :exec
 INSERT INTO in_app_notifications (id, user_id, title, message, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6)
 `

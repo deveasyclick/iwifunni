@@ -18,6 +18,7 @@ import (
 	grpcapi "github.com/deveasyclick/iwifunni/internal/api/grpc"
 	"github.com/deveasyclick/iwifunni/internal/api/rest"
 	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/cli"
 	"github.com/deveasyclick/iwifunni/internal/config"
 	"github.com/deveasyclick/iwifunni/internal/notifications"
 	"github.com/deveasyclick/iwifunni/internal/storage"
@@ -31,6 +32,13 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		l.Fatal().Err(err).Msg("failed to load configuration")
+	}
+
+	if handled, err := cli.Run(context.Background(), cfg, os.Args[1:]); handled {
+		if err != nil {
+			l.Fatal().Err(err).Msg("command failed")
+		}
+		return
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

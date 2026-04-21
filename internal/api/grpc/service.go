@@ -28,7 +28,7 @@ func (s *Service) SendNotification(ctx context.Context, req *proto.SendNotificat
 		return nil, fmt.Errorf("user_id, title and message are required")
 	}
 
-	svc, err := s.queries.GetServiceByAPIKey(ctx, req.ApiKey)
+	svc, err := s.queries.GetServiceByAPIKey(ctx, auth.HashAPIKey(req.ApiKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid api key: %w", err)
 	}

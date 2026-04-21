@@ -63,6 +63,16 @@ The service can also combine channels in a single notification request and use e
 
 Copy `.env.example` to `.env` and set values.
 
+### Create A Service API Key
+
+Generate and store a service credential with the built-in command:
+
+```bash
+go run ./cmd/iwifunni create-service --name checkout --description "Checkout service"
+```
+
+The command prints a one-time API key. Keep it safe and use it in REST requests as `Authorization: ApiKey <key>` or in gRPC requests as `api_key`.
+
 ### Run Migrations
 
 ```bash
@@ -130,12 +140,13 @@ RATE_LIMIT_PER_MINUTE=60
 ENVIRONMENT=development
 ```
 
-### 3. Seed a service API key for authentication
+### 3. Create a service API key for authentication
 
 ```bash
-psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "insert into services (id, name, api_key, description) values (gen_random_uuid(), 'manual-test-service', 'test-api-key', 'manual testing') on conflict (api_key) do nothing;"
+go run ./cmd/iwifunni create-service --name manual-test-service --description "manual testing"
 ```
+
+Copy the printed API key and use it in the next request.
 
 ### 4. Seed user delivery preferences
 
@@ -166,7 +177,7 @@ npx wscat -c ws://localhost:8080/ws
 
 ```bash
 curl -i -X POST http://localhost:8080/notifications \
-  -H "Authorization: ApiKey test-api-key" \
+  -H "Authorization: ApiKey YOUR_GENERATED_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"user_id":"user-123","title":"Welcome","message":"Your order has shipped","channels":["in_app","push","email","sms"],"metadata":{"order_id":"A123"}}'
 ```

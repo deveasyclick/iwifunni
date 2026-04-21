@@ -3,6 +3,10 @@ SELECT id, name, api_key, description, created_at
 FROM services
 WHERE api_key = $1;
 
+-- name: InsertService :exec
+INSERT INTO services (id, name, api_key, description)
+VALUES ($1, $2, $3, $4);
+
 -- name: InsertNotification :exec
 INSERT INTO notifications (id, service_id, user_id, title, message, channels, metadata, status, retry_count, created_at, updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11);

@@ -23,7 +23,7 @@ func NewAuthMiddleware(queries *db.Queries, limiter *RateLimiter) func(http.Hand
 			}
 
 			apiKey := strings.TrimPrefix(header, "ApiKey ")
-			svc, err := queries.GetServiceByAPIKey(r.Context(), apiKey)
+			svc, err := queries.GetServiceByAPIKey(r.Context(), HashAPIKey(apiKey))
 			if err != nil {
 				http.Error(w, "invalid service api key", http.StatusUnauthorized)
 				return
