@@ -11,6 +11,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/internal/ws"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/deveasyclick/iwifunni/pkg/mailer"
 	"github.com/google/uuid"
 )
 
@@ -18,10 +19,11 @@ type Manager struct {
 	queries  *db.Queries
 	wsServer *ws.Server
 	cfg      *config.Config
+	mailer   *mailer.Mailer
 }
 
-func NewManager(queries db.Queries, wsServer *ws.Server, cfg *config.Config) *Manager {
-	return &Manager{queries: &queries, wsServer: wsServer, cfg: cfg}
+func NewManager(queries db.Queries, wsServer *ws.Server, cfg *config.Config, emailMailer *mailer.Mailer) *Manager {
+	return &Manager{queries: &queries, wsServer: wsServer, cfg: cfg, mailer: emailMailer}
 }
 
 func (m *Manager) Send(ctx context.Context, job *types.NotificationJob) error {
@@ -75,7 +77,7 @@ func (m *Manager) Send(ctx context.Context, job *types.NotificationJob) error {
 			return err
 		}
 		if prefs.EmailOptIn {
-			if err := channels.SendEmail(ctx, m.cfg.BrevoAPIKey, job.UserID, job.Title, job.Message, job.Metadata); err != nil {
+			if err := channels.SendEmail(ctx, m.mailer, job.UserID, job.Title, job.Message, job.Metadata); err != nil {
 				logger.Get().Warn().Err(err).Msg("email fallback failed")
 			}
 		}

@@ -24,6 +24,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/worker"
 	"github.com/deveasyclick/iwifunni/internal/ws"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/deveasyclick/iwifunni/pkg/mailer"
 	"github.com/deveasyclick/iwifunni/proto"
 )
 
@@ -76,7 +77,13 @@ func main() {
 
 	wsServer := ws.NewServer()
 	rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
-	notifier := notifications.NewManager(*store.Queries, wsServer, cfg)
+	var emailMailer *mailer.Mailer
+	if cfg.MailerFrom != "" && cfg.MailerPassword != "" {
+		emailMailer = mailer.NewMailer(cfg.MailerHost, cfg.MailerPort, cfg.MailerUsername, cfg.MailerPassword, cfg.MailerFrom)
+	} else {
+		l.Warn().Msg("mailer is not fully configured; email delivery is disabled")
+	}
+	notifier := notifications.NewManager(*store.Queries, wsServer, cfg, emailMailer)
 	queue := worker.NewProducer(asynqClient)
 	consumer := worker.NewConsumer(asynqServer, notifier)
 
