@@ -73,6 +73,13 @@ go run ./cmd/iwifunni create-service --name checkout --description "Checkout ser
 
 The command prints a one-time API key. Keep it safe and use it in REST requests as `Authorization: ApiKey <key>` or in gRPC requests as `api_key`.
 
+You can inspect available CLI commands with:
+
+```bash
+go run ./cmd/iwifunni help
+go run ./cmd/iwifunni help create-service
+```
+
 ### Run Migrations
 
 ```bash

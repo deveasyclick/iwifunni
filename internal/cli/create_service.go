@@ -20,6 +20,9 @@ func newCreateServiceCommand(ctx context.Context, cfg *config.Config) *cobra.Com
 	cmd := &cobra.Command{
 		Use:   "create-service",
 		Short: "Create a service API key",
+		Long:  "Create a new service record and print a one-time API key for clients that need to authenticate against the notification service.",
+		Example: "  iwifunni create-service --name checkout --description \"Checkout service\"\n" +
+			"  iwifunni create-service --name billing",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			store := storage.NewStore(ctx, cfg)
 			defer store.Pool.Close()
@@ -56,6 +59,7 @@ func newCreateServiceCommand(ctx context.Context, cfg *config.Config) *cobra.Com
 	cmd.Flags().StringVar(&name, "name", "", "service name")
 	cmd.Flags().StringVar(&description, "description", "", "service description")
 	_ = cmd.MarkFlagRequired("name")
+	cmd.Flags().SortFlags = false
 
 	return cmd
 }
