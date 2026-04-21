@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deveasyclick/iwifunni/api/proto"
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/internal/worker"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/deveasyclick/iwifunni/proto"
 )
 
 type Service struct {

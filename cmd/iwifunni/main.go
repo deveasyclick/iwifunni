@@ -14,7 +14,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 
-	"github.com/deveasyclick/iwifunni/api/proto"
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/cli"
 	"github.com/deveasyclick/iwifunni/internal/config"
@@ -25,6 +24,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/worker"
 	"github.com/deveasyclick/iwifunni/internal/ws"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/deveasyclick/iwifunni/proto"
 )
 
 func main() {

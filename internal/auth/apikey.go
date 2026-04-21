@@ -10,6 +10,7 @@ import (
 
 const apiKeyPrefix = "iwf_"
 
+// TODO: Allow apikey expiration
 func GenerateAPIKey() (string, error) {
 	randomBytes := make([]byte, 32)
 	if _, err := rand.Read(randomBytes); err != nil {
