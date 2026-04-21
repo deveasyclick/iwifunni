@@ -15,11 +15,11 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/deveasyclick/iwifunni/api/proto"
-	grpcapi "github.com/deveasyclick/iwifunni/internal/api/grpc"
-	"github.com/deveasyclick/iwifunni/internal/api/rest"
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/cli"
 	"github.com/deveasyclick/iwifunni/internal/config"
+	grpcapi "github.com/deveasyclick/iwifunni/internal/grpc"
+	"github.com/deveasyclick/iwifunni/internal/handlers"
 	"github.com/deveasyclick/iwifunni/internal/notifications"
 	"github.com/deveasyclick/iwifunni/internal/storage"
 	"github.com/deveasyclick/iwifunni/internal/worker"
@@ -80,7 +80,7 @@ func main() {
 	queue := worker.NewProducer(asynqClient)
 	consumer := worker.NewConsumer(asynqServer, notifier)
 
-	apiHandler := rest.NewHandler(store.Queries, queue, rateLimiter)
+	apiHandler := handlers.NewHandler(store.Queries, queue, rateLimiter)
 	router := apiHandler.Router(wsServer)
 
 	grpcServer := grpc.NewServer()
