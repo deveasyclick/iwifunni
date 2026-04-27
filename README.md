@@ -1,53 +1,66 @@
-# Iwifunni Notification Service
+# Iwifunni Notification Platform
 
-A secure, multi-channel notification service in Go.
+A multi-tenant, API-driven notification platform in Go.
 
-Iwifunni is a backend service that lets other applications send notifications to users through a single API. Client services submit a notification request over REST or gRPC, the service authenticates and rate-limits the caller, queues the job for asynchronous processing, stores the notification in PostgreSQL, and then delivers it through one or more channels such as push, in-app, email, or SMS.
-
-It is designed for product teams that want one place to manage notification delivery instead of wiring each channel directly into every application.
+Iwifunni lets your backend services and SDKs send notifications through a single REST API. Projects are the top-level tenant unit. Each project owns its own providers, templates, API keys, and webhooks. Notifications are processed asynchronously via a Redis-backed queue and delivered through pluggable channel providers.
 
 ## Supported Delivery Channels
 
-Iwifunni currently supports these delivery channels:
+- Email (SMTP / SendGrid)
+- SMS (Termii)
+- Push (FCM / Web Push)
 
-- In-app notifications broadcast over WebSocket.
-- Push notifications through Firebase Cloud Messaging (FCM).
-- Browser push notifications through Web Push subscriptions.
-- Email delivery through Brevo.
-- SMS delivery through Termii.
+## Authentication
 
-The service can also combine channels in a single notification request and use email or SMS as fallback delivery when push is unavailable and the user has opted in.
+Iwifunni uses two auth systems:
 
-## What The App Does
+| Mechanism | Format | Purpose |
+|-----------|--------|---------|
+| API Key | `Bearer nk_live_<token>` | Machine-to-machine — sending notifications and managing resources |
+| JWT | `Bearer <jwt>` | Dashboard users — signup, signin, managing project settings |
 
-- Accepts notification requests from internal or external services over REST and gRPC.
-- Authenticates each calling service with an API key and enforces per-service rate limits.
-- Queues notification jobs in Redis-backed Asynq workers so API requests return quickly.
-- Persists notification records and user delivery preferences in PostgreSQL.
-- Delivers notifications through in-app, FCM push, browser push, email, and SMS channels.
-- Falls back to email and SMS when push delivery is unavailable and the user has opted in.
+## Architecture at a Glance
 
-## Delivery Flow
-
-1. A service sends a notification request with user ID, title, message, channels, and metadata.
-2. Iwifunni validates the payload, verifies the API key, and checks the rate limit.
-3. The request is enqueued for background processing.
-4. A worker stores the notification and attempts delivery on the requested channels.
-5. If in-app delivery is enabled, connected clients receive the event over WebSocket.
-6. If push delivery fails, the service can fall back to email or SMS based on user preferences.
+```
+Client (SDK / API)
+  ↓
+API Key or JWT Middleware  →  resolve project_id
+  ↓
+Validate request
+  ↓
+Enqueue job (Asynq / Redis)
+  ↓
+Worker picks job
+  ↓
+Load provider config from DB
+  ↓
+Deliver via channel provider (Email / SMS / Push)
+  ↓
+Update notification status (sent / partial_failed / failed)
+  ↓
+Fire webhooks for subscribed events
+```
 
 ## Features
 
-- REST API + gRPC API
-- API key authentication for authorized services
-- Redis-backed queue for asynchronous notification processing
-- PostgreSQL storage with sqlc and goose migrations
-- WebSocket broadcasting for in-app notifications
-- Push notifications via FCM and browser Web Push
-- Email via Brevo
-- SMS via Termii
-- Rate limiting per service
-- Retry with exponential backoff
+- Multi-tenant project model — every resource is scoped to a project
+- Dual auth: API keys for SDK/backend, JWT for dashboard users
+- Project-scoped provider registry — configure different email/SMS/push providers per project
+- Template management — store and render Go text/template notification templates per project
+- API key management — create, rotate, and revoke project API keys
+- Webhook delivery — register endpoints to receive `notification.sent` / `notification.failed` events with HMAC-SHA256 signatures
+- Asynchronous processing via Redis-backed Asynq workers
+- Per-project rate limiting
+- AES-GCM encryption for provider credentials at rest
+
+## Delivery Flow
+
+1. Client sends `POST /notifications` with `Authorization: Bearer nk_live_<key>`.
+2. Middleware resolves the project and enforces rate limits.
+3. Request is enqueued; API returns immediately.
+4. Worker stores the notification record (`pending`), resolves the active provider for each requested channel from the project's provider config, and attempts delivery.
+5. Notification status is updated (`sent`, `partial_failed`, or `failed`).
+6. Webhooks subscribed to the resulting event are called asynchronously.
 
 ## Getting Started
 
@@ -56,40 +69,25 @@ The service can also combine channels in a single notification request and use e
 - Go 1.26+
 - PostgreSQL
 - Redis
-- goose CLI
-- sqlc CLI
+- goose CLI (`go install github.com/pressly/goose/v3/cmd/goose@latest`)
+- sqlc CLI (`go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`)
 
 ### Environment
 
-Copy `.env.example` to `.env` and set values.
+Copy `.env.example` to `.env` and set the required values:
 
-### Create A Service API Key
-
-Generate and store a service credential with the built-in command:
-
-```bash
-go run ./cmd/iwifunni create-service --name checkout --description "Checkout service"
 ```
-
-The command prints a one-time API key. Keep it safe and use it in REST requests as `Authorization: ApiKey <key>` or in gRPC requests as `api_key`.
-
-You can inspect available CLI commands with:
-
-```bash
-go run ./cmd/iwifunni help
-go run ./cmd/iwifunni help create-service
+DATABASE_URL=postgres://...
+REDIS_ADDR=localhost:6379
+JWT_SECRET=<random-256-bit-hex>
+ENCRYPTION_KEY=<random-32-byte-hex>
+API_SERVICE_PORT=8080
 ```
 
 ### Run Migrations
 
 ```bash
 goose -dir migrations postgres "$DATABASE_URL" up
-```
-
-### Generate SQL Code
-
-```bash
-sqlc generate
 ```
 
 ### Run the Service
@@ -104,22 +102,118 @@ go run ./cmd/iwifunni
 docker compose up --build
 ```
 
+## API Reference
+
+### Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/signup` | Create account and project |
+| POST | `/auth/signin` | Signin, receive JWT + refresh token |
+| POST | `/auth/refresh` | Exchange refresh token for new access token |
+| POST | `/auth/logout` | Revoke refresh token |
+
+### Notifications
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/notifications` | API Key | Enqueue a notification |
+
+**Example request:**
+```json
+{
+  "title": "Welcome",
+  "message": "Thanks for signing up!",
+  "channels": ["email"],
+  "recipient": {
+    "email": "user@example.com"
+  }
+}
+```
+
+### Templates
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/templates` | API Key | Create a template |
+| GET | `/templates` | API Key | List templates |
+| GET | `/templates/{templateID}` | API Key | Get a template |
+| PATCH | `/templates/{templateID}` | API Key | Update a template |
+| DELETE | `/templates/{templateID}` | API Key | Delete a template |
+| POST | `/templates/render` | API Key | Render a template with variables |
+
+### Providers
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/providers` | API Key | Register a channel provider |
+| GET | `/providers` | API Key | List providers |
+| GET | `/providers/{providerID}` | API Key | Get a provider |
+| PUT | `/providers/{providerID}` | API Key | Update a provider |
+| DELETE | `/providers/{providerID}` | API Key | Delete a provider |
+
+Provider `credentials` are encrypted with AES-GCM before storage.
+
+### API Keys
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api-keys` | API Key | List API keys for the project |
+| POST | `/api-keys` | API Key | Create a new API key |
+| POST | `/api-keys/{keyID}/rotate` | API Key | Rotate (regenerate) an API key |
+| DELETE | `/api-keys/{keyID}` | API Key | Revoke an API key |
+
+API keys are in the format `nk_live_<token>`. Only the prefix is stored; the full key is shown once on creation.
+
+### Webhooks
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/webhooks` | API Key | Register a webhook endpoint |
+| GET | `/webhooks` | API Key | List webhooks |
+| DELETE | `/webhooks/{webhookID}` | API Key | Deactivate a webhook |
+
+**Webhook events:** `notification.sent`, `notification.failed`
+
+Deliveries include an `X-Signature-256: sha256=<hex>` header. Verify it with HMAC-SHA256 using your webhook secret.
+
+**Example payload:**
+```json
+{
+  "event": "notification.sent",
+  "notification_id": "uuid",
+  "project_id": "uuid",
+  "timestamp": "2026-04-27T12:00:00Z"
+}
+```
+
+## Development
+
+### Generate SQL Code
+
+```bash
+sqlc generate
+```
+
+### Run Tests
+
+```bash
+go test ./...
+```
+
+
 ### Example REST Request
 
 ```bash
 curl -X POST http://localhost:8080/notifications \
   -H "Authorization: ApiKey YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"user_id":"user-123","title":"Hello","message":"Welcome","channels":["push","email"],"metadata":{"order_id":"abc"}}'
+  -d '{"title":"Hello","message":"Welcome","channels":["push","email"],"recipient":{"email":"user@example.com","push_tokens":["push-token-1"],"reference":"customer-123"},"metadata":{"order_id":"abc"}}'
 ```
-
-### Example gRPC Request
-
-Use `grpcurl` or generated client from `api/proto/notifications.pb.go`.
 
 ## Manual Testing
 
-Use this flow to test the app like a real user would: start the backend, connect a live client to the in-app channel, send a notification as a service, and verify what the user sees.
+Use this flow to test the app like a real client service would: create a service key, configure channels for that service, send a notification, and verify persisted delivery outcomes.
 
 ### 1. Start Postgres and Redis
 
@@ -136,13 +230,6 @@ DATABASE_URL=postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable
 REDIS_ADDR=localhost:6380
 REDIS_PASSWORD=
 API_PORT=8080
-GRPC_PORT=9090
-FCM_SERVER_KEY=test-fcm-key
-WEBPUSH_PUBLIC_KEY=test-webpush-public-key
-WEBPUSH_PRIVATE_KEY=test-webpush-private-key
-BREVO_API_KEY=test-brevo-key
-TERMII_API_KEY=test-termii-key
-TERMII_SENDER_ID=iwifunni
 RATE_LIMIT_PER_MINUTE=60
 ENVIRONMENT=development
 ```
@@ -153,15 +240,29 @@ ENVIRONMENT=development
 go run ./cmd/iwifunni create-service --name manual-test-service --description "manual testing"
 ```
 
-Copy the printed API key and use it in the next request.
-
-### 4. Seed user delivery preferences
-
-This allows fallback to email and SMS when push delivery fails.
+Copy the printed API key for the send request. Also fetch the service ID for channel setup:
 
 ```bash
 psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "insert into users_preferences (user_id, email_opt_in, sms_opt_in) values ('user-123', true, true) on conflict (user_id) do update set email_opt_in = excluded.email_opt_in, sms_opt_in = excluded.sms_opt_in;"
+  -c "select id, name, created_at from services order by created_at desc limit 5;"
+```
+
+### 4. Configure enabled channels for the service
+
+Replace `SERVICE_ID` below with the UUID from the previous query.
+
+```bash
+psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
+  -c "insert into service_channel_configs (id, service_id, channel, enabled, provider, config_json)
+      values
+        (gen_random_uuid(), 'SERVICE_ID', 'email', true, 'smtp', '{\"host\":\"smtp-relay.brevo.com\",\"port\":587,\"username\":\"apikey\",\"password\":\"secret\",\"from\":\"notifications@example.com\"}'::jsonb),
+        (gen_random_uuid(), 'SERVICE_ID', 'sms', true, 'termii', '{\"provider\":\"termii\",\"api_key\":\"secret\",\"sender_id\":\"iwifunni\"}'::jsonb),
+        (gen_random_uuid(), 'SERVICE_ID', 'push', true, 'fcm', '{\"provider\":\"fcm\",\"server_key\":\"secret\"}'::jsonb)
+      on conflict (service_id, channel) do update
+      set enabled = excluded.enabled,
+          provider = excluded.provider,
+          config_json = excluded.config_json,
+          updated_at = now();"
 ```
 
 ### 5. Run the service
@@ -170,59 +271,44 @@ psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
 go run ./cmd/iwifunni
 ```
 
-### 6. Connect a live client to the in-app channel
-
-Connect a WebSocket client to `ws://localhost:8080/ws`.
-
-Example using `wscat`:
-
-```bash
-npx wscat -c ws://localhost:8080/ws
-```
-
-### 7. Send a notification as a client service
+### 6. Send a notification as a client service
 
 ```bash
 curl -i -X POST http://localhost:8080/notifications \
   -H "Authorization: ApiKey YOUR_GENERATED_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"user_id":"user-123","title":"Welcome","message":"Your order has shipped","channels":["in_app","push","email","sms"],"metadata":{"order_id":"A123"}}'
+  -d '{"title":"Welcome","message":"Your order has shipped","channels":["push","email","sms"],"recipient":{"email":"user@example.com","phone_number":"+2348012345678","push_tokens":["device-token-1"],"reference":"customer-123"},"metadata":{"order_id":"A123"}}'
 ```
 
-### 8. Verify the user-facing result
+### 7. Verify persistence and delivery status
 
 - The API returns `202 Accepted`.
-- The WebSocket client receives a live in-app notification payload.
 - The terminal logs show delivery attempts for the requested channels.
 - The notification is stored in PostgreSQL.
 
-Confirm persistence with:
+Confirm notification persistence with:
 
 ```bash
 psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "select user_id, title, message, channels, status, created_at from notifications order by created_at desc limit 5;"
+  -c "select id, service_id, title, channels, recipient, status, created_at from notifications order by created_at desc limit 5;"
+```
+
+Confirm channel attempts with:
+
+```bash
+psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
+  -c "select notification_id, channel, destination, status, error_message, attempted_at from delivery_attempts order by attempted_at desc limit 20;"
 ```
 
 ### Manual test scenarios
 
-#### In-app notification
+#### Missing recipient destination
 
-Send a request with `"channels":["in_app"]` and confirm the WebSocket client immediately receives the JSON payload.
+Send a payload without `recipient.email`, `recipient.phone_number`, and `recipient.push_tokens` and confirm `400 Bad Request`.
 
-#### Push notification
+#### Channel disabled
 
-Seed a push subscription first:
-
-```bash
-psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "insert into push_subscriptions (id, user_id, channel, endpoint) values (gen_random_uuid(), 'user-123', 'fcm', 'device-token-1') on conflict do nothing;"
-```
-
-Then send a request with `"channels":["push"]` and confirm the push sender log appears.
-
-#### Fallback behavior
-
-Send a request with `"channels":["push"]` and no working push setup. If the user has email or SMS opt-in enabled, the service should attempt fallback delivery.
+Disable a channel in `service_channel_configs`, request that channel, and confirm delivery attempt is recorded as failed with the channel configuration error.
 
 #### Invalid API key
 
@@ -230,7 +316,7 @@ Send the same request with a bad API key and confirm the API returns `401 Unauth
 
 #### Missing required fields
 
-Remove `title`, `message`, or `user_id` and confirm the API returns `400 Bad Request`.
+Remove `title`, `message`, or `channels` and confirm the API returns `400 Bad Request`.
 
 #### Rate limiting
 
@@ -238,18 +324,16 @@ Send more than `RATE_LIMIT_PER_MINUTE` requests within a minute and confirm the 
 
 ### Current limitation
 
-The in-app flow is the most realistic end-to-end manual test right now. Push, email, and SMS senders currently validate configuration and log delivery attempts, but they do not yet call live external providers.
+The current channel adapters are still provider stubs for push and SMS; test flow validates orchestration, persistence, and config lookup behavior. Email uses SMTP config and can be wired to a real provider credential.
 
 ## Project Structure
 
 - `cmd/iwifunni`: application entrypoint
-- `internal/api/rest`: REST handler and middleware
-- `internal/api/grpc`: gRPC service implementation
+- `internal/handlers`: REST handler and middleware
 - `internal/auth`: API key authentication and rate limiting
 - `internal/storage`: PostgreSQL storage wrapper and sqlc queries
 - `internal/worker`: Redis job producer and consumer
-- `internal/notifications`: notification orchestration and fallback logic
-- `internal/channels`: provider-specific delivery stubs
-- `internal/ws`: WebSocket real-time notification support
+- `internal/notifications`: notification orchestration and delivery attempt tracking
+- `internal/channels`: provider-specific delivery adapters
 - `migrations`: goose migration files
-- `sql`: sqlc query definitions
+- `internal/db/queries`: sqlc query definitions

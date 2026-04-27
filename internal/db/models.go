@@ -9,35 +9,98 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type InAppNotification struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	UserID    string             `db:"user_id" json:"user_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+type ApiKey struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ProjectID   uuid.UUID          `db:"project_id" json:"project_id"`
+	Name        string             `db:"name" json:"name"`
+	KeyPrefix   string             `db:"key_prefix" json:"key_prefix"`
+	KeyHash     string             `db:"key_hash" json:"key_hash"`
+	Scopes      []byte             `db:"scopes" json:"scopes"`
+	Status      string             `db:"status" json:"status"`
+	LastUsedAt  pgtype.Timestamptz `db:"last_used_at" json:"last_used_at"`
+	ExpiresAt   pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	RevokedAt   pgtype.Timestamptz `db:"revoked_at" json:"revoked_at"`
+	RotatedFrom pgtype.UUID        `db:"rotated_from" json:"rotated_from"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type DeliveryAttempt struct {
+	ID                uuid.UUID          `db:"id" json:"id"`
+	NotificationID    uuid.UUID          `db:"notification_id" json:"notification_id"`
+	Channel           string             `db:"channel" json:"channel"`
+	Destination       string             `db:"destination" json:"destination"`
+	Status            string             `db:"status" json:"status"`
+	ErrorMessage      *string            `db:"error_message" json:"error_message"`
+	ProviderMessageID *string            `db:"provider_message_id" json:"provider_message_id"`
+	AttemptedAt       pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
 }
 
 type Notification struct {
-	ID         uuid.UUID          `db:"id" json:"id"`
-	ServiceID  uuid.UUID          `db:"service_id" json:"service_id"`
-	UserID     string             `db:"user_id" json:"user_id"`
-	Title      string             `db:"title" json:"title"`
-	Message    string             `db:"message" json:"message"`
-	Channels   []string           `db:"channels" json:"channels"`
-	Metadata   []byte             `db:"metadata" json:"metadata"`
-	Status     string             `db:"status" json:"status"`
-	RetryCount int32              `db:"retry_count" json:"retry_count"`
-	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
 }
 
-type PushSubscription struct {
+type Organization struct {
 	ID        uuid.UUID          `db:"id" json:"id"`
-	UserID    string             `db:"user_id" json:"user_id"`
-	Channel   string             `db:"channel" json:"channel"`
-	Endpoint  string             `db:"endpoint" json:"endpoint"`
+	Name      string             `db:"name" json:"name"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type OrganizationMember struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	UserID         uuid.UUID          `db:"user_id" json:"user_id"`
+	Role           string             `db:"role" json:"role"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+type Project struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	Name           string             `db:"name" json:"name"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
+}
+
+type ProjectMembership struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
+	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
+	Role      string             `db:"role" json:"role"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type Provider struct {
+	ID          uuid.UUID        `db:"id" json:"id"`
+	ProjectID   uuid.UUID        `db:"project_id" json:"project_id"`
+	Name        string           `db:"name" json:"name"`
+	Channel     string           `db:"channel" json:"channel"`
+	Credentials []byte           `db:"credentials" json:"credentials"`
+	Config      []byte           `db:"config" json:"config"`
+	IsActive    bool             `db:"is_active" json:"is_active"`
+	CreatedAt   pgtype.Timestamp `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `db:"updated_at" json:"updated_at"`
+}
+
+type RefreshToken struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
+	TokenHash string             `db:"token_hash" json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 type Service struct {
@@ -48,8 +111,56 @@ type Service struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
-type UsersPreference struct {
-	UserID     string `db:"user_id" json:"user_id"`
-	EmailOptIn bool   `db:"email_opt_in" json:"email_opt_in"`
-	SmsOptIn   bool   `db:"sms_opt_in" json:"sms_opt_in"`
+type ServiceChannelConfig struct {
+	ID         uuid.UUID          `db:"id" json:"id"`
+	ServiceID  uuid.UUID          `db:"service_id" json:"service_id"`
+	Channel    string             `db:"channel" json:"channel"`
+	Enabled    bool               `db:"enabled" json:"enabled"`
+	Provider   string             `db:"provider" json:"provider"`
+	ConfigJson []byte             `db:"config_json" json:"config_json"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type Template struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
+	Name      string             `db:"name" json:"name"`
+	Channel   string             `db:"channel" json:"channel"`
+	Subject   *string            `db:"subject" json:"subject"`
+	Body      string             `db:"body" json:"body"`
+	Version   int32              `db:"version" json:"version"`
+	IsActive  bool               `db:"is_active" json:"is_active"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type User struct {
+	ID           uuid.UUID          `db:"id" json:"id"`
+	Email        string             `db:"email" json:"email"`
+	PasswordHash string             `db:"password_hash" json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type Webhook struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
+	Url       string             `db:"url" json:"url"`
+	Secret    string             `db:"secret" json:"secret"`
+	Events    []string           `db:"events" json:"events"`
+	IsActive  bool               `db:"is_active" json:"is_active"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type WebhookDelivery struct {
+	ID           uuid.UUID          `db:"id" json:"id"`
+	WebhookID    uuid.UUID          `db:"webhook_id" json:"webhook_id"`
+	Event        string             `db:"event" json:"event"`
+	Payload      []byte             `db:"payload" json:"payload"`
+	Status       string             `db:"status" json:"status"`
+	ResponseCode *int32             `db:"response_code" json:"response_code"`
+	ErrorMessage *string            `db:"error_message" json:"error_message"`
+	AttemptedAt  pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
 }

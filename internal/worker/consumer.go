@@ -4,19 +4,19 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/deveasyclick/iwifunni/internal/notifications"
+	"github.com/deveasyclick/iwifunni/internal/notification"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
 )
 
 type Consumer struct {
-	server   *asynq.Server
-	notifier *notifications.Manager
+	server  *asynq.Server
+	service *notification.Service
 }
 
-func NewConsumer(server *asynq.Server, notifier *notifications.Manager) *Consumer {
-	return &Consumer{server: server, notifier: notifier}
+func NewConsumer(server *asynq.Server, service *notification.Service) *Consumer {
+	return &Consumer{server: server, service: service}
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
@@ -33,5 +33,5 @@ func (c *Consumer) handleNotificationSend(ctx context.Context, t *asynq.Task) er
 		return err
 	}
 
-	return c.notifier.Send(ctx, &job)
+	return c.service.Send(ctx, &job)
 }

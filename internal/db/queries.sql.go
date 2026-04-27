@@ -12,36 +12,658 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getPushSubscriptions = `-- name: GetPushSubscriptions :many
-SELECT id, user_id, channel, endpoint, created_at
-FROM push_subscriptions
-WHERE user_id = $1
+const createAPIKey = `-- name: CreateAPIKey :exec
+INSERT INTO api_keys (
+	id,
+	project_id,
+	name,
+	key_prefix,
+	key_hash,
+	scopes,
+	status,
+	expires_at,
+	rotated_from,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
-func (q *Queries) GetPushSubscriptions(ctx context.Context, userID string) ([]PushSubscription, error) {
-	rows, err := q.db.Query(ctx, getPushSubscriptions, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []PushSubscription{}
-	for rows.Next() {
-		var i PushSubscription
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Channel,
-			&i.Endpoint,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type CreateAPIKeyParams struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ProjectID   uuid.UUID          `db:"project_id" json:"project_id"`
+	Name        string             `db:"name" json:"name"`
+	KeyPrefix   string             `db:"key_prefix" json:"key_prefix"`
+	KeyHash     string             `db:"key_hash" json:"key_hash"`
+	Scopes      []byte             `db:"scopes" json:"scopes"`
+	Status      string             `db:"status" json:"status"`
+	ExpiresAt   pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	RotatedFrom pgtype.UUID        `db:"rotated_from" json:"rotated_from"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error {
+	_, err := q.db.Exec(ctx, createAPIKey,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.KeyPrefix,
+		arg.KeyHash,
+		arg.Scopes,
+		arg.Status,
+		arg.ExpiresAt,
+		arg.RotatedFrom,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createOrganization = `-- name: CreateOrganization :one
+INSERT INTO organizations (id, name, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, created_at, updated_at
+`
+
+type CreateOrganizationParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, createOrganization,
+		arg.ID,
+		arg.Name,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createOrganizationMember = `-- name: CreateOrganizationMember :exec
+INSERT INTO organization_members (id, organization_id, user_id, role, created_at)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type CreateOrganizationMemberParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	UserID         uuid.UUID          `db:"user_id" json:"user_id"`
+	Role           string             `db:"role" json:"role"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+func (q *Queries) CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) error {
+	_, err := q.db.Exec(ctx, createOrganizationMember,
+		arg.ID,
+		arg.OrganizationID,
+		arg.UserID,
+		arg.Role,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const createProject = `-- name: CreateProject :exec
+INSERT INTO projects (id, name, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateProjectParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) error {
+	_, err := q.db.Exec(ctx, createProject,
+		arg.ID,
+		arg.Name,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createProjectMembership = `-- name: CreateProjectMembership :exec
+INSERT INTO project_memberships (id, project_id, user_id, role, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreateProjectMembershipParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
+	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
+	Role      string             `db:"role" json:"role"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateProjectMembership(ctx context.Context, arg CreateProjectMembershipParams) error {
+	_, err := q.db.Exec(ctx, createProjectMembership,
+		arg.ID,
+		arg.ProjectID,
+		arg.UserID,
+		arg.Role,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createProjectWithOrg = `-- name: CreateProjectWithOrg :one
+INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, created_at, updated_at, organization_id
+`
+
+type CreateProjectWithOrgParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateProjectWithOrg(ctx context.Context, arg CreateProjectWithOrgParams) (Project, error) {
+	row := q.db.QueryRow(ctx, createProjectWithOrg,
+		arg.ID,
+		arg.OrganizationID,
+		arg.Name,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
+const createProvider = `-- name: CreateProvider :one
+INSERT INTO providers (id, project_id, name, channel, credentials, config, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, true)
+RETURNING id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+`
+
+type CreateProviderParams struct {
+	ID          uuid.UUID `db:"id" json:"id"`
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	Name        string    `db:"name" json:"name"`
+	Channel     string    `db:"channel" json:"channel"`
+	Credentials []byte    `db:"credentials" json:"credentials"`
+	Config      []byte    `db:"config" json:"config"`
+}
+
+func (q *Queries) CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, createProvider,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Channel,
+		arg.Credentials,
+		arg.Config,
+	)
+	var i Provider
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createRefreshToken = `-- name: CreateRefreshToken :exec
+INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreateRefreshTokenParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
+	TokenHash string             `db:"token_hash" json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
+	_, err := q.db.Exec(ctx, createRefreshToken,
+		arg.ID,
+		arg.UserID,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createTemplate = `-- name: CreateTemplate :one
+INSERT INTO templates (id, project_id, name, channel, subject, body)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at
+`
+
+type CreateTemplateParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Name      string    `db:"name" json:"name"`
+	Channel   string    `db:"channel" json:"channel"`
+	Subject   *string   `db:"subject" json:"subject"`
+	Body      string    `db:"body" json:"body"`
+}
+
+func (q *Queries) CreateTemplate(ctx context.Context, arg CreateTemplateParams) (Template, error) {
+	row := q.db.QueryRow(ctx, createTemplate,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Channel,
+		arg.Subject,
+		arg.Body,
+	)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Subject,
+		&i.Body,
+		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createUser = `-- name: CreateUser :exec
+INSERT INTO users (id, email, password_hash, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type CreateUserParams struct {
+	ID           uuid.UUID          `db:"id" json:"id"`
+	Email        string             `db:"email" json:"email"`
+	PasswordHash string             `db:"password_hash" json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.Exec(ctx, createUser,
+		arg.ID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createWebhook = `-- name: CreateWebhook :one
+INSERT INTO webhooks (id, project_id, url, secret, events, is_active, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, true, $6, $7)
+RETURNING id, project_id, url, secret, events, is_active, created_at, updated_at
+`
+
+type CreateWebhookParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
+	Url       string             `db:"url" json:"url"`
+	Secret    string             `db:"secret" json:"secret"`
+	Events    []string           `db:"events" json:"events"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error) {
+	row := q.db.QueryRow(ctx, createWebhook,
+		arg.ID,
+		arg.ProjectID,
+		arg.Url,
+		arg.Secret,
+		arg.Events,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Webhook
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Url,
+		&i.Secret,
+		&i.Events,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteProvider = `-- name: DeleteProvider :exec
+UPDATE providers
+SET is_active = false, updated_at = now()
+WHERE id = $1 AND project_id = $2
+`
+
+type DeleteProviderParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) DeleteProvider(ctx context.Context, arg DeleteProviderParams) error {
+	_, err := q.db.Exec(ctx, deleteProvider, arg.ID, arg.ProjectID)
+	return err
+}
+
+const deleteRefreshTokenByHash = `-- name: DeleteRefreshTokenByHash :exec
+DELETE FROM refresh_tokens
+WHERE token_hash = $1
+`
+
+func (q *Queries) DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error {
+	_, err := q.db.Exec(ctx, deleteRefreshTokenByHash, tokenHash)
+	return err
+}
+
+const deleteTemplate = `-- name: DeleteTemplate :exec
+UPDATE templates
+SET is_active = false, updated_at = now()
+WHERE id = $1 AND project_id = $2
+`
+
+type DeleteTemplateParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) DeleteTemplate(ctx context.Context, arg DeleteTemplateParams) error {
+	_, err := q.db.Exec(ctx, deleteTemplate, arg.ID, arg.ProjectID)
+	return err
+}
+
+const deleteWebhook = `-- name: DeleteWebhook :exec
+UPDATE webhooks
+SET is_active = false, updated_at = now()
+WHERE id = $1 AND project_id = $2
+`
+
+type DeleteWebhookParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) DeleteWebhook(ctx context.Context, arg DeleteWebhookParams) error {
+	_, err := q.db.Exec(ctx, deleteWebhook, arg.ID, arg.ProjectID)
+	return err
+}
+
+const getAPIKeyByPrefix = `-- name: GetAPIKeyByPrefix :one
+SELECT id, project_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
+FROM api_keys
+WHERE key_prefix = $1
+`
+
+func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, getAPIKeyByPrefix, keyPrefix)
+	var i ApiKey
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.KeyPrefix,
+		&i.KeyHash,
+		&i.Scopes,
+		&i.Status,
+		&i.LastUsedAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.RotatedFrom,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getActiveProjectProviderByChannel = `-- name: GetActiveProjectProviderByChannel :one
+SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+FROM providers
+WHERE project_id = $1 AND channel = $2 AND is_active = true
+LIMIT 1
+`
+
+type GetActiveProjectProviderByChannelParams struct {
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Channel   string    `db:"channel" json:"channel"`
+}
+
+func (q *Queries) GetActiveProjectProviderByChannel(ctx context.Context, arg GetActiveProjectProviderByChannelParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, getActiveProjectProviderByChannel, arg.ProjectID, arg.Channel)
+	var i Provider
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFirstProjectMembershipByUser = `-- name: GetFirstProjectMembershipByUser :one
+SELECT id, project_id, user_id, role, created_at, updated_at
+FROM project_memberships
+WHERE user_id = $1
+ORDER BY created_at ASC
+LIMIT 1
+`
+
+func (q *Queries) GetFirstProjectMembershipByUser(ctx context.Context, userID uuid.UUID) (ProjectMembership, error) {
+	row := q.db.QueryRow(ctx, getFirstProjectMembershipByUser, userID)
+	var i ProjectMembership
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrganizationByID = `-- name: GetOrganizationByID :one
+SELECT id, name, created_at, updated_at
+FROM organizations
+WHERE id = $1
+`
+
+func (q *Queries) GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error) {
+	row := q.db.QueryRow(ctx, getOrganizationByID, id)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrganizationMember = `-- name: GetOrganizationMember :one
+SELECT id, organization_id, user_id, role, created_at
+FROM organization_members
+WHERE organization_id = $1 AND user_id = $2
+`
+
+type GetOrganizationMemberParams struct {
+	OrganizationID uuid.UUID `db:"organization_id" json:"organization_id"`
+	UserID         uuid.UUID `db:"user_id" json:"user_id"`
+}
+
+func (q *Queries) GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (OrganizationMember, error) {
+	row := q.db.QueryRow(ctx, getOrganizationMember, arg.OrganizationID, arg.UserID)
+	var i OrganizationMember
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getProject = `-- name: GetProject :one
+SELECT id, name, created_at, updated_at
+FROM projects
+WHERE id = $1
+`
+
+type GetProjectRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetProject(ctx context.Context, id uuid.UUID) (GetProjectRow, error) {
+	row := q.db.QueryRow(ctx, getProject, id)
+	var i GetProjectRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProjectByID = `-- name: GetProjectByID :one
+SELECT id, organization_id, name, created_at, updated_at
+FROM projects
+WHERE id = $1
+`
+
+type GetProjectByIDRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error) {
+	row := q.db.QueryRow(ctx, getProjectByID, id)
+	var i GetProjectByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProjectMembershipByUser = `-- name: GetProjectMembershipByUser :one
+SELECT id, project_id, user_id, role, created_at, updated_at
+FROM project_memberships
+WHERE project_id = $1 AND user_id = $2
+`
+
+type GetProjectMembershipByUserParams struct {
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	UserID    uuid.UUID `db:"user_id" json:"user_id"`
+}
+
+func (q *Queries) GetProjectMembershipByUser(ctx context.Context, arg GetProjectMembershipByUserParams) (ProjectMembership, error) {
+	row := q.db.QueryRow(ctx, getProjectMembershipByUser, arg.ProjectID, arg.UserID)
+	var i ProjectMembership
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProviderByID = `-- name: GetProviderByID :one
+SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+FROM providers
+WHERE id = $1 AND project_id = $2
+`
+
+type GetProviderByIDParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) GetProviderByID(ctx context.Context, arg GetProviderByIDParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, getProviderByID, arg.ID, arg.ProjectID)
+	var i Provider
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
+SELECT id, user_id, token_hash, expires_at, created_at, updated_at
+FROM refresh_tokens
+WHERE token_hash = $1
+`
+
+func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByHash, tokenHash)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getServiceByAPIKey = `-- name: GetServiceByAPIKey :one
@@ -63,75 +685,230 @@ func (q *Queries) GetServiceByAPIKey(ctx context.Context, apiKey string) (Servic
 	return i, err
 }
 
-const getUserPreferences = `-- name: GetUserPreferences :one
-SELECT user_id, email_opt_in, sms_opt_in
-FROM users_preferences
-WHERE user_id = $1
+const getServiceChannelConfig = `-- name: GetServiceChannelConfig :one
+SELECT id, service_id, channel, enabled, provider, config_json, created_at, updated_at
+FROM service_channel_configs
+WHERE service_id = $1 AND channel = $2
 `
 
-func (q *Queries) GetUserPreferences(ctx context.Context, userID string) (UsersPreference, error) {
-	row := q.db.QueryRow(ctx, getUserPreferences, userID)
-	var i UsersPreference
-	err := row.Scan(&i.UserID, &i.EmailOptIn, &i.SmsOptIn)
+type GetServiceChannelConfigParams struct {
+	ServiceID uuid.UUID `db:"service_id" json:"service_id"`
+	Channel   string    `db:"channel" json:"channel"`
+}
+
+func (q *Queries) GetServiceChannelConfig(ctx context.Context, arg GetServiceChannelConfigParams) (ServiceChannelConfig, error) {
+	row := q.db.QueryRow(ctx, getServiceChannelConfig, arg.ServiceID, arg.Channel)
+	var i ServiceChannelConfig
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Channel,
+		&i.Enabled,
+		&i.Provider,
+		&i.ConfigJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
-const insertInAppNotification = `-- name: InsertInAppNotification :exec
-INSERT INTO in_app_notifications (id, user_id, title, message, metadata, created_at)
-VALUES ($1,$2,$3,$4,$5,$6)
+const getTemplateByID = `-- name: GetTemplateByID :one
+SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE id = $1 AND project_id = $2
 `
 
-type InsertInAppNotificationParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	UserID    string             `db:"user_id" json:"user_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+type GetTemplateByIDParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
 }
 
-func (q *Queries) InsertInAppNotification(ctx context.Context, arg InsertInAppNotificationParams) error {
-	_, err := q.db.Exec(ctx, insertInAppNotification,
+func (q *Queries) GetTemplateByID(ctx context.Context, arg GetTemplateByIDParams) (Template, error) {
+	row := q.db.QueryRow(ctx, getTemplateByID, arg.ID, arg.ProjectID)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Subject,
+		&i.Body,
+		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTemplateByName = `-- name: GetTemplateByName :one
+SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE project_id = $1 AND name = $2 AND channel = $3 AND is_active = true
+ORDER BY version DESC
+LIMIT 1
+`
+
+type GetTemplateByNameParams struct {
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Name      string    `db:"name" json:"name"`
+	Channel   string    `db:"channel" json:"channel"`
+}
+
+func (q *Queries) GetTemplateByName(ctx context.Context, arg GetTemplateByNameParams) (Template, error) {
+	row := q.db.QueryRow(ctx, getTemplateByName, arg.ProjectID, arg.Name, arg.Channel)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Subject,
+		&i.Body,
+		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, password_hash, created_at, updated_at
+FROM users
+WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWebhookByID = `-- name: GetWebhookByID :one
+SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+FROM webhooks
+WHERE id = $1 AND project_id = $2
+`
+
+type GetWebhookByIDParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) GetWebhookByID(ctx context.Context, arg GetWebhookByIDParams) (Webhook, error) {
+	row := q.db.QueryRow(ctx, getWebhookByID, arg.ID, arg.ProjectID)
+	var i Webhook
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Url,
+		&i.Secret,
+		&i.Events,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertDeliveryAttempt = `-- name: InsertDeliveryAttempt :exec
+INSERT INTO delivery_attempts (id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+`
+
+type InsertDeliveryAttemptParams struct {
+	ID                uuid.UUID          `db:"id" json:"id"`
+	NotificationID    uuid.UUID          `db:"notification_id" json:"notification_id"`
+	Channel           string             `db:"channel" json:"channel"`
+	Destination       string             `db:"destination" json:"destination"`
+	Status            string             `db:"status" json:"status"`
+	ErrorMessage      *string            `db:"error_message" json:"error_message"`
+	ProviderMessageID *string            `db:"provider_message_id" json:"provider_message_id"`
+	AttemptedAt       pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
+}
+
+func (q *Queries) InsertDeliveryAttempt(ctx context.Context, arg InsertDeliveryAttemptParams) error {
+	_, err := q.db.Exec(ctx, insertDeliveryAttempt,
 		arg.ID,
-		arg.UserID,
-		arg.Title,
-		arg.Message,
-		arg.Metadata,
-		arg.CreatedAt,
+		arg.NotificationID,
+		arg.Channel,
+		arg.Destination,
+		arg.Status,
+		arg.ErrorMessage,
+		arg.ProviderMessageID,
+		arg.AttemptedAt,
 	)
 	return err
 }
 
 const insertNotification = `-- name: InsertNotification :exec
-INSERT INTO notifications (id, service_id, user_id, title, message, channels, metadata, status, retry_count, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+INSERT INTO notifications (id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 `
 
 type InsertNotificationParams struct {
-	ID         uuid.UUID          `db:"id" json:"id"`
-	ServiceID  uuid.UUID          `db:"service_id" json:"service_id"`
-	UserID     string             `db:"user_id" json:"user_id"`
-	Title      string             `db:"title" json:"title"`
-	Message    string             `db:"message" json:"message"`
-	Channels   []string           `db:"channels" json:"channels"`
-	Metadata   []byte             `db:"metadata" json:"metadata"`
-	Status     string             `db:"status" json:"status"`
-	RetryCount int32              `db:"retry_count" json:"retry_count"`
-	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
 	_, err := q.db.Exec(ctx, insertNotification,
 		arg.ID,
 		arg.ServiceID,
-		arg.UserID,
 		arg.Title,
 		arg.Message,
 		arg.Channels,
+		arg.Recipient,
 		arg.Metadata,
 		arg.Status,
-		arg.RetryCount,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const insertNotificationByProject = `-- name: InsertNotificationByProject :exec
+INSERT INTO notifications (id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+`
+
+type InsertNotificationByProjectParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) InsertNotificationByProject(ctx context.Context, arg InsertNotificationByProjectParams) error {
+	_, err := q.db.Exec(ctx, insertNotificationByProject,
+		arg.ID,
+		arg.ProjectID,
+		arg.Title,
+		arg.Message,
+		arg.Channels,
+		arg.Recipient,
+		arg.Metadata,
+		arg.Status,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -160,27 +937,431 @@ func (q *Queries) InsertService(ctx context.Context, arg InsertServiceParams) er
 	return err
 }
 
-const upsertInAppNotification = `-- name: UpsertInAppNotification :exec
-INSERT INTO in_app_notifications (id, user_id, title, message, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6)
+const insertWebhookDelivery = `-- name: InsertWebhookDelivery :exec
+INSERT INTO webhook_deliveries (id, webhook_id, event, payload, status, response_code, error_message, attempted_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
-type UpsertInAppNotificationParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	UserID    string             `db:"user_id" json:"user_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+type InsertWebhookDeliveryParams struct {
+	ID           uuid.UUID          `db:"id" json:"id"`
+	WebhookID    uuid.UUID          `db:"webhook_id" json:"webhook_id"`
+	Event        string             `db:"event" json:"event"`
+	Payload      []byte             `db:"payload" json:"payload"`
+	Status       string             `db:"status" json:"status"`
+	ResponseCode *int32             `db:"response_code" json:"response_code"`
+	ErrorMessage *string            `db:"error_message" json:"error_message"`
+	AttemptedAt  pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
 }
 
-func (q *Queries) UpsertInAppNotification(ctx context.Context, arg UpsertInAppNotificationParams) error {
-	_, err := q.db.Exec(ctx, upsertInAppNotification,
+func (q *Queries) InsertWebhookDelivery(ctx context.Context, arg InsertWebhookDeliveryParams) error {
+	_, err := q.db.Exec(ctx, insertWebhookDelivery,
 		arg.ID,
-		arg.UserID,
-		arg.Title,
-		arg.Message,
-		arg.Metadata,
-		arg.CreatedAt,
+		arg.WebhookID,
+		arg.Event,
+		arg.Payload,
+		arg.Status,
+		arg.ResponseCode,
+		arg.ErrorMessage,
+		arg.AttemptedAt,
 	)
 	return err
+}
+
+const listAPIKeysByProject = `-- name: ListAPIKeysByProject :many
+SELECT id, project_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
+FROM api_keys
+WHERE project_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAPIKeysByProject(ctx context.Context, projectID uuid.UUID) ([]ApiKey, error) {
+	rows, err := q.db.Query(ctx, listAPIKeysByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ApiKey{}
+	for rows.Next() {
+		var i ApiKey
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.KeyPrefix,
+			&i.KeyHash,
+			&i.Scopes,
+			&i.Status,
+			&i.LastUsedAt,
+			&i.ExpiresAt,
+			&i.RevokedAt,
+			&i.RotatedFrom,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listActiveWebhooksForEvent = `-- name: ListActiveWebhooksForEvent :many
+SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+FROM webhooks
+WHERE project_id = $1 AND is_active = true AND $2 = ANY(events)
+`
+
+type ListActiveWebhooksForEventParams struct {
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Events    []string  `db:"events" json:"events"`
+}
+
+func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActiveWebhooksForEventParams) ([]Webhook, error) {
+	rows, err := q.db.Query(ctx, listActiveWebhooksForEvent, arg.ProjectID, arg.Events)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Webhook{}
+	for rows.Next() {
+		var i Webhook
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Url,
+			&i.Secret,
+			&i.Events,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizationsByUser = `-- name: ListOrganizationsByUser :many
+SELECT o.id, o.name, o.created_at, o.updated_at
+FROM organizations o
+JOIN organization_members om ON om.organization_id = o.id
+WHERE om.user_id = $1
+ORDER BY o.created_at ASC
+`
+
+func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listOrganizationsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectsByOrganization = `-- name: ListProjectsByOrganization :many
+SELECT id, organization_id, name, created_at, updated_at
+FROM projects
+WHERE organization_id = $1
+ORDER BY created_at ASC
+`
+
+type ListProjectsByOrganizationRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ListProjectsByOrganization(ctx context.Context, organizationID pgtype.UUID) ([]ListProjectsByOrganizationRow, error) {
+	rows, err := q.db.Query(ctx, listProjectsByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProjectsByOrganizationRow{}
+	for rows.Next() {
+		var i ListProjectsByOrganizationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProviders = `-- name: ListProviders :many
+SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+FROM providers
+WHERE project_id = $1 AND is_active = true
+ORDER BY name
+`
+
+func (q *Queries) ListProviders(ctx context.Context, projectID uuid.UUID) ([]Provider, error) {
+	rows, err := q.db.Query(ctx, listProviders, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Provider{}
+	for rows.Next() {
+		var i Provider
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Channel,
+			&i.Credentials,
+			&i.Config,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTemplates = `-- name: ListTemplates :many
+SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE project_id = $1
+ORDER BY name, channel
+`
+
+func (q *Queries) ListTemplates(ctx context.Context, projectID uuid.UUID) ([]Template, error) {
+	rows, err := q.db.Query(ctx, listTemplates, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Template{}
+	for rows.Next() {
+		var i Template
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Channel,
+			&i.Subject,
+			&i.Body,
+			&i.Version,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWebhooksByProject = `-- name: ListWebhooksByProject :many
+SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+FROM webhooks
+WHERE project_id = $1 AND is_active = true
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListWebhooksByProject(ctx context.Context, projectID uuid.UUID) ([]Webhook, error) {
+	rows, err := q.db.Query(ctx, listWebhooksByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Webhook{}
+	for rows.Next() {
+		var i Webhook
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Url,
+			&i.Secret,
+			&i.Events,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const touchAPIKeyLastUsed = `-- name: TouchAPIKeyLastUsed :exec
+UPDATE api_keys
+SET last_used_at = $1, updated_at = $2
+WHERE id = $3
+`
+
+type TouchAPIKeyLastUsedParams struct {
+	LastUsedAt pgtype.Timestamptz `db:"last_used_at" json:"last_used_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID         uuid.UUID          `db:"id" json:"id"`
+}
+
+func (q *Queries) TouchAPIKeyLastUsed(ctx context.Context, arg TouchAPIKeyLastUsedParams) error {
+	_, err := q.db.Exec(ctx, touchAPIKeyLastUsed, arg.LastUsedAt, arg.UpdatedAt, arg.ID)
+	return err
+}
+
+const updateAPIKeyStatus = `-- name: UpdateAPIKeyStatus :exec
+UPDATE api_keys
+SET status = $1, revoked_at = $2, updated_at = $3
+WHERE id = $4
+`
+
+type UpdateAPIKeyStatusParams struct {
+	Status    string             `db:"status" json:"status"`
+	RevokedAt pgtype.Timestamptz `db:"revoked_at" json:"revoked_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID        uuid.UUID          `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateAPIKeyStatus(ctx context.Context, arg UpdateAPIKeyStatusParams) error {
+	_, err := q.db.Exec(ctx, updateAPIKeyStatus,
+		arg.Status,
+		arg.RevokedAt,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	return err
+}
+
+const updateNotificationStatus = `-- name: UpdateNotificationStatus :exec
+UPDATE notifications
+SET status = $1, updated_at = $2
+WHERE id = $3
+`
+
+type UpdateNotificationStatusParams struct {
+	Status    string             `db:"status" json:"status"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID        uuid.UUID          `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateNotificationStatus(ctx context.Context, arg UpdateNotificationStatusParams) error {
+	_, err := q.db.Exec(ctx, updateNotificationStatus, arg.Status, arg.UpdatedAt, arg.ID)
+	return err
+}
+
+const updateProvider = `-- name: UpdateProvider :one
+UPDATE providers
+SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
+WHERE id = $1 AND project_id = $2
+RETURNING id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+`
+
+type UpdateProviderParams struct {
+	ID          uuid.UUID `db:"id" json:"id"`
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	Name        string    `db:"name" json:"name"`
+	Channel     string    `db:"channel" json:"channel"`
+	Credentials []byte    `db:"credentials" json:"credentials"`
+	Config      []byte    `db:"config" json:"config"`
+}
+
+func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, updateProvider,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Channel,
+		arg.Credentials,
+		arg.Config,
+	)
+	var i Provider
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTemplate = `-- name: UpdateTemplate :one
+UPDATE templates
+SET subject = $3, body = $4, version = version + 1, updated_at = now()
+WHERE id = $1 AND project_id = $2
+RETURNING id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at
+`
+
+type UpdateTemplateParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Subject   *string   `db:"subject" json:"subject"`
+	Body      string    `db:"body" json:"body"`
+}
+
+func (q *Queries) UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) (Template, error) {
+	row := q.db.QueryRow(ctx, updateTemplate,
+		arg.ID,
+		arg.ProjectID,
+		arg.Subject,
+		arg.Body,
+	)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Channel,
+		&i.Subject,
+		&i.Body,
+		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

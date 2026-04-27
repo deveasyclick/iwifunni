@@ -4,6 +4,7 @@ go 1.26.2
 
 require (
 	github.com/go-chi/chi/v5 v5.0.8
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hibiken/asynq v0.26.0
@@ -13,6 +14,7 @@ require (
 	github.com/redis/go-redis/v9 v9.14.1
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/crypto v0.48.0
 	google.golang.org/grpc v1.79.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )

@@ -9,11 +9,22 @@ import (
 	"github.com/deveasyclick/iwifunni/pkg/mailer"
 )
 
-func SendEmail(ctx context.Context, emailMailer *mailer.Mailer, recipient, title, message string, metadata map[string]string) error {
+type EmailConfig struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+}
+
+func SendEmail(ctx context.Context, emailConfig EmailConfig, recipient, title, message string, metadata map[string]string) error {
 	_ = ctx
 	logger.Get().Info().Str("recipient", recipient).Str("title", title).Msg("sending email")
-	if emailMailer == nil {
-		return fmt.Errorf("mailer is not configured")
+	if recipient == "" {
+		return fmt.Errorf("email recipient is required")
+	}
+	if emailConfig.Host == "" || emailConfig.Port == 0 || emailConfig.Username == "" || emailConfig.Password == "" || emailConfig.From == "" {
+		return fmt.Errorf("email channel config is incomplete")
 	}
 
 	body := message
@@ -30,5 +41,6 @@ func SendEmail(ctx context.Context, emailMailer *mailer.Mailer, recipient, title
 		body = builder.String()
 	}
 
+	emailMailer := mailer.NewMailer(emailConfig.Host, emailConfig.Port, emailConfig.Username, emailConfig.Password, emailConfig.From)
 	return emailMailer.Send(recipient, title, body)
 }
