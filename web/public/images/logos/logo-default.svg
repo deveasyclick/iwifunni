@@ -32,12 +32,6 @@
     <circle cx="158" cy="110" r="8" fill="white"/>
     <circle cx="110" cy="168" r="8" fill="white"/>
     <circle cx="62" cy="110" r="8" fill="white"/>
-
-    <!-- Connection lines -->
-    <line x1="110" y1="70" x2="110" y2="92" stroke="white" stroke-width="6" stroke-linecap="round"/>
-    <line x1="128" y1="110" x2="150" y2="110" stroke="white" stroke-width="6" stroke-linecap="round"/>
-    <line x1="110" y1="128" x2="110" y2="150" stroke="white" stroke-width="6" stroke-linecap="round"/>
-    <line x1="70" y1="110" x2="92" y2="110" stroke="white" stroke-width="6" stroke-linecap="round"/>
   </g>
 
   <!-- Brand text -->

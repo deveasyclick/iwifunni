@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@iconify/react";
 import StatCard from "../utilities/stat-card/StatCard";
@@ -22,20 +21,21 @@ export default function Hero() {
         </p>
 
         <div className="flex gap-4 mt-8">
-          <Button size="lg">
-            <a href="/auth/register">Get started</a>
-          </Button>
-          <Button size="lg" variant="outline">
-            <a
-              href="https://github.com/deveasyclick/iwifunni"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex gap-0.5 items-center"
-            >
-              <Icon icon="mdi:github" className="mr-2" />
-              Star on GitHub
-            </a>
-          </Button>
+          <a
+            href="/auth/register"
+            className="flex gap-0.5 items-center justify-center bg-primary px-8 py-4 rounded-md hover:bg-primary/90"
+          >
+            Get started
+          </a>
+          <a
+            href="https://github.com/deveasyclick/iwifunni"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-0.5 items-center justify-center outline outline-primary px-8 py-4 rounded-md hover:bg-primary"
+          >
+            <Icon icon="mdi:github" className="mr-2" />
+            Star on GitHub
+          </a>
         </div>
 
         <div className="flex gap-6 mt-6 text-sm text-white/60">

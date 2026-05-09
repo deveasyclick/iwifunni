@@ -1,11 +1,16 @@
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function Navbar() {
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
       <div className="flex items-center gap-2 text-lg font-semibold">
-        <div className="w-6 h-6 rounded-full bg-blue-500" />
-        Iwifunni
+        <Image
+          src="images/logos/logo-light-204x36.svg"
+          alt="logo"
+          width={204}
+          height={36}
+        />
       </div>
 
       <div className="hidden md:flex gap-6 text-sm text-white/70">
