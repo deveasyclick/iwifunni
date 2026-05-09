@@ -23,7 +23,7 @@ export default function Hero() {
         <div className="flex gap-4 mt-8">
           <a
             href="/auth/register"
-            className="flex gap-0.5 items-center justify-center bg-primary px-8 py-4 rounded-md hover:bg-primary/90"
+            className="flex gap-0.5 items-center justify-center bg-primary px-8 py-3 rounded-md hover:bg-primary/90"
           >
             Get started
           </a>
@@ -31,7 +31,7 @@ export default function Hero() {
             href="https://github.com/deveasyclick/iwifunni"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex gap-0.5 items-center justify-center outline outline-primary px-8 py-4 rounded-md hover:bg-primary"
+            className="flex gap-0.5 items-center justify-center outline outline-primary px-8 py-3 rounded-md hover:bg-primary"
           >
             <Icon icon="mdi:github" className="mr-2" />
             Star on GitHub
