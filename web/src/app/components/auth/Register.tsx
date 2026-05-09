@@ -58,7 +58,7 @@ export const Register = () => {
             />
           </div>
           <Button className="w-full mt-6" asChild>
-            <Link href="/">Sign Up</Link>
+            <Link href="/dashboard">Sign Up</Link>
           </Button>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
