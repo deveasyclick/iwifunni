@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import Hero from "./components/sections/Hero";
@@ -16,12 +15,12 @@ export default function Home() {
       <HowItWorks />
       {/* <CTA /> */}
       <section className="px-6 pb-20">
-        <div className="max-w-5xl mx-auto bg-linear-to-r from-blue-600/20 to-purple-600/20 p-10 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="max-w-5xl mx-auto bg-linear-to-r from-lightprimary to-lightinfo p-10 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
             <h3 className="text-xl font-semibold">
               Ready to ship better notifications?
             </h3>
-            <p className="text-white/60">
+            <p className="text-muted-foreground">
               Join developers building better experiences.
             </p>
           </div>
@@ -29,7 +28,7 @@ export default function Home() {
           <div className="flex gap-4">
             <a
               href="/auth/register"
-              className="flex gap-0.5 items-center justify-center bg-primary px-8 py-3 rounded-md hover:bg-primary/90"
+              className="flex gap-0.5 items-center justify-center bg-primary px-8 py-3 rounded-md hover:bg-primaryemphasis"
             >
               Get started
             </a>
