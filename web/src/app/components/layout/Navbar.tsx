@@ -1,19 +1,14 @@
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+import FullLogo from "../shared/FullLogo";
 
 export default function Navbar() {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+    <div className="flex items-center justify-between px-6 py-4 border-b border-border">
       <div className="flex items-center gap-2 text-lg font-semibold">
-        <Image
-          src="images/logos/logo-light-204x36.svg"
-          alt="logo"
-          width={204}
-          height={36}
-        />
+        <FullLogo />
       </div>
 
-      <div className="hidden md:flex gap-6 text-sm text-white/70">
+      <div className="hidden md:flex gap-6 text-sm text-muted-foreground">
         <span>Features</span>
         <span>Docs</span>
         <span>Pricing</span>
@@ -21,12 +16,20 @@ export default function Navbar() {
       </div>
 
       <div className="flex gap-3">
-        <Button variant="ghost">
-          <a href="/auth/login">Sign in</a>
-        </Button>
-        <Button>
-          <a href="/auth/register">Get started</a>
-        </Button>
+        <a
+          href="/auth/login"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex gap-0.5 items-center justify-center px-4 py-2 rounded-md"
+        >
+          Sign in
+        </a>
+        <a
+          href="/auth/register"
+          className="flex gap-0.5 items-center justify-center bg-primary px-4 py-2 rounded-md hover:bg-primaryemphasis"
+        >
+          Get started
+        </a>
       </div>
     </div>
   );
