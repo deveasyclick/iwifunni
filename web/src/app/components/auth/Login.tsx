@@ -63,7 +63,7 @@ export const Login = () => {
             </Link>
           </div>
           <Button className="w-full" asChild>
-            <Link href="/">Sign In</Link>
+            <Link href="/dashboard">Sign In</Link>
           </Button>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
