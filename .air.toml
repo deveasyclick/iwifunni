@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  cmd = "go build -o ./tmp/iwifunni ./cmd/iwifunni"
+  cmd = "go build -o ./tmp/iwifunni ./cmd/api"
   delay = 1000
   entrypoint = "./tmp/iwifunni"
   exclude_dir = ["testdata","tmp"]

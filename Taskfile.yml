@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   MIGRATIONS_DIR: ./migrations
+  FRONTEND_DIR: ./web
   DB_URL: postgres://yusuf:123456@localhost:5434/iwifunni?sslmode=disable
 
 tasks:
@@ -14,6 +15,13 @@ tasks:
     cmds:
       - task: db
       - air
+      - echo "✅ All services running."
+
+  web:
+    desc: Start frontend
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - pnpm dev
       - echo "✅ All services running."
 
   build:

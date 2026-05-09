@@ -71,6 +71,7 @@ Fire webhooks for subscribed events
 - Redis
 - goose CLI (`go install github.com/pressly/goose/v3/cmd/goose@latest`)
 - sqlc CLI (`go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`)
+- Taskfile (`https://taskfile.dev/docs/installation`)
 
 ### Environment
 
