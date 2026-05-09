@@ -27,12 +27,20 @@ export default function Home() {
           </div>
 
           <div className="flex gap-4">
-            <Button size="lg">
-              <a href="/auth/register">Get started</a>
-            </Button>
-            <Button size="lg" variant="outline">
+            <a
+              href="/auth/register"
+              className="flex gap-0.5 items-center justify-center bg-primary px-8 py-3 rounded-md hover:bg-primary/90"
+            >
+              Get started
+            </a>
+            <a
+              href="https://github.com/deveasyclick/iwifunni"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex gap-0.5 items-center justify-center outline outline-primary px-8 py-3 rounded-md hover:bg-primary text-primary"
+            >
               Read the docs
-            </Button>
+            </a>
           </div>
         </div>
       </section>
