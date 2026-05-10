@@ -270,21 +270,25 @@ API Key required
 
 ```json id="n1"
 {
+  "workflow_id": "wf_123",
   "to": {
-    "email": "user@example.com",
-    "phone": "+2348000000000"
+    "subscriber_id": "sub_123"
   },
-  "channel": "email",
-  "template_id": "tpl_123",
-  "variables": {
+  "data": {
     "name": "John",
     "code": "123456"
-  },
-  "metadata": {
-    "source": "signup"
   }
 }
 ```
+
+### Targeting Rules
+
+- `to` is subscriber-centric.
+- Existing subscriber: send `to.subscriber_id`.
+- New subscriber on send: send `to.subscriber_id` plus subscriber details such as `email`, `phone`, or `push_token`.
+- For bulk notifications: POST /notifications once per subscriber; one notification record is created per request.
+- Subscribers can also be created explicitly via the Subscribers API before sending.
+- Channel selection is derived from `workflow_id`; request payload does not accept `channel` or `channels`.
 
 ---
 

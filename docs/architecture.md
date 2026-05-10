@@ -203,6 +203,9 @@ The registry is responsible for:
 
 * Notifications are immutable once created
 * Delivery is asynchronous
+* One notification record maps to one subscriber (`subscriber_id`)
+* Channels are resolved from `workflow_id` (not passed directly on send request)
+* Bulk delivery is modeled as multiple notification records (one per subscriber)
 * Each notification has a lifecycle:
 
   * queued
@@ -210,6 +213,13 @@ The registry is responsible for:
   * sent
   * delivered
   * failed
+
+### Subscriber Targeting Model
+
+* `POST /notifications` accepts a single subscriber target in `to`
+* Existing subscriber: `to.subscriber_id` is required
+* New subscriber on send: `to.subscriber_id` plus contact fields (e.g., email/phone/push token)
+* For bulk sends, call `POST /notifications` per subscriber
 
 ---
 

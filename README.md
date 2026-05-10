@@ -2,7 +2,7 @@
 
 A multi-tenant, API-driven notification platform in Go.
 
-Iwifunni lets your backend services and SDKs send notifications through a single REST API. Projects are the top-level tenant unit. Each project owns its own providers, templates, API keys, and webhooks. Notifications are processed asynchronously via a Redis-backed queue and delivered through pluggable channel providers.
+Iwifunni lets your backend services and SDKs send notifications through a single REST API. Projects are the top-level tenant unit. Each project owns its own providers, templates, API keys, subscribers, and webhooks. Notifications are processed asynchronously via a Redis-backed queue and delivered through pluggable channel providers.
 
 ## Supported Delivery Channels
 
@@ -57,10 +57,11 @@ Fire webhooks for subscribed events
 
 1. Client sends `POST /notifications` with `Authorization: Bearer nk_live_<key>`.
 2. Middleware resolves the project and enforces rate limits.
-3. Request is enqueued; API returns immediately.
-4. Worker stores the notification record (`pending`), resolves the active provider for each requested channel from the project's provider config, and attempts delivery.
-5. Notification status is updated (`sent`, `partial_failed`, or `failed`).
-6. Webhooks subscribed to the resulting event are called asynchronously.
+3. Request includes `workflow_id`, `to` subscriber target, and `data`; API resolves existing subscribers or creates new subscribers when needed.
+4. Request is enqueued; API returns immediately with one notification record per subscriber.
+5. Worker stores the notification record (`pending`), resolves channels from the workflow, skips unsubscribed/bounced subscriber channels, resolves active providers, and attempts delivery.
+6. Notification status is updated (`sent`, `partial_failed`, or `failed`).
+7. Webhooks subscribed to the resulting event are called asynchronously.
 
 ## Getting Started
 
@@ -123,14 +124,21 @@ docker compose up --build
 **Example request:**
 ```json
 {
-  "title": "Welcome",
-  "message": "Thanks for signing up!",
-  "channels": ["email"],
-  "recipient": {
-    "email": "user@example.com"
+  "workflow_id": "wf_welcome",
+  "to": {
+    "subscriber_id": "sub_123"
+  },
+  "data": {
+    "name": "John Doe"
   }
 }
 ```
+
+Rules:
+- Existing subscriber requires `to.subscriber_id`.
+- New subscriber via notification send requires `to.subscriber_id` plus contact fields (for example `email`, `phone`, `push_token`).
+- For bulk sends, call POST /notifications once per subscriber; one notification record is created per request.
+- Channels are selected by workflow; `channel` and `channels` are not accepted on this endpoint.
 
 ### Templates
 
@@ -209,7 +217,7 @@ go test ./...
 curl -X POST http://localhost:8080/notifications \
   -H "Authorization: ApiKey YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Hello","message":"Welcome","channels":["push","email"],"recipient":{"email":"user@example.com","push_tokens":["push-token-1"],"reference":"customer-123"},"metadata":{"order_id":"abc"}}'
+  -d '{"workflow_id":"wf_welcome","to":{"subscriber_id":"sub_123","email":"user@example.com"},"data":{"title":"Hello","message":"Welcome"}}'
 ```
 
 ## Manual Testing
@@ -278,8 +286,10 @@ go run ./cmd/iwifunni
 curl -i -X POST http://localhost:8080/notifications \
   -H "Authorization: ApiKey YOUR_GENERATED_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Welcome","message":"Your order has shipped","channels":["push","email","sms"],"recipient":{"email":"user@example.com","phone_number":"+2348012345678","push_tokens":["device-token-1"],"reference":"customer-123"},"metadata":{"order_id":"A123"}}'
+  -d '{"workflow_id":"wf_order_update","to":{"subscriber_id":"sub_123"},"data":{"title":"Welcome","message":"Your order has shipped"}}'
 ```
+
+For bulk sends, POST /notifications once per subscriber.
 
 ### 7. Verify persistence and delivery status
 
@@ -291,7 +301,7 @@ Confirm notification persistence with:
 
 ```bash
 psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "select id, service_id, title, channels, recipient, status, created_at from notifications order by created_at desc limit 5;"
+  -c "select id, service_id, subscriber_id, workflow_id, data, status, created_at from notifications order by created_at desc limit 5;"
 ```
 
 Confirm channel attempts with:
@@ -303,13 +313,13 @@ psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
 
 ### Manual test scenarios
 
-#### Missing recipient destination
+#### Missing subscriber target
 
-Send a payload without `recipient.email`, `recipient.phone_number`, and `recipient.push_tokens` and confirm `400 Bad Request`.
+Send a payload without `to.subscriber_id` and confirm `400 Bad Request`.
 
-#### Channel disabled
+#### Unsubscribed channel
 
-Disable a channel in `service_channel_configs`, request that channel, and confirm delivery attempt is recorded as failed with the channel configuration error.
+Use a subscriber that is `unsubscribed` for one workflow channel and confirm the channel is skipped.
 
 #### Invalid API key
 
@@ -317,7 +327,7 @@ Send the same request with a bad API key and confirm the API returns `401 Unauth
 
 #### Missing required fields
 
-Remove `title`, `message`, or `channels` and confirm the API returns `400 Bad Request`.
+Remove `workflow_id` or `data` and confirm the API returns `400 Bad Request`.
 
 #### Rate limiting
 
