@@ -45,9 +45,9 @@ type Notification struct {
 	Recipient []byte             `db:"recipient" json:"recipient"`
 	Metadata  []byte             `db:"metadata" json:"metadata"`
 	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
 }
 
 type Organization struct {
@@ -68,9 +68,9 @@ type OrganizationMember struct {
 type Project struct {
 	ID             uuid.UUID          `db:"id" json:"id"`
 	Name           string             `db:"name" json:"name"`
+	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
 	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
 }
 
 type ProjectMembership struct {

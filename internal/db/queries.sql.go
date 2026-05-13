@@ -164,7 +164,7 @@ func (q *Queries) CreateProjectMembership(ctx context.Context, arg CreateProject
 const createProjectWithOrg = `-- name: CreateProjectWithOrg :one
 INSERT INTO projects (id, organization_id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, created_at, updated_at, organization_id
+RETURNING id, name, organization_id, created_at, updated_at
 `
 
 type CreateProjectWithOrgParams struct {
@@ -187,9 +187,9 @@ func (q *Queries) CreateProjectWithOrg(ctx context.Context, arg CreateProjectWit
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.OrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OrganizationID,
 	)
 	return i, err
 }
