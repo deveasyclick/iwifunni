@@ -53,14 +53,14 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         name: "Subscribers",
         icon: "mynaui:users",
-        url: "/dashboard/apps/subscribers",
+        url: "/dashboard/subscribers",
         isPro: false,
       },
       {
         id: uniqueId(),
         name: "Notifications",
         icon: "ant-design:notification-outlined",
-        url: "/dashboard/apps/tickets",
+        url: "/dashboard/notifications",
         isPro: false,
       },
       {

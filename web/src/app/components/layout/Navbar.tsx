@@ -18,8 +18,6 @@ export default function Navbar() {
       <div className="flex gap-3">
         <a
           href="/auth/login"
-          target="_blank"
-          rel="noopener noreferrer"
           className="flex gap-0.5 items-center justify-center px-4 py-2 rounded-md"
         >
           Sign in
