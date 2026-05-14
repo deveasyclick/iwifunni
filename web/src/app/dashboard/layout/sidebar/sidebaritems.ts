@@ -67,7 +67,7 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         name: "Templates",
         icon: "streamline-pixel:content-files-note",
-        url: "/dashboard/apps/templates",
+        url: "/dashboard/settings/templates",
         isPro: false,
       },
       {
