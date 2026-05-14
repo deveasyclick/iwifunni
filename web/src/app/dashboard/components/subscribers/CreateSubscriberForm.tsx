@@ -126,32 +126,49 @@ const CreateSubscriberForm = ({
 
     setErrors({});
 
-    const newSubscriber: SubscriberType = {
-      id: Date.now().toString(), // Simple ID generation
-      name: parsed.data.name,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-      pushToken: parsed.data.pushToken,
-      channels: parsed.data.channels,
-      status: {
-        email: "subscribed",
-        sms: parsed.data.channels.includes("sms") ? "subscribed" : undefined,
-        push: parsed.data.channels.includes("push") ? "subscribed" : undefined,
-      },
-      tags: parsed.data.tags,
-      subscriptionDate: new Date(),
-      deleted: false,
-    };
-
     try {
-      await fetch("/api/subscriber", {
+      const response = await fetch("/api/subscriber", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSubscriber),
+        body: JSON.stringify({
+          name: parsed.data.name,
+          email: parsed.data.email,
+          phone: parsed.data.phone,
+          pushToken: parsed.data.pushToken,
+          channels: parsed.data.channels,
+          status: {
+            email: "subscribed",
+            sms: parsed.data.channels.includes("sms") ? "subscribed" : undefined,
+            push: parsed.data.channels.includes("push") ? "subscribed" : undefined,
+          },
+          tags: parsed.data.tags,
+        }),
       });
 
+      if (!response.ok) {
+        throw new Error("Failed to create subscriber");
+      }
+
+      const payload = await response.json();
+      const createdSubscriber = payload?.data as SubscriberType | undefined;
+
       resetForm();
-      onCreated?.(newSubscriber);
+      onCreated?.(createdSubscriber ?? {
+        id: Date.now().toString(),
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        pushToken: parsed.data.pushToken,
+        channels: parsed.data.channels,
+        status: {
+          email: "subscribed",
+          sms: parsed.data.channels.includes("sms") ? "subscribed" : undefined,
+          push: parsed.data.channels.includes("push") ? "subscribed" : undefined,
+        },
+        tags: parsed.data.tags,
+        subscriptionDate: new Date(),
+        deleted: false,
+      });
     } catch (error) {
       console.error("Failed to create subscriber", error);
     }

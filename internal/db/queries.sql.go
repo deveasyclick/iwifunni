@@ -259,6 +259,70 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return err
 }
 
+const createSubscriber = `-- name: CreateSubscriber :one
+INSERT INTO subscribers (
+	id,
+	project_id,
+	name,
+	email,
+	phone,
+	push_token,
+	channels,
+	status,
+	tags,
+	metadata
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, project_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+`
+
+type CreateSubscriberParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Name      string    `db:"name" json:"name"`
+	Email     *string   `db:"email" json:"email"`
+	Phone     *string   `db:"phone" json:"phone"`
+	PushToken *string   `db:"push_token" json:"push_token"`
+	Channels  []string  `db:"channels" json:"channels"`
+	Status    []byte    `db:"status" json:"status"`
+	Tags      []string  `db:"tags" json:"tags"`
+	Metadata  []byte    `db:"metadata" json:"metadata"`
+}
+
+func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, createSubscriber,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.PushToken,
+		arg.Channels,
+		arg.Status,
+		arg.Tags,
+		arg.Metadata,
+	)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createTemplate = `-- name: CreateTemplate :one
 INSERT INTO templates (id, project_id, name, channel, subject, body)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -363,6 +427,57 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 	return i, err
 }
 
+const createWorkflow = `-- name: CreateWorkflow :one
+INSERT INTO workflows (
+	id,
+	project_id,
+	key,
+	name,
+	description,
+	channels,
+	template_ids,
+	is_active
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+RETURNING id, project_id, key, name, description, channels, template_ids, is_active, created_at, updated_at
+`
+
+type CreateWorkflowParams struct {
+	ID          uuid.UUID `db:"id" json:"id"`
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	Key         string    `db:"key" json:"key"`
+	Name        string    `db:"name" json:"name"`
+	Description *string   `db:"description" json:"description"`
+	Channels    []string  `db:"channels" json:"channels"`
+	TemplateIds []byte    `db:"template_ids" json:"template_ids"`
+}
+
+func (q *Queries) CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, createWorkflow,
+		arg.ID,
+		arg.ProjectID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteProvider = `-- name: DeleteProvider :exec
 UPDATE providers
 SET is_active = false, updated_at = now()
@@ -386,6 +501,22 @@ WHERE token_hash = $1
 
 func (q *Queries) DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error {
 	_, err := q.db.Exec(ctx, deleteRefreshTokenByHash, tokenHash)
+	return err
+}
+
+const deleteSubscriber = `-- name: DeleteSubscriber :exec
+UPDATE subscribers
+SET deleted_at = now(), updated_at = now()
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL
+`
+
+type DeleteSubscriberParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) DeleteSubscriber(ctx context.Context, arg DeleteSubscriberParams) error {
+	_, err := q.db.Exec(ctx, deleteSubscriber, arg.ID, arg.ProjectID)
 	return err
 }
 
@@ -418,6 +549,22 @@ type DeleteWebhookParams struct {
 
 func (q *Queries) DeleteWebhook(ctx context.Context, arg DeleteWebhookParams) error {
 	_, err := q.db.Exec(ctx, deleteWebhook, arg.ID, arg.ProjectID)
+	return err
+}
+
+const deleteWorkflow = `-- name: DeleteWorkflow :exec
+UPDATE workflows
+SET is_active = false, updated_at = now()
+WHERE id = $1 AND project_id = $2
+`
+
+type DeleteWorkflowParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) DeleteWorkflow(ctx context.Context, arg DeleteWorkflowParams) error {
+	_, err := q.db.Exec(ctx, deleteWorkflow, arg.ID, arg.ProjectID)
 	return err
 }
 
@@ -618,6 +765,36 @@ func (q *Queries) GetProjectMembershipByUser(ctx context.Context, arg GetProject
 	return i, err
 }
 
+const getProjectNotificationByID = `-- name: GetProjectNotificationByID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+FROM notifications
+WHERE id = $1 AND project_id = $2
+`
+
+type GetProjectNotificationByIDParams struct {
+	ID        uuid.UUID   `db:"id" json:"id"`
+	ProjectID pgtype.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) GetProjectNotificationByID(ctx context.Context, arg GetProjectNotificationByIDParams) (Notification, error) {
+	row := q.db.QueryRow(ctx, getProjectNotificationByID, arg.ID, arg.ProjectID)
+	var i Notification
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.ProjectID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getProviderByID = `-- name: GetProviderByID :one
 SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
 FROM providers
@@ -706,6 +883,39 @@ func (q *Queries) GetServiceChannelConfig(ctx context.Context, arg GetServiceCha
 		&i.Enabled,
 		&i.Provider,
 		&i.ConfigJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSubscriberByID = `-- name: GetSubscriberByID :one
+SELECT id, project_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL
+`
+
+type GetSubscriberByIDParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, getSubscriberByID, arg.ID, arg.ProjectID)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -810,6 +1020,34 @@ func (q *Queries) GetWebhookByID(ctx context.Context, arg GetWebhookByIDParams) 
 		&i.Url,
 		&i.Secret,
 		&i.Events,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowByID = `-- name: GetWorkflowByID :one
+SELECT id, project_id, key, name, description, channels, template_ids, is_active, created_at, updated_at FROM workflows
+WHERE id = $1 AND project_id = $2
+`
+
+type GetWorkflowByIDParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+}
+
+func (q *Queries) GetWorkflowByID(ctx context.Context, arg GetWorkflowByIDParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, getWorkflowByID, arg.ID, arg.ProjectID)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1081,6 +1319,45 @@ func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID)
 	return items, nil
 }
 
+const listProjectNotifications = `-- name: ListProjectNotifications :many
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+FROM notifications
+WHERE project_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListProjectNotifications(ctx context.Context, projectID pgtype.UUID) ([]Notification, error) {
+	rows, err := q.db.Query(ctx, listProjectNotifications, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Notification{}
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.ID,
+			&i.ServiceID,
+			&i.Title,
+			&i.Message,
+			&i.Channels,
+			&i.Recipient,
+			&i.Metadata,
+			&i.Status,
+			&i.ProjectID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectsByOrganization = `-- name: ListProjectsByOrganization :many
 SELECT id, organization_id, name, created_at, updated_at
 FROM projects
@@ -1159,6 +1436,48 @@ func (q *Queries) ListProviders(ctx context.Context, projectID uuid.UUID) ([]Pro
 	return items, nil
 }
 
+const listSubscribersByProject = `-- name: ListSubscribersByProject :many
+SELECT id, project_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+WHERE project_id = $1 AND deleted_at IS NULL
+ORDER BY subscription_date DESC
+`
+
+func (q *Queries) ListSubscribersByProject(ctx context.Context, projectID uuid.UUID) ([]Subscriber, error) {
+	rows, err := q.db.Query(ctx, listSubscribersByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscriber{}
+	for rows.Next() {
+		var i Subscriber
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.PushToken,
+			&i.Channels,
+			&i.Status,
+			&i.Tags,
+			&i.SubscriptionDate,
+			&i.LastNotificationDate,
+			&i.Metadata,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTemplates = `-- name: ListTemplates :many
 SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
 WHERE project_id = $1
@@ -1218,6 +1537,43 @@ func (q *Queries) ListWebhooksByProject(ctx context.Context, projectID uuid.UUID
 			&i.Url,
 			&i.Secret,
 			&i.Events,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowsByProject = `-- name: ListWorkflowsByProject :many
+SELECT id, project_id, key, name, description, channels, template_ids, is_active, created_at, updated_at FROM workflows
+WHERE project_id = $1 AND is_active = true
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListWorkflowsByProject(ctx context.Context, projectID uuid.UUID) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, listWorkflowsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1329,6 +1685,68 @@ func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) 
 	return i, err
 }
 
+const updateSubscriber = `-- name: UpdateSubscriber :one
+UPDATE subscribers
+SET name = $3,
+	email = $4,
+	phone = $5,
+	push_token = $6,
+	channels = $7,
+	status = $8,
+	tags = $9,
+	metadata = $10,
+	updated_at = now()
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL
+RETURNING id, project_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+`
+
+type UpdateSubscriberParams struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	Name      string    `db:"name" json:"name"`
+	Email     *string   `db:"email" json:"email"`
+	Phone     *string   `db:"phone" json:"phone"`
+	PushToken *string   `db:"push_token" json:"push_token"`
+	Channels  []string  `db:"channels" json:"channels"`
+	Status    []byte    `db:"status" json:"status"`
+	Tags      []string  `db:"tags" json:"tags"`
+	Metadata  []byte    `db:"metadata" json:"metadata"`
+}
+
+func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, updateSubscriber,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.PushToken,
+		arg.Channels,
+		arg.Status,
+		arg.Tags,
+		arg.Metadata,
+	)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateTemplate = `-- name: UpdateTemplate :one
 UPDATE templates
 SET subject = $3, body = $4, version = version + 1, updated_at = now()
@@ -1359,6 +1777,57 @@ func (q *Queries) UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) 
 		&i.Subject,
 		&i.Body,
 		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflow = `-- name: UpdateWorkflow :one
+UPDATE workflows
+SET key = $3,
+	name = $4,
+	description = $5,
+	channels = $6,
+	template_ids = $7,
+	is_active = $8,
+	updated_at = now()
+WHERE id = $1 AND project_id = $2
+RETURNING id, project_id, key, name, description, channels, template_ids, is_active, created_at, updated_at
+`
+
+type UpdateWorkflowParams struct {
+	ID          uuid.UUID `db:"id" json:"id"`
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	Key         string    `db:"key" json:"key"`
+	Name        string    `db:"name" json:"name"`
+	Description *string   `db:"description" json:"description"`
+	Channels    []string  `db:"channels" json:"channels"`
+	TemplateIds []byte    `db:"template_ids" json:"template_ids"`
+	IsActive    bool      `db:"is_active" json:"is_active"`
+}
+
+func (q *Queries) UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, updateWorkflow,
+		arg.ID,
+		arg.ProjectID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
+		arg.IsActive,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,

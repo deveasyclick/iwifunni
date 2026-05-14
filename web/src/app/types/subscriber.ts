@@ -15,7 +15,7 @@ export interface SubscriberType {
   channels: ("email" | "sms" | "push")[];
   status: SubscriberChannelStatus;
   tags: string[];
-  subscriptionDate: Date;
-  lastNotificationDate?: Date;
+  subscriptionDate: string | Date;
+  lastNotificationDate?: string | Date;
   deleted: boolean;
 }

@@ -24,6 +24,7 @@ export default function SubscriberDetailPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [pushToken, setPushToken] = useState("");
   const [channels, setChannels] = useState<("email" | "sms" | "push")[]>([]);
   const [tags, setTags] = useState("");
   const [tagList, setTagList] = useState<string[]>([]);
@@ -43,6 +44,7 @@ export default function SubscriberDetailPage() {
           setName(data.data.name);
           setEmail(data.data.email || "");
           setPhone(data.data.phone || "");
+          setPushToken(data.data.pushToken || "");
           setChannels(data.data.channels);
           setTagList(data.data.tags || []);
           setStatus(data.data.status.email || "subscribed");
@@ -61,7 +63,9 @@ export default function SubscriberDetailPage() {
     checked: boolean,
   ) => {
     if (checked) {
-      setChannels([...channels, channel]);
+      setChannels((current) =>
+        current.includes(channel) ? current : [...current, channel],
+      );
     } else {
       setChannels(channels.filter((c) => c !== channel));
     }
@@ -79,16 +83,29 @@ export default function SubscriberDetailPage() {
   };
 
   const handleUpdate = async () => {
-    if (!name || !email) {
-      alert("Please fill out name and email fields.");
+    if (!name) {
+      alert("Please fill out the name field.");
+      return;
+    }
+    if (channels.includes("email") && !email) {
+      alert("Email is required when Email channel is selected.");
+      return;
+    }
+    if (channels.includes("sms") && !phone) {
+      alert("Phone is required when SMS channel is selected.");
+      return;
+    }
+    if (channels.includes("push") && !pushToken) {
+      alert("Push token is required when Push channel is selected.");
       return;
     }
 
     const updatedSubscriber: SubscriberType = {
       id: subscriberId,
       name,
-      email,
+      email: email || undefined,
       phone: phone || undefined,
+      pushToken: pushToken || undefined,
       channels,
       status: {
         email: status,
@@ -102,15 +119,21 @@ export default function SubscriberDetailPage() {
     };
 
     try {
-      await fetch(`/api/subscriber/${subscriberId}`, {
+      const response = await fetch(`/api/subscriber/${subscriberId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedSubscriber),
       });
 
+      if (!response.ok) {
+        throw new Error("Failed to update subscriber");
+      }
+
+      const data = await response.json();
+      const nextSubscriber = (data?.data as SubscriberType | undefined) ?? updatedSubscriber;
+
       setEditing(false);
-      setSubscriber(updatedSubscriber);
-      // Show success message
+      setSubscriber(nextSubscriber);
       alert("Subscriber updated successfully");
     } catch (error) {
       console.error("Failed to update subscriber", error);
@@ -135,7 +158,7 @@ export default function SubscriberDetailPage() {
   const BCrumb = [
     { to: "/", title: "Home" },
     { to: "/dashboard/subscribers", title: "Subscribers" },
-    { title: email || "Subscriber" },
+    { title: name || email || "Subscriber" },
   ];
 
   if (loading) {
@@ -265,6 +288,20 @@ export default function SubscriberDetailPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+1 (555) 000-0000"
+                disabled={!editing}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="pushToken" className="mb-2 block">
+                Push Token
+              </Label>
+              <Input
+                id="pushToken"
+                value={pushToken}
+                onChange={(e) => setPushToken(e.target.value)}
+                placeholder="Push token"
                 disabled={!editing}
                 className="w-full"
               />

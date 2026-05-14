@@ -122,6 +122,24 @@ type ServiceChannelConfig struct {
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
+type Subscriber struct {
+	ID                   uuid.UUID          `db:"id" json:"id"`
+	ProjectID            uuid.UUID          `db:"project_id" json:"project_id"`
+	Name                 string             `db:"name" json:"name"`
+	Email                *string            `db:"email" json:"email"`
+	Phone                *string            `db:"phone" json:"phone"`
+	PushToken            *string            `db:"push_token" json:"push_token"`
+	Channels             []string           `db:"channels" json:"channels"`
+	Status               []byte             `db:"status" json:"status"`
+	Tags                 []string           `db:"tags" json:"tags"`
+	SubscriptionDate     pgtype.Timestamptz `db:"subscription_date" json:"subscription_date"`
+	LastNotificationDate pgtype.Timestamptz `db:"last_notification_date" json:"last_notification_date"`
+	Metadata             []byte             `db:"metadata" json:"metadata"`
+	DeletedAt            pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+	CreatedAt            pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type Template struct {
 	ID        uuid.UUID          `db:"id" json:"id"`
 	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
@@ -163,4 +181,17 @@ type WebhookDelivery struct {
 	ResponseCode *int32             `db:"response_code" json:"response_code"`
 	ErrorMessage *string            `db:"error_message" json:"error_message"`
 	AttemptedAt  pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
+}
+
+type Workflow struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ProjectID   uuid.UUID          `db:"project_id" json:"project_id"`
+	Key         string             `db:"key" json:"key"`
+	Name        string             `db:"name" json:"name"`
+	Description *string            `db:"description" json:"description"`
+	Channels    []string           `db:"channels" json:"channels"`
+	TemplateIds []byte             `db:"template_ids" json:"template_ids"`
+	IsActive    bool               `db:"is_active" json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }

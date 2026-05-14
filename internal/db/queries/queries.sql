@@ -26,6 +26,17 @@ WHERE service_id = $1 AND channel = $2;
 INSERT INTO notifications (id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
 
+-- name: ListProjectNotifications :many
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+FROM notifications
+WHERE project_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetProjectNotificationByID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+FROM notifications
+WHERE id = $1 AND project_id = $2;
+
 -- name: UpdateNotificationStatus :exec
 UPDATE notifications
 SET status = $1, updated_at = $2
@@ -146,6 +157,90 @@ RETURNING *;
 
 -- name: DeleteTemplate :exec
 UPDATE templates
+SET is_active = false, updated_at = now()
+WHERE id = $1 AND project_id = $2;
+
+-- name: CreateSubscriber :one
+INSERT INTO subscribers (
+	id,
+	project_id,
+	name,
+	email,
+	phone,
+	push_token,
+	channels,
+	status,
+	tags,
+	metadata
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING *;
+
+-- name: ListSubscribersByProject :many
+SELECT * FROM subscribers
+WHERE project_id = $1 AND deleted_at IS NULL
+ORDER BY subscription_date DESC;
+
+-- name: GetSubscriberByID :one
+SELECT * FROM subscribers
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL;
+
+-- name: UpdateSubscriber :one
+UPDATE subscribers
+SET name = $3,
+	email = $4,
+	phone = $5,
+	push_token = $6,
+	channels = $7,
+	status = $8,
+	tags = $9,
+	metadata = $10,
+	updated_at = now()
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL
+RETURNING *;
+
+-- name: DeleteSubscriber :exec
+UPDATE subscribers
+SET deleted_at = now(), updated_at = now()
+WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL;
+
+-- name: CreateWorkflow :one
+INSERT INTO workflows (
+	id,
+	project_id,
+	key,
+	name,
+	description,
+	channels,
+	template_ids,
+	is_active
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+RETURNING *;
+
+-- name: ListWorkflowsByProject :many
+SELECT * FROM workflows
+WHERE project_id = $1 AND is_active = true
+ORDER BY created_at DESC;
+
+-- name: GetWorkflowByID :one
+SELECT * FROM workflows
+WHERE id = $1 AND project_id = $2;
+
+-- name: UpdateWorkflow :one
+UPDATE workflows
+SET key = $3,
+	name = $4,
+	description = $5,
+	channels = $6,
+	template_ids = $7,
+	is_active = $8,
+	updated_at = now()
+WHERE id = $1 AND project_id = $2
+RETURNING *;
+
+-- name: DeleteWorkflow :exec
+UPDATE workflows
 SET is_active = false, updated_at = now()
 WHERE id = $1 AND project_id = $2;
 
