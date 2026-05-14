@@ -74,23 +74,23 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         name: "Setting",
         icon: "mdi-light:settings",
-        url: "/dashboard/apps/settings",
+        url: "/dashboard/settings",
         isPro: false,
         children: [
           {
             id: uniqueId(),
             name: "API Keys",
-            url: "/dashboard/apps/settings/apikey",
+            url: "/dashboard/settings/apikey",
           },
           {
             id: uniqueId(),
             name: "Webhooks",
-            url: "/dashboard/apps/settings/webhook",
+            url: "/dashboard/settings/webhook",
           },
           {
             id: uniqueId(),
             name: "Integrations",
-            url: "/dashboard/apps/settings/integrations",
+            url: "/dashboard/settings/integrations",
           },
         ],
       },
