@@ -14,6 +14,7 @@ tasks:
     desc: Start dev server
     cmds:
       - task: db
+      - task: web
       - air
       - echo "✅ All services running."
 
@@ -24,10 +25,16 @@ tasks:
       - pnpm dev
       - echo "✅ All services running."
 
+  worker:
+    desc: Start workers
+    cmds:
+      - go run -o ./cmd/worker/main.go
+      - echo "✅ All workers running."
+
   build:
     desc: Build app
     cmds:
-      - go build -o ./iwifunni ./cmd/iwifunni/main.go
+      - go build -o ./iwifunni ./cmd/api/main.go
       - echo "✅ All services running."
 
   db:
