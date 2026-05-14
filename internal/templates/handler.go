@@ -57,8 +57,8 @@ type templateResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -78,7 +78,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID: proj.ProjectID,
+		ProjectID: projectID,
 		Name:      req.Name,
 		Channel:   req.Channel,
 		Subject:   req.Subject,
@@ -98,12 +98,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items, err := h.service.List(r.Context(), proj.ProjectID)
+	items, err := h.service.List(r.Context(), projectID)
 	if err != nil {
 		http.Error(w, "failed to list templates", http.StatusInternalServerError)
 		return
@@ -121,8 +121,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -131,7 +131,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid template id", http.StatusBadRequest)
 		return
 	}
-	t, err := h.service.GetByID(r.Context(), id, proj.ProjectID)
+	t, err := h.service.GetByID(r.Context(), id, projectID)
 	if err != nil {
 		http.Error(w, "template not found", http.StatusNotFound)
 		return
@@ -145,8 +145,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -164,7 +164,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "body is required", http.StatusBadRequest)
 		return
 	}
-	t, err := h.service.Update(r.Context(), UpdateInput{ID: id, ProjectID: proj.ProjectID, Subject: req.Subject, Body: req.Body})
+	t, err := h.service.Update(r.Context(), UpdateInput{ID: id, ProjectID: projectID, Subject: req.Subject, Body: req.Body})
 	if err != nil {
 		http.Error(w, "template not found or update failed", http.StatusNotFound)
 		return
@@ -178,8 +178,8 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -188,7 +188,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid template id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), id, proj.ProjectID); err != nil {
+	if err := h.service.Delete(r.Context(), id, projectID); err != nil {
 		http.Error(w, "failed to delete template", http.StatusInternalServerError)
 		return
 	}
@@ -196,8 +196,8 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -213,7 +213,7 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
 	if req.Variables == nil {
 		req.Variables = make(map[string]any)
 	}
-	t, err := h.service.GetByID(r.Context(), req.TemplateID, proj.ProjectID)
+	t, err := h.service.GetByID(r.Context(), req.TemplateID, projectID)
 	if err != nil {
 		http.Error(w, "template not found", http.StatusNotFound)
 		return

@@ -167,16 +167,5 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func projectIDFromContext(r *http.Request) (uuid.UUID, bool) {
-	if claims := auth.GetJWTClaims(r.Context()); claims != nil {
-		id, err := uuid.Parse(claims.ProjectID)
-		if err == nil {
-			return id, true
-		}
-	}
-
-	if proj := auth.GetAuthenticatedProject(r.Context()); proj != nil {
-		return proj.ProjectID, true
-	}
-
-	return uuid.Nil, false
+	return auth.GetProjectID(r.Context())
 }

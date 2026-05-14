@@ -40,8 +40,8 @@ type updateRequest struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID:   proj.ProjectID,
+		ProjectID:   projectID,
 		Name:        req.Name,
 		Channel:     req.Channel,
 		Credentials: req.Credentials,
@@ -74,12 +74,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	providers, err := h.service.List(r.Context(), proj.ProjectID)
+	providers, err := h.service.List(r.Context(), projectID)
 	if err != nil {
 		http.Error(w, "failed to list providers", http.StatusInternalServerError)
 		return
@@ -100,8 +100,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -110,7 +110,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	p, err := h.service.GetByID(r.Context(), providerID, proj.ProjectID)
+	p, err := h.service.GetByID(r.Context(), providerID, projectID)
 	if err != nil {
 		http.Error(w, "provider not found", http.StatusNotFound)
 		return
@@ -123,8 +123,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -144,7 +144,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := h.service.Update(r.Context(), UpdateInput{
 		ID:          providerID,
-		ProjectID:   proj.ProjectID,
+		ProjectID:   projectID,
 		Name:        req.Name,
 		Channel:     req.Channel,
 		Credentials: req.Credentials,
@@ -162,8 +162,8 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -172,7 +172,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), providerID, proj.ProjectID); err != nil {
+	if err := h.service.Delete(r.Context(), providerID, projectID); err != nil {
 		http.Error(w, "failed to delete provider", http.StatusInternalServerError)
 		return
 	}

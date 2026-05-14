@@ -39,8 +39,8 @@ type webhookResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -54,7 +54,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wh, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID: proj.ProjectID,
+		ProjectID: projectID,
 		URL:       req.URL,
 		Secret:    req.Secret,
 		Events:    req.Events,
@@ -69,12 +69,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	whs, err := h.service.List(r.Context(), proj.ProjectID)
+	whs, err := h.service.List(r.Context(), projectID)
 	if err != nil {
 		http.Error(w, "failed to list webhooks", http.StatusInternalServerError)
 		return
@@ -88,8 +88,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := auth.GetProjectID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -98,7 +98,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid webhook id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), webhookID, proj.ProjectID); err != nil {
+	if err := h.service.Delete(r.Context(), webhookID, projectID); err != nil {
 		http.Error(w, "failed to delete webhook", http.StatusInternalServerError)
 		return
 	}
