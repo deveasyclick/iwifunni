@@ -1,97 +1,75 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import CardBox from "@/app/components/shared/CardBox";
-
-const workflows = [
-  {
-    id: 1,
-    name: "User Onboarding",
-    count: "12.4k",
-    change: "+12.3%",
-    trend: "up",
-    icon: "👤",
-  },
-  {
-    id: 2,
-    name: "Password Reset",
-    count: "4.7k",
-    change: "+8.7%",
-    trend: "up",
-    icon: "🔐",
-  },
-  {
-    id: 3,
-    name: "Order Shipped",
-    count: "2.3k",
-    change: "+15.2%",
-    trend: "up",
-    icon: "📦",
-  },
-  {
-    id: 4,
-    name: "Abandoned Cart",
-    count: "1.9k",
-    change: "-3.1%",
-    trend: "down",
-    icon: "🛒",
-  },
-  {
-    id: 5,
-    name: "Comment Reply",
-    count: "1.2k",
-    change: "+6.4%",
-    trend: "up",
-    icon: "💬",
-  },
-];
+import type { WorkflowItem } from "@/app/types/workflow";
 
 export const TopWorkflows = () => {
+  const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
+
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      try {
+        const response = await fetch("/api/workflows", {
+          headers: { browserrefreshed: "false" },
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as WorkflowItem[];
+        setWorkflows(Array.isArray(data) ? data.slice(0, 5) : []);
+      } catch {
+        setWorkflows([]);
+      }
+    };
+
+    void fetchWorkflows();
+  }, []);
+
   return (
     <CardBox>
-      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h5 className="card-title">Top workflows</h5>
-        <button className="text-sm text-primary hover:underline">
+        <Link href="/dashboard/apps/workflows" className="text-sm text-primary hover:underline">
           View all workflows →
-        </button>
+        </Link>
       </div>
 
-      {/* List */}
       <div className="space-y-4">
-        {workflows.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center justify-between py-2 border-b border-border last:border-none"
-          >
-            {/* Left: Icon + Name */}
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">{item.name}</span>
-            </div>
-
-            {/* Count */}
-            <div className="text-sm font-medium text-muted-foreground w-20 text-right">
-              {item.count}
-            </div>
-
-            {/* Change */}
+        {workflows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No workflows configured yet.
+          </p>
+        ) : (
+          workflows.map((item) => (
             <div
-              className={`text-sm font-medium w-20 text-right ${
-                item.trend === "up" ? "text-success" : "text-error"
-              }`}
+              key={item.id}
+              className="flex items-center justify-between py-2 border-b border-border last:border-none gap-4"
             >
-              {item.change}
-            </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{item.name}</p>
+                <p className="text-xs text-muted-foreground font-mono truncate">
+                  {item.key}
+                </p>
+              </div>
 
-            {/* Sparkline placeholder */}
-            <div className="w-20 h-6 flex items-center justify-end">
+              <div className="text-sm text-muted-foreground w-20 text-right capitalize">
+                {item.channels.length} channels
+              </div>
+
               <div
-                className={`h-0.5 w-full rounded ${
-                  item.trend === "up" ? "bg-success" : "bg-error"
+                className={`text-sm font-medium w-20 text-right ${
+                  item.isActive ? "text-success" : "text-muted-foreground"
                 }`}
-              />
+              >
+                {item.isActive ? "Active" : "Archived"}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </CardBox>
   );
