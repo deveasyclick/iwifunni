@@ -58,6 +58,7 @@ func main() {
 		Queries:       store.Queries,
 		RateLimiter:   rateLimiter,
 		AuthService:   authService,
+		JWTManager:    jwtManager,
 		EncryptionKey: cfg.EncryptionKey,
 		Producer:      producer,
 		Dispatcher:    dispatcher,

@@ -82,7 +82,23 @@ func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]APIKeyResult
 	return out, nil
 }
 
-func (s *Service) Revoke(ctx context.Context, keyID uuid.UUID) error {
+func (s *Service) Revoke(ctx context.Context, projectID, keyID uuid.UUID) error {
+	keys, err := s.repo.ListByProject(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, k := range keys {
+		if k.ID == keyID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return &notFoundError{id: keyID}
+	}
+
 	now := time.Now().UTC()
 	ts := pgtype.Timestamptz{Time: now, Valid: true}
 	return s.repo.UpdateStatus(ctx, keyID, "revoked", ts, ts)

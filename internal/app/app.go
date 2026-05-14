@@ -21,6 +21,7 @@ type App struct {
 	queries       *db.Queries
 	rateLimiter   *auth.RateLimiter
 	authService   authServiceFull
+	jwtManager    *auth.JWTManager
 	encryptionKey string
 	producer      *queue.Producer
 	dispatcher    *webhooks.Dispatcher
@@ -30,6 +31,7 @@ type Config struct {
 	Queries       *db.Queries
 	RateLimiter   *auth.RateLimiter
 	AuthService   authServiceFull
+	JWTManager    *auth.JWTManager
 	EncryptionKey string
 	Producer      *queue.Producer
 	Dispatcher    *webhooks.Dispatcher
@@ -40,6 +42,7 @@ func New(cfg Config) *App {
 		queries:       cfg.Queries,
 		rateLimiter:   cfg.RateLimiter,
 		authService:   cfg.AuthService,
+		jwtManager:    cfg.JWTManager,
 		encryptionKey: cfg.EncryptionKey,
 		producer:      cfg.Producer,
 		dispatcher:    cfg.Dispatcher,
@@ -57,6 +60,15 @@ func (a *App) Router() http.Handler {
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
+		r.Use(auth.NewJWTMiddleware(a.jwtManager))
+
+		// API Keys management (dashboard)
+		apikeyRepo := apikey.NewRepository(a.queries)
+		apikeySvc := apikey.NewService(apikeyRepo)
+		apikey.NewHandler(apikeySvc).Register(r)
+	})
+
+	r.Group(func(r chi.Router) {
 		r.Use(auth.NewAuthMiddleware(a.queries, a.rateLimiter))
 
 		// Notifications
@@ -73,11 +85,6 @@ func (a *App) Router() http.Handler {
 		providerRepo := provider.NewRepository(a.queries)
 		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
 		provider.NewHandler(providerSvc).Register(r)
-
-		// API Keys
-		apikeyRepo := apikey.NewRepository(a.queries)
-		apikeySvc := apikey.NewService(apikeyRepo)
-		apikey.NewHandler(apikeySvc).Register(r)
 
 		// Webhooks
 		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)

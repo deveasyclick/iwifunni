@@ -45,12 +45,12 @@ type createResponse struct {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := projectIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	keys, err := h.service.List(r.Context(), proj.ProjectID)
+	keys, err := h.service.List(r.Context(), projectID)
 	if err != nil {
 		http.Error(w, "failed to list api keys", http.StatusInternalServerError)
 		return
@@ -64,8 +64,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := projectIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -78,7 +78,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Create(r.Context(), proj.ProjectID, req.Name, req.Scopes)
+	k, err := h.service.Create(r.Context(), projectID, req.Name, req.Scopes)
 	if err != nil {
 		http.Error(w, "failed to create api key", http.StatusInternalServerError)
 		return
@@ -92,8 +92,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := projectIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -102,7 +102,7 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Rotate(r.Context(), proj.ProjectID, keyID)
+	k, err := h.service.Rotate(r.Context(), projectID, keyID)
 	if err != nil {
 		http.Error(w, "failed to rotate api key", http.StatusInternalServerError)
 		return
@@ -115,8 +115,8 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	projectID, ok := projectIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -125,9 +125,24 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Revoke(r.Context(), keyID); err != nil {
+	if err := h.service.Revoke(r.Context(), projectID, keyID); err != nil {
 		http.Error(w, "failed to revoke api key", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func projectIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	if claims := auth.GetJWTClaims(r.Context()); claims != nil {
+		id, err := uuid.Parse(claims.ProjectID)
+		if err == nil {
+			return id, true
+		}
+	}
+
+	if proj := auth.GetAuthenticatedProject(r.Context()); proj != nil {
+		return proj.ProjectID, true
+	}
+
+	return uuid.Nil, false
 }
