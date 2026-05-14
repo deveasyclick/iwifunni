@@ -24,6 +24,17 @@ func (r *Repository) Insert(ctx context.Context, arg db.InsertNotificationParams
 	return r.q.InsertNotification(ctx, arg)
 }
 
+func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error) {
+	return r.q.ListProjectNotifications(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
+}
+
+func (r *Repository) GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error) {
+	return r.q.GetProjectNotificationByID(ctx, db.GetProjectNotificationByIDParams{
+		ID:        id,
+		ProjectID: pgtype.UUID{Bytes: projectID, Valid: true},
+	})
+}
+
 func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error {
 	return r.q.UpdateNotificationStatus(ctx, db.UpdateNotificationStatusParams{
 		ID:        id,
@@ -45,4 +56,16 @@ func (r *Repository) GetActiveProviderByChannel(ctx context.Context, projectID u
 
 func (r *Repository) GetServiceChannelConfig(ctx context.Context, arg db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error) {
 	return r.q.GetServiceChannelConfig(ctx, arg)
+}
+
+func (r *Repository) GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error) {
+	return r.q.GetWorkflowByID(ctx, db.GetWorkflowByIDParams{ID: id, ProjectID: projectID})
+}
+
+func (r *Repository) GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error) {
+	return r.q.GetSubscriberByID(ctx, db.GetSubscriberByIDParams{ID: id, ProjectID: projectID})
+}
+
+func (r *Repository) GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error) {
+	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, ProjectID: projectID})
 }

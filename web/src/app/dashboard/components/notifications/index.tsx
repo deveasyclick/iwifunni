@@ -65,8 +65,7 @@ const MOCK_NOTIFICATIONS: NotificationType[] = [
 ];
 
 const NotificationList = () => {
-  const [notifications, setNotifications] =
-    useState<NotificationType[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [filter, setFilter] = useState<string>("total_notifications");
   const [notificationSearch, setNotificationSearch] = useState<string>("");
 
@@ -91,9 +90,7 @@ const NotificationList = () => {
             ? (json as NotificationType[])
             : [];
 
-        setNotifications(
-          apiNotifications.length > 0 ? apiNotifications : MOCK_NOTIFICATIONS,
-        );
+        setNotifications(apiNotifications);
       } catch (err) {
         console.error("Error fetching notifications:", err);
         setNotifications(MOCK_NOTIFICATIONS);

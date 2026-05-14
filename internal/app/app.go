@@ -11,8 +11,10 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/project"
 	"github.com/deveasyclick/iwifunni/internal/provider"
 	"github.com/deveasyclick/iwifunni/internal/queue"
+	"github.com/deveasyclick/iwifunni/internal/subscriber"
 	"github.com/deveasyclick/iwifunni/internal/templates"
 	"github.com/deveasyclick/iwifunni/internal/webhooks"
+	"github.com/deveasyclick/iwifunni/internal/workflow"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -66,6 +68,35 @@ func (a *App) Router() http.Handler {
 		apikeyRepo := apikey.NewRepository(a.queries)
 		apikeySvc := apikey.NewService(apikeyRepo)
 		apikey.NewHandler(apikeySvc).Register(r)
+
+		// Notification reads (dashboard)
+		notifRepo := notification.NewRepository(a.queries)
+		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher)
+		notification.NewHandler(notifSvc, a.producer).RegisterReadRoutes(r)
+
+		// Provider management (dashboard)
+		providerRepo := provider.NewRepository(a.queries)
+		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
+		provider.NewHandler(providerSvc).Register(r)
+
+		// Template management (dashboard)
+		tplRepo := templates.NewRepository(a.queries)
+		tplSvc := templates.NewService(tplRepo)
+		templates.NewHandler(tplSvc).Register(r)
+
+		// Subscriber management (dashboard)
+		subscriberRepo := subscriber.NewRepository(a.queries)
+		subscriberSvc := subscriber.NewService(subscriberRepo)
+		subscriber.NewHandler(subscriberSvc).Register(r)
+
+		// Workflow management (dashboard)
+		workflowRepo := workflow.NewRepository(a.queries)
+		workflowSvc := workflow.NewService(workflowRepo)
+		workflow.NewHandler(workflowSvc).Register(r)
+
+		// Webhook management (dashboard)
+		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
+		webhooks.NewHandler(webhookSvc).Register(r)
 	})
 
 	r.Group(func(r chi.Router) {
@@ -74,12 +105,22 @@ func (a *App) Router() http.Handler {
 		// Notifications
 		notifRepo := notification.NewRepository(a.queries)
 		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher)
-		notification.NewHandler(notifSvc, a.producer).Register(r)
+		notification.NewHandler(notifSvc, a.producer).RegisterSendRoutes(r)
 
 		// Templates
 		tplRepo := templates.NewRepository(a.queries)
 		tplSvc := templates.NewService(tplRepo)
 		templates.NewHandler(tplSvc).Register(r)
+
+		// Subscribers
+		subscriberRepo := subscriber.NewRepository(a.queries)
+		subscriberSvc := subscriber.NewService(subscriberRepo)
+		subscriber.NewHandler(subscriberSvc).Register(r)
+
+		// Workflows
+		workflowRepo := workflow.NewRepository(a.queries)
+		workflowSvc := workflow.NewService(workflowRepo)
+		workflow.NewHandler(workflowSvc).Register(r)
 
 		// Providers
 		providerRepo := provider.NewRepository(a.queries)

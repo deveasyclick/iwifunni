@@ -63,11 +63,12 @@ type emailProvider struct{ name string }
 func (p emailProvider) Name() string    { return p.name }
 func (p emailProvider) Channel() string { return "email" }
 func (p emailProvider) Send(ctx context.Context, job *types.NotificationJob, configJSON []byte) ([]DeliveryAttempt, error) {
+	content := job.ContentForChannel(p.Channel())
 	var cfg channels.EmailConfig
 	if err := json.Unmarshal(configJSON, &cfg); err != nil {
 		return []DeliveryAttempt{{Destination: job.Recipient.Email, Err: fmt.Errorf("invalid email config: %w", err)}}, err
 	}
-	err := channels.SendEmail(ctx, cfg, job.Recipient.Email, job.Title, job.Message, job.Metadata)
+	err := channels.SendEmail(ctx, cfg, job.Recipient.Email, content.Title, content.Message, job.Metadata)
 	if err != nil {
 		return []DeliveryAttempt{{Destination: job.Recipient.Email, Err: err}}, err
 	}
@@ -79,11 +80,12 @@ type smsProvider struct{ name string }
 func (p smsProvider) Name() string    { return p.name }
 func (p smsProvider) Channel() string { return "sms" }
 func (p smsProvider) Send(ctx context.Context, job *types.NotificationJob, configJSON []byte) ([]DeliveryAttempt, error) {
+	content := job.ContentForChannel(p.Channel())
 	var cfg channels.SMSConfig
 	if err := json.Unmarshal(configJSON, &cfg); err != nil {
 		return []DeliveryAttempt{{Destination: job.Recipient.PhoneNumber, Err: fmt.Errorf("invalid sms config: %w", err)}}, err
 	}
-	err := channels.SendSMS(ctx, cfg, job.Recipient.PhoneNumber, job.Title, job.Message, job.Metadata)
+	err := channels.SendSMS(ctx, cfg, job.Recipient.PhoneNumber, content.Title, content.Message, job.Metadata)
 	if err != nil {
 		return []DeliveryAttempt{{Destination: job.Recipient.PhoneNumber, Err: err}}, err
 	}
@@ -95,6 +97,7 @@ type pushProvider struct{ name string }
 func (p pushProvider) Name() string    { return p.name }
 func (p pushProvider) Channel() string { return "push" }
 func (p pushProvider) Send(ctx context.Context, job *types.NotificationJob, configJSON []byte) ([]DeliveryAttempt, error) {
+	content := job.ContentForChannel(p.Channel())
 	var cfg channels.PushConfig
 	if err := json.Unmarshal(configJSON, &cfg); err != nil {
 		return []DeliveryAttempt{{Err: fmt.Errorf("invalid push config: %w", err)}}, err
@@ -109,9 +112,9 @@ func (p pushProvider) Send(ctx context.Context, job *types.NotificationJob, conf
 		a := DeliveryAttempt{Destination: dest}
 		switch p.name {
 		case "fcm":
-			a.Err = channels.SendFCM(ctx, cfg.ServerKey, dest, job.Title, job.Message, job.Metadata)
+			a.Err = channels.SendFCM(ctx, cfg.ServerKey, dest, content.Title, content.Message, job.Metadata)
 		case "webpush":
-			a.Err = channels.SendBrowserPush(ctx, cfg.PublicKey, cfg.PrivateKey, dest, job.Title, job.Message, job.Metadata)
+			a.Err = channels.SendBrowserPush(ctx, cfg.PublicKey, cfg.PrivateKey, dest, content.Title, content.Message, job.Metadata)
 		default:
 			a.Err = fmt.Errorf("unsupported push provider %s", p.name)
 		}

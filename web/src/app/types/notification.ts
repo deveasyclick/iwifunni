@@ -19,14 +19,14 @@ export type NotificationStatus =
 
 export interface NotificationType {
 	id: string;
-	service_id: string;
-	user_id: string;
+	service_id?: string;
+	user_id?: string;
 	title: string;
 	message: string;
 	channels: NotificationChannel[];
 	metadata: JsonObject;
 	status: NotificationStatus;
-	retry_count: number;
+	retry_count?: number;
 	created_at: Date | string;
 	updated_at: Date | string;
 	project_id?: string;

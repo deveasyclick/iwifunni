@@ -2,12 +2,15 @@ package notification
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type Handler struct {
@@ -20,15 +23,27 @@ func NewHandler(service *Service, producer *queue.Producer) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router) {
+	h.RegisterReadRoutes(r)
+	h.RegisterSendRoutes(r)
+}
+
+func (h *Handler) RegisterSendRoutes(r chi.Router) {
 	r.Post("/notifications", h.create)
 }
 
+func (h *Handler) RegisterReadRoutes(r chi.Router) {
+	r.Get("/notifications", h.list)
+	r.Get("/notifications/{notificationID}", h.get)
+}
+
 type createRequest struct {
-	Title     string            `json:"title"`
-	Message   string            `json:"message"`
-	Channels  []string          `json:"channels,omitempty"`
-	Recipient types.Recipient   `json:"recipient"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
+	WorkflowID   string            `json:"workflow_id,omitempty"`
+	SubscriberID string            `json:"subscriber_id,omitempty"`
+	Title        string            `json:"title"`
+	Message      string            `json:"message"`
+	Channels     []string          `json:"channels,omitempty"`
+	Recipient    types.Recipient   `json:"recipient"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -39,11 +54,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := &types.NotificationJob{
-		Title:     payload.Title,
-		Message:   payload.Message,
-		Channels:  payload.Channels,
-		Recipient: payload.Recipient,
-		Metadata:  payload.Metadata,
+		WorkflowID:   payload.WorkflowID,
+		SubscriberID: payload.SubscriberID,
+		Title:        payload.Title,
+		Message:      payload.Message,
+		Channels:     payload.Channels,
+		Recipient:    payload.Recipient,
+		Metadata:     payload.Metadata,
 	}
 
 	// Resolve project or legacy service from context
@@ -56,11 +73,83 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.producer.Enqueue(r.Context(), job); err != nil {
+	preparedJob, err := h.service.PrepareJob(r.Context(), job)
+	if err != nil {
+		h.respondSendError(w, err)
+		return
+	}
+
+	if err := h.producer.Enqueue(r.Context(), preparedJob); err != nil {
 		http.Error(w, "failed to enqueue notification", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "queued"})
+}
+
+func (h *Handler) respondSendError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, ErrInvalidSendRequest):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, pgx.ErrNoRows):
+		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		http.Error(w, "failed to prepare notification", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	projectID, ok := notificationProjectIDFromContext(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	items, err := h.service.ListByProject(r.Context(), projectID)
+	if err != nil {
+		http.Error(w, "failed to list notifications", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(items)
+}
+
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	projectID, ok := notificationProjectIDFromContext(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	notificationID, err := uuid.Parse(chi.URLParam(r, "notificationID"))
+	if err != nil {
+		http.Error(w, "invalid notification id", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.GetByProject(r.Context(), notificationID, projectID)
+	if err != nil {
+		http.Error(w, "notification not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(item)
+}
+
+func notificationProjectIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	if claims := auth.GetJWTClaims(r.Context()); claims != nil {
+		id, err := uuid.Parse(claims.ProjectID)
+		if err == nil {
+			return id, true
+		}
+	}
+
+	if proj := auth.GetAuthenticatedProject(r.Context()); proj != nil {
+		return proj.ProjectID, true
+	}
+
+	return uuid.Nil, false
 }
