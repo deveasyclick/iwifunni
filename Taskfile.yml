@@ -18,6 +18,12 @@ tasks:
       - air
       - echo "✅ All services running."
 
+  server:
+    desc: Start dev server
+    cmds:
+      - task: db
+      - air
+      - echo "✅ All services running."
   web:
     desc: Start frontend
     dir: "{{.FRONTEND_DIR}}"
