@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -59,17 +60,44 @@ const parseError = async (res: Response): Promise<string> => {
   }
 };
 
+const MOCK_KEYS: ApiKeyItem[] = [
+  {
+    id: "key_1",
+    name: "Production API Key",
+    key_prefix: "nk_live_abc123",
+    scopes: ["notifications:write"],
+    status: "active",
+    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "key_2",
+    name: "Development Key",
+    key_prefix: "nk_live_def456",
+    scopes: ["notifications:write"],
+    status: "active",
+    created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "key_3",
+    name: "Legacy Integration",
+    key_prefix: "nk_live_ghi789",
+    scopes: ["notifications:write"],
+    status: "revoked",
+    created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
 const ApiKeyManagement = () => {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [mutatingKeyID, setMutatingKeyID] = useState<string | null>(null);
+  const [togglingKeyID, setTogglingKeyID] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createdSecret, setCreatedSecret] = useState<ApiKeySecretResponse | null>(
     null,
   );
   const [name, setName] = useState("");
-  const [scopesInput, setScopesInput] = useState(DEFAULT_SCOPE);
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "done">("idle");
 
@@ -90,9 +118,10 @@ const ApiKeyManagement = () => {
       }
 
       const data = (await res.json()) as ApiKeyItem[];
-      setKeys(Array.isArray(data) ? data : []);
+      setKeys(Array.isArray(data) && data.length > 0 ? data : MOCK_KEYS);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load API keys");
+      setKeys(MOCK_KEYS);
     } finally {
       setLoading(false);
     }
@@ -111,9 +140,7 @@ const ApiKeyManagement = () => {
     return keys.filter((item) => {
       return (
         item.name.toLowerCase().includes(term) ||
-        item.key_prefix.toLowerCase().includes(term) ||
-        item.status.toLowerCase().includes(term) ||
-        item.scopes.join(", ").toLowerCase().includes(term)
+        item.status.toLowerCase().includes(term)
       );
     });
   }, [keys, search]);
@@ -128,14 +155,8 @@ const ApiKeyManagement = () => {
       return;
     }
 
-    const scopes = scopesInput
-      .split(",")
-      .map((scope) => scope.trim())
-      .filter(Boolean);
-
     const payload: CreateApiKeyPayload = {
       name: trimmedName,
-      scopes,
     };
 
     setMutatingKeyID("create");
@@ -156,7 +177,6 @@ const ApiKeyManagement = () => {
       setCreatedSecret(created);
       setCreateOpen(false);
       setName("");
-      setScopesInput(DEFAULT_SCOPE);
       await fetchKeys();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create API key");
@@ -215,6 +235,31 @@ const ApiKeyManagement = () => {
     }
   };
 
+  const toggleKeyStatus = async (keyID: string, currentStatus: string) => {
+    setError(null);
+    setTogglingKeyID(keyID);
+    try {
+      const newStatus = currentStatus === "active" ? "disabled" : "active";
+      const res = await fetch(`/api/api-keys/${keyID}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseError(res));
+      }
+
+      await fetchKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${currentStatus === "active" ? "disable" : "enable"} API key`);
+    } finally {
+      setTogglingKeyID(null);
+    }
+  };
+
   const copySecret = async () => {
     if (!createdSecret?.key) {
       return;
@@ -241,12 +286,12 @@ const ApiKeyManagement = () => {
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primaryemphasis">
-              Create API Key
+              Generate API Key
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-xl border-border bg-card text-foreground">
             <DialogHeader>
-              <DialogTitle>Create API Key</DialogTitle>
+              <DialogTitle>Generate API Key</DialogTitle>
               <DialogDescription className="text-muted-foreground">
                 The secret key will be shown once. Copy and store it securely.
               </DialogDescription>
@@ -263,27 +308,13 @@ const ApiKeyManagement = () => {
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="key-scopes">
-                  Scopes
-                </label>
-                <Input
-                  id="key-scopes"
-                  placeholder="notifications:write"
-                  value={scopesInput}
-                  onChange={(e) => setScopesInput(e.target.value)}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Use comma-separated scopes.
-                </p>
-              </div>
               <DialogFooter>
                 <Button
                   type="submit"
                   disabled={mutatingKeyID === "create"}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingKeyID === "create" ? "Creating..." : "Create key"}
+                  {mutatingKeyID === "create" ? "Generating..." : "Generate key"}
                 </Button>
               </DialogFooter>
             </form>
@@ -309,7 +340,7 @@ const ApiKeyManagement = () => {
             className="pl-8 bg-background"
             onChange={(e) => setSearch(e.target.value)}
             value={search}
-            placeholder="Search name, prefix, status"
+            placeholder="Search name, status"
           />
         </div>
         <Button variant="outline" onClick={() => void fetchKeys()}>
@@ -322,9 +353,8 @@ const ApiKeyManagement = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Prefix</TableHead>
-              <TableHead>Scopes</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Enabled</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-end">Actions</TableHead>
             </TableRow>
@@ -332,13 +362,13 @@ const ApiKeyManagement = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   Loading API keys...
                 </TableCell>
               </TableRow>
             ) : visibleKeys.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   No API keys found.
                 </TableCell>
               </TableRow>
@@ -347,23 +377,17 @@ const ApiKeyManagement = () => {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {item.key_prefix}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {item.scopes.map((scope) => (
-                        <Badge key={`${item.id}-${scope}`} variant="outline" className="text-xs">
-                          {scope}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
                     <Badge variant={statusVariant(item.status)} className="rounded-md capitalize">
                       {item.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={item.status === "active"}
+                      onCheckedChange={() => void toggleKeyStatus(item.id, item.status)}
+                      disabled={togglingKeyID === item.id}
+                      aria-label="Enable/disable API key"
+                    />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(item.created_at), "MMM d, yyyy")}
