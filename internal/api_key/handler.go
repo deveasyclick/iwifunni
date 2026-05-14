@@ -23,6 +23,7 @@ func (h *Handler) Register(r chi.Router) {
 	r.Post("/api-keys", h.create)
 	r.Post("/api-keys/{keyID}/rotate", h.rotate)
 	r.Delete("/api-keys/{keyID}", h.revoke)
+	r.Patch("/api-keys/{keyID}", h.update)
 }
 
 type createRequest struct {
@@ -130,6 +131,39 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type updateRequest struct {
+	Status string `json:"status"`
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	projectID, ok := projectIDFromContext(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyID"))
+	if err != nil {
+		http.Error(w, "invalid key id", http.StatusBadRequest)
+		return
+	}
+	var req updateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	if req.Status != "active" && req.Status != "disabled" {
+		http.Error(w, "invalid status", http.StatusBadRequest)
+		return
+	}
+	if err := h.service.UpdateStatus(r.Context(), projectID, keyID, req.Status); err != nil {
+		http.Error(w, "failed to update api key", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": req.Status})
 }
 
 func projectIDFromContext(r *http.Request) (uuid.UUID, bool) {

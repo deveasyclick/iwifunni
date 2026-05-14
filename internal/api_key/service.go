@@ -164,6 +164,33 @@ func (s *Service) Rotate(ctx context.Context, projectID, keyID uuid.UUID) (APIKe
 	return APIKeyResult{ID: newKeyID, Name: old.Name, KeyPrefix: prefix, Scopes: scopes, Status: "active", CreatedAt: now, Key: rawKey}, nil
 }
 
+func (s *Service) UpdateStatus(ctx context.Context, projectID, keyID uuid.UUID, status string) error {
+	// Verify key belongs to project
+	keys, err := s.repo.ListByProject(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, k := range keys {
+		if k.ID == keyID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return &notFoundError{id: keyID}
+	}
+
+	now := time.Now().UTC()
+	var revokedAt pgtype.Timestamptz
+	if status == "revoked" {
+		revokedAt = pgtype.Timestamptz{Time: now, Valid: true}
+	}
+	ts := pgtype.Timestamptz{Time: now, Valid: true}
+	return s.repo.UpdateStatus(ctx, keyID, status, revokedAt, ts)
+}
+
 type notFoundError struct{ id uuid.UUID }
 
 func (e *notFoundError) Error() string { return "not found: " + e.id.String() }
