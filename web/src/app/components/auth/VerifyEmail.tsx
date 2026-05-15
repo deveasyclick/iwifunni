@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import FullLogo from "../shared/FullLogo";
+import { SocialAuthButtons } from "./SocialAuthButtons";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export const VerifyEmail = () => {
@@ -60,6 +61,7 @@ export const VerifyEmail = () => {
           <p className="text-sm text-muted-foreground text-center mb-6">
             Enter the six-digit code sent to your email to continue.
           </p>
+          <SocialAuthButtons helperText="Or continue with social sign-in" />
           <form onSubmit={handleSubmit}>
             <div>
               <div className="mb-2 block">

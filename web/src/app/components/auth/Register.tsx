@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import FullLogo from "../shared/FullLogo";
+import { SocialAuthButtons } from "./SocialAuthButtons";
 import { useRouter } from "next/navigation";
 
 export const Register = () => {
@@ -69,6 +70,7 @@ export const Register = () => {
           <p className="text-sm text-muted-foreground text-center mb-6">
             Create your account, then verify your email before accessing the dashboard.
           </p>
+          <SocialAuthButtons helperText="Or sign up with email" />
           <form onSubmit={handleSubmit}>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -141,14 +143,6 @@ export const Register = () => {
               {isSubmitting ? "Signing Up..." : "Sign Up"}
             </Button>
           </form>
-          <div className="grid gap-3 mt-6">
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/google">Continue with Google</Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/github">Continue with GitHub</Link>
-            </Button>
-          </div>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
               Already have an account?

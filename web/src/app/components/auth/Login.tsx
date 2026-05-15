@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FullLogo from "../shared/FullLogo";
+import { SocialAuthButtons } from "./SocialAuthButtons";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export const Login = () => {
@@ -61,6 +62,7 @@ export const Login = () => {
           <p className="text-sm text-muted-foreground text-center mb-6">
             Welcome back. Verified accounts continue to your dashboard or onboarding.
           </p>
+          <SocialAuthButtons />
           <form onSubmit={handleSubmit}>
             <div>
               <div className="mb-2 block">
@@ -118,14 +120,6 @@ export const Login = () => {
               {isSubmitting ? "Signing In..." : "Sign In"}
             </Button>
           </form>
-          <div className="grid gap-3 mt-6">
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/google">Continue with Google</Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/github">Continue with GitHub</Link>
-            </Button>
-          </div>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
               New to Iwifunni?
