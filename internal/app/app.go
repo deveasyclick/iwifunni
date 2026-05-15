@@ -24,6 +24,9 @@ type App struct {
 	rateLimiter   *auth.RateLimiter
 	authService   authServiceFull
 	jwtManager    *auth.JWTManager
+	frontendBaseURL string
+	socialProviders map[string]bool
+	cookieSecure bool
 	encryptionKey string
 	producer      *queue.Producer
 	dispatcher    *webhooks.Dispatcher
@@ -34,6 +37,9 @@ type Config struct {
 	RateLimiter   *auth.RateLimiter
 	AuthService   authServiceFull
 	JWTManager    *auth.JWTManager
+	FrontendBaseURL string
+	SocialProviders map[string]bool
+	CookieSecure bool
 	EncryptionKey string
 	Producer      *queue.Producer
 	Dispatcher    *webhooks.Dispatcher
@@ -45,6 +51,9 @@ func New(cfg Config) *App {
 		rateLimiter:   cfg.RateLimiter,
 		authService:   cfg.AuthService,
 		jwtManager:    cfg.JWTManager,
+		frontendBaseURL: cfg.FrontendBaseURL,
+		socialProviders: cfg.SocialProviders,
+		cookieSecure: cfg.CookieSecure,
 		encryptionKey: cfg.EncryptionKey,
 		producer:      cfg.Producer,
 		dispatcher:    cfg.Dispatcher,
@@ -56,13 +65,17 @@ func (a *App) Router() http.Handler {
 
 	// Auth routes (no auth middleware)
 	r.Post("/auth/signup", a.authHandler().signup)
+	r.Post("/auth/verify-email", a.authHandler().verifyEmail)
 	r.Post("/auth/signin", a.authHandler().signin)
 	r.Post("/auth/refresh", a.authHandler().refresh)
 	r.Post("/auth/logout", a.authHandler().logout)
+	r.Get("/auth/social/{provider}", a.authHandler().socialStart)
+	r.Get("/auth/social/{provider}/callback", a.authHandler().socialCallback)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(auth.NewJWTMiddleware(a.jwtManager))
+		r.Post("/auth/onboarding", a.authHandler().completeOnboarding)
 
 		// API Keys management (dashboard)
 		apikeyRepo := apikey.NewRepository(a.queries)

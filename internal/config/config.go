@@ -31,6 +31,14 @@ type Config struct {
 	JWTIssuer          string
 	JWTAccessTokenTTL  time.Duration
 	JWTRefreshTokenTTL time.Duration
+	AuthVerificationTTL time.Duration
+	WebBaseURL         string
+	APIPublicBaseURL   string
+	GothSessionSecret  string
+	GoogleClientID     string
+	GoogleClientSecret string
+	GitHubClientID     string
+	GitHubClientSecret string
 	Environment        string
 	EncryptionKey      string
 	QueueMaxRetry      int
@@ -54,6 +62,11 @@ func Load() (*Config, error) {
 	jwtRefreshTokenTTL, err := time.ParseDuration(getenvDefault("JWT_REFRESH_TOKEN_TTL", "720h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TOKEN_TTL: %w", err)
+	}
+
+	authVerificationTTL, err := time.ParseDuration(getenvDefault("AUTH_VERIFICATION_TTL", "15m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid AUTH_VERIFICATION_TTL: %w", err)
 	}
 
 	mailerPort, err := strconv.Atoi(getenvDefault("MAILER_PORT", "587"))
@@ -103,6 +116,14 @@ func Load() (*Config, error) {
 		JWTIssuer:          getenvDefault("JWT_ISSUER", "iwifunni"),
 		JWTAccessTokenTTL:  jwtAccessTokenTTL,
 		JWTRefreshTokenTTL: jwtRefreshTokenTTL,
+		AuthVerificationTTL: authVerificationTTL,
+		WebBaseURL:         getenvDefault("WEB_BASE_URL", "http://localhost:3000"),
+		APIPublicBaseURL:   getenvDefault("API_PUBLIC_BASE_URL", getenvDefault("API_BASE_URL", "http://localhost:8080")),
+		GothSessionSecret:  getenvDefault("GOTH_SESSION_SECRET", "development-goth-session-secret-change-me"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		Environment:        getenvDefault("ENVIRONMENT", "development"),
 		EncryptionKey:      getenvDefault("ENCRYPTION_KEY", "dev-encryption-key-32bytes-padded"),
 		QueueMaxRetry:      queueMaxRetry,
