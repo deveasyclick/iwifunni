@@ -1,13 +1,18 @@
-"use client";
-
 import Header from "./layout/header/Header";
 import Sidebar from "./layout/sidebar/Sidebar";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function Layout({
+export default async function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  if (!cookieStore.get("access_token")?.value) {
+    redirect("/auth/login");
+  }
+
   return (
     <div className="flex w-full min-h-screen">
       <div className="page-wrapper flex w-full">

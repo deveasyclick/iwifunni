@@ -2,13 +2,52 @@
 
 import CardBox from "../shared/CardBox";
 import Link from "next/link";
+import { FormEvent, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FullLogo from "../shared/FullLogo";
+import { useRouter } from "next/navigation";
 
 export const Login = () => {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(payload?.error || "Unable to sign in.");
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Unable to sign in right now.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="h-screen w-full flex justify-center items-center bg-lightprimary">
       <div className="md:min-w-112.5 min-w-max">
@@ -19,52 +58,63 @@ export const Login = () => {
           <p className="text-sm text-muted-foreground text-center mb-6">
             Welcome to Iwifunni
           </p>
-          <div>
-            <div className="mb-2 block">
-              <Label htmlFor="username1" className="font-medium">
-                Username
-              </Label>
+          <form onSubmit={handleSubmit}>
+            <div>
+              <div className="mb-2 block">
+                <Label htmlFor="email" className="font-medium">
+                  Email
+                </Label>
+              </div>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
             </div>
-            <Input
-              id="username1"
-              type="text"
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-          <div className="mt-6">
-            <div className="mb-2 block">
-              <Label htmlFor="password1" className="font-medium">
-                Password
-              </Label>
+            <div className="mt-6">
+              <div className="mb-2 block">
+                <Label htmlFor="password" className="font-medium">
+                  Password
+                </Label>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
             </div>
-            <Input
-              id="password1"
-              type="password"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-          <div className="flex flex-wrap gap-6 items-center justify-between my-6">
-            <div className="flex items-center gap-2">
-              <Checkbox id="remember" checked />
-              <Label
-                className="text-link font-normal text-sm"
-                htmlFor="remember"
+            <div className="flex flex-wrap gap-6 items-center justify-between my-6">
+              <div className="flex items-center gap-2">
+                <Checkbox id="remember" defaultChecked />
+                <Label
+                  className="text-link font-normal text-sm"
+                  htmlFor="remember"
+                >
+                  Remember this device
+                </Label>
+              </div>
+              <Link
+                href="#"
+                className="text-sm font-medium text-primary hover:text-primaryemphasis"
               >
-                Remember this device
-              </Label>
+                Forgot Password ?
+              </Link>
             </div>
-            <Link
-              href="#"
-              className="text-sm font-medium text-primary hover:text-primaryemphasis"
-            >
-              Forgot Password ?
-            </Link>
-          </div>
-          <Button className="w-full" asChild>
-            <Link href="/dashboard">Sign In</Link>
-          </Button>
+            {error ? (
+              <p className="mb-4 text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button className="w-full" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Signing In..." : "Sign In"}
+            </Button>
+          </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
               New to Iwifunni?

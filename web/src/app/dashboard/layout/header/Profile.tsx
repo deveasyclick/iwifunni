@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import * as profileData from './data'
 import SimpleBar from 'simplebar-react'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +17,29 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const Profile = () => {
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  async function handleLogout() {
+    setIsLoggingOut(true)
+
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        setIsLoggingOut(false)
+        return
+      }
+
+      router.replace('/auth/login')
+      router.refresh()
+    } catch {
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <div className='relative group/menu ps-15 shrink-0'>
       <DropdownMenu>
@@ -56,8 +81,12 @@ const Profile = () => {
           <DropdownMenuSeparator className='my-2' />
 
           <div className='px-4'>
-            <Button variant='outline' asChild className='w-full rounded-md'>
-              <Link href='/auth/login'>Logout</Link>
+            <Button
+              variant='outline'
+              className='w-full rounded-md'
+              onClick={handleLogout}
+              disabled={isLoggingOut}>
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
             </Button>
           </div>
         </DropdownMenuContent>

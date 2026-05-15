@@ -26,22 +26,16 @@ function normalizePath(path: string): string {
   return `/${path}`;
 }
 
-export async function proxyBackend(
-  req: NextRequest,
+async function sendToBackend(
   path: string,
   init?: RequestInit,
+  authHeader?: string | null,
 ): Promise<NextResponse> {
-  const authHeader = resolveAuthHeader(req);
-  if (!authHeader) {
-    return NextResponse.json(
-      { error: "Missing bearer token" },
-      { status: 401 },
-    );
-  }
-
   const target = `${BACKEND_BASE_URL}${normalizePath(path)}`;
   const headers = new Headers(init?.headers);
-  headers.set("Authorization", authHeader);
+  if (authHeader) {
+    headers.set("Authorization", authHeader);
+  }
   headers.set("Accept", "application/json");
 
   if (init?.body && !headers.has("Content-Type")) {
@@ -74,4 +68,27 @@ export async function proxyBackend(
       { status: 502 },
     );
   }
+}
+
+export async function proxyBackend(
+  req: NextRequest,
+  path: string,
+  init?: RequestInit,
+): Promise<NextResponse> {
+  const authHeader = resolveAuthHeader(req);
+  if (!authHeader) {
+    return NextResponse.json(
+      { error: "Missing bearer token" },
+      { status: 401 },
+    );
+  }
+
+  return sendToBackend(path, init, authHeader);
+}
+
+export async function proxyBackendPublic(
+  path: string,
+  init?: RequestInit,
+): Promise<NextResponse> {
+  return sendToBackend(path, init);
 }
