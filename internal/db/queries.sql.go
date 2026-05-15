@@ -59,6 +59,41 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) erro
 	return err
 }
 
+const createAuthIdentity = `-- name: CreateAuthIdentity :exec
+INSERT INTO auth_identities (
+	id,
+	user_id,
+	provider,
+	provider_user_id,
+	email,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type CreateAuthIdentityParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	UserID         uuid.UUID          `db:"user_id" json:"user_id"`
+	Provider       string             `db:"provider" json:"provider"`
+	ProviderUserID string             `db:"provider_user_id" json:"provider_user_id"`
+	Email          string             `db:"email" json:"email"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateAuthIdentity(ctx context.Context, arg CreateAuthIdentityParams) error {
+	_, err := q.db.Exec(ctx, createAuthIdentity,
+		arg.ID,
+		arg.UserID,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.Email,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $4)
@@ -364,16 +399,29 @@ func (q *Queries) CreateTemplate(ctx context.Context, arg CreateTemplateParams) 
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (id, email, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users (
+	id,
+	email,
+	password_hash,
+	first_name,
+	last_name,
+	email_verified_at,
+	onboarding_completed_at,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID          `db:"id" json:"id"`
-	Email        string             `db:"email" json:"email"`
-	PasswordHash string             `db:"password_hash" json:"password_hash"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -381,6 +429,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.ID,
 		arg.Email,
 		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.EmailVerifiedAt,
+		arg.OnboardingCompletedAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -476,6 +528,16 @@ func (q *Queries) CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteEmailVerificationByUserID = `-- name: DeleteEmailVerificationByUserID :exec
+DELETE FROM email_verifications
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteEmailVerificationByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEmailVerificationByUserID, userID)
+	return err
 }
 
 const deleteProvider = `-- name: DeleteProvider :exec
@@ -618,6 +680,52 @@ func (q *Queries) GetActiveProjectProviderByChannel(ctx context.Context, arg Get
 		&i.Credentials,
 		&i.Config,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAuthIdentityByProviderUserID = `-- name: GetAuthIdentityByProviderUserID :one
+SELECT id, user_id, provider, provider_user_id, email, created_at, updated_at
+FROM auth_identities
+WHERE provider = $1 AND provider_user_id = $2
+`
+
+type GetAuthIdentityByProviderUserIDParams struct {
+	Provider       string `db:"provider" json:"provider"`
+	ProviderUserID string `db:"provider_user_id" json:"provider_user_id"`
+}
+
+func (q *Queries) GetAuthIdentityByProviderUserID(ctx context.Context, arg GetAuthIdentityByProviderUserIDParams) (AuthIdentity, error) {
+	row := q.db.QueryRow(ctx, getAuthIdentityByProviderUserID, arg.Provider, arg.ProviderUserID)
+	var i AuthIdentity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEmailVerificationByUserID = `-- name: GetEmailVerificationByUserID :one
+SELECT user_id, code_hash, expires_at, consumed_at, created_at, updated_at
+FROM email_verifications
+WHERE user_id = $1
+`
+
+func (q *Queries) GetEmailVerificationByUserID(ctx context.Context, userID uuid.UUID) (EmailVerification, error) {
+	row := q.db.QueryRow(ctx, getEmailVerificationByUserID, userID)
+	var i EmailVerification
+	err := row.Scan(
+		&i.UserID,
+		&i.CodeHash,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1039,18 +1147,69 @@ func (q *Queries) GetTemplateByName(ctx context.Context, arg GetTemplateByNamePa
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, created_at, updated_at
+SELECT id, email, password_hash, first_name, last_name, email_verified_at, onboarding_completed_at, created_at, updated_at
 FROM users
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.EmailVerifiedAt,
+		&i.OnboardingCompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, password_hash, first_name, last_name, email_verified_at, onboarding_completed_at, created_at, updated_at
+FROM users
+WHERE id = $1
+`
+
+type GetUserByIDRow struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i GetUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.EmailVerifiedAt,
+		&i.OnboardingCompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1650,6 +1809,23 @@ func (q *Queries) UpdateNotificationStatus(ctx context.Context, arg UpdateNotifi
 	return err
 }
 
+const updateProjectName = `-- name: UpdateProjectName :exec
+UPDATE projects
+SET name = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateProjectNameParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateProjectName(ctx context.Context, arg UpdateProjectNameParams) error {
+	_, err := q.db.Exec(ctx, updateProjectName, arg.ID, arg.Name, arg.UpdatedAt)
+	return err
+}
+
 const updateProvider = `-- name: UpdateProvider :one
 UPDATE providers
 SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
@@ -1789,6 +1965,40 @@ func (q *Queries) UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) 
 	return i, err
 }
 
+const updateUserEmailVerifiedAt = `-- name: UpdateUserEmailVerifiedAt :exec
+UPDATE users
+SET email_verified_at = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateUserEmailVerifiedAtParams struct {
+	ID              uuid.UUID          `db:"id" json:"id"`
+	EmailVerifiedAt pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserEmailVerifiedAt(ctx context.Context, arg UpdateUserEmailVerifiedAtParams) error {
+	_, err := q.db.Exec(ctx, updateUserEmailVerifiedAt, arg.ID, arg.EmailVerifiedAt, arg.UpdatedAt)
+	return err
+}
+
+const updateUserOnboardingCompletedAt = `-- name: UpdateUserOnboardingCompletedAt :exec
+UPDATE users
+SET onboarding_completed_at = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateUserOnboardingCompletedAtParams struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserOnboardingCompletedAt(ctx context.Context, arg UpdateUserOnboardingCompletedAtParams) error {
+	_, err := q.db.Exec(ctx, updateUserOnboardingCompletedAt, arg.ID, arg.OnboardingCompletedAt, arg.UpdatedAt)
+	return err
+}
+
 const updateWorkflow = `-- name: UpdateWorkflow :one
 UPDATE workflows
 SET key = $3,
@@ -1838,6 +2048,43 @@ func (q *Queries) UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const upsertEmailVerification = `-- name: UpsertEmailVerification :exec
+INSERT INTO email_verifications (
+	user_id,
+	code_hash,
+	expires_at,
+	consumed_at,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE
+SET code_hash = EXCLUDED.code_hash,
+	expires_at = EXCLUDED.expires_at,
+	consumed_at = EXCLUDED.consumed_at,
+	updated_at = EXCLUDED.updated_at
+`
+
+type UpsertEmailVerificationParams struct {
+	UserID     uuid.UUID          `db:"user_id" json:"user_id"`
+	CodeHash   string             `db:"code_hash" json:"code_hash"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	ConsumedAt pgtype.Timestamptz `db:"consumed_at" json:"consumed_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertEmailVerification(ctx context.Context, arg UpsertEmailVerificationParams) error {
+	_, err := q.db.Exec(ctx, upsertEmailVerification,
+		arg.UserID,
+		arg.CodeHash,
+		arg.ExpiresAt,
+		arg.ConsumedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
 }
 
 const upsertNotificationByProjectJob = `-- name: UpsertNotificationByProjectJob :one

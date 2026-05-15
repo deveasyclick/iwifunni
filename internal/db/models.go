@@ -25,6 +25,16 @@ type ApiKey struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
+type AuthIdentity struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	UserID         uuid.UUID          `db:"user_id" json:"user_id"`
+	Provider       string             `db:"provider" json:"provider"`
+	ProviderUserID string             `db:"provider_user_id" json:"provider_user_id"`
+	Email          string             `db:"email" json:"email"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type DeliveryAttempt struct {
 	ID                uuid.UUID          `db:"id" json:"id"`
 	NotificationID    uuid.UUID          `db:"notification_id" json:"notification_id"`
@@ -34,6 +44,15 @@ type DeliveryAttempt struct {
 	ErrorMessage      *string            `db:"error_message" json:"error_message"`
 	ProviderMessageID *string            `db:"provider_message_id" json:"provider_message_id"`
 	AttemptedAt       pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
+}
+
+type EmailVerification struct {
+	UserID     uuid.UUID          `db:"user_id" json:"user_id"`
+	CodeHash   string             `db:"code_hash" json:"code_hash"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	ConsumedAt pgtype.Timestamptz `db:"consumed_at" json:"consumed_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 type Notification struct {
@@ -155,11 +174,15 @@ type Template struct {
 }
 
 type User struct {
-	ID           uuid.UUID          `db:"id" json:"id"`
-	Email        string             `db:"email" json:"email"`
-	PasswordHash string             `db:"password_hash" json:"password_hash"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
 }
 
 type Webhook struct {
