@@ -33,6 +33,9 @@ type Config struct {
 	JWTRefreshTokenTTL time.Duration
 	Environment        string
 	EncryptionKey      string
+	QueueMaxRetry      int
+	QueueTaskTimeout   time.Duration
+	QueueUniqueTTL     time.Duration
 }
 
 func Load() (*Config, error) {
@@ -56,6 +59,21 @@ func Load() (*Config, error) {
 	mailerPort, err := strconv.Atoi(getenvDefault("MAILER_PORT", "587"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILER_PORT: %w", err)
+	}
+
+	queueMaxRetry, err := strconv.Atoi(getenvDefault("QUEUE_MAX_RETRY", "5"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_MAX_RETRY: %w", err)
+	}
+
+	queueTaskTimeout, err := time.ParseDuration(getenvDefault("QUEUE_TASK_TIMEOUT", "2m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_TASK_TIMEOUT: %w", err)
+	}
+
+	queueUniqueTTL, err := time.ParseDuration(getenvDefault("QUEUE_UNIQUE_TTL", "5m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_UNIQUE_TTL: %w", err)
 	}
 
 	mailerPassword := os.Getenv("MAILER_PASSWORD")
@@ -87,6 +105,9 @@ func Load() (*Config, error) {
 		JWTRefreshTokenTTL: jwtRefreshTokenTTL,
 		Environment:        getenvDefault("ENVIRONMENT", "development"),
 		EncryptionKey:      getenvDefault("ENCRYPTION_KEY", "dev-encryption-key-32bytes-padded"),
+		QueueMaxRetry:      queueMaxRetry,
+		QueueTaskTimeout:   queueTaskTimeout,
+		QueueUniqueTTL:     queueUniqueTTL,
 	}, nil
 }
 

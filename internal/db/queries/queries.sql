@@ -7,9 +7,17 @@ WHERE api_key = $1;
 INSERT INTO services (id, name, api_key, description)
 VALUES ($1, $2, $3, $4);
 
--- name: InsertNotificationByProject :exec
-INSERT INTO notifications (id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
+-- name: UpsertNotificationByProjectJob :one
+INSERT INTO notifications (id, job_id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at;
 
 -- name: GetActiveProjectProviderByChannel :one
 SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
@@ -22,20 +30,33 @@ SELECT id, service_id, channel, enabled, provider, config_json, created_at, upda
 FROM service_channel_configs
 WHERE service_id = $1 AND channel = $2;
 
--- name: InsertNotification :exec
-INSERT INTO notifications (id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
+-- name: UpsertNotificationByServiceJob :one
+INSERT INTO notifications (id, job_id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at;
 
 -- name: ListProjectNotifications :many
-SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
 FROM notifications
 WHERE project_id = $1
 ORDER BY created_at DESC;
 
 -- name: GetProjectNotificationByID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND project_id = $2;
+
+-- name: GetNotificationByJobID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
+FROM notifications
+WHERE job_id = $1;
 
 -- name: UpdateNotificationStatus :exec
 UPDATE notifications

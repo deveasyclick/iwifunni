@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +10,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/config"
 	"github.com/deveasyclick/iwifunni/internal/notification"
+	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/storage"
 	"github.com/deveasyclick/iwifunni/internal/webhooks"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
@@ -38,6 +40,12 @@ func main() {
 	}
 	defer redisClient.Close()
 
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     cfg.RedisAddr,
+		Password: cfg.RedisPassword,
+	})
+	defer asynqClient.Close()
+
 	asynqServer := asynq.NewServer(
 		asynq.RedisClientOpt{
 			Addr:     cfg.RedisAddr,
@@ -50,18 +58,26 @@ func main() {
 				"default":  3,
 				"low":      1,
 			},
+			IsFailure: func(err error) bool {
+				return !errors.Is(err, asynq.SkipRetry)
+			},
 		},
 	)
 
 	_ = auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin) // keep redis warmed
 
-	dispatcher := webhooks.NewDispatcher(store.Queries)
+	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
+	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 	notifRepo := notification.NewRepository(store.Queries)
 	notifSvc := notification.NewServiceWithWebhooks(notifRepo, dispatcher)
-	worker := notification.NewWorker(asynqServer, notifSvc)
+	notificationWorker := notification.NewWorker(asynqServer, notifSvc)
+	webhookWorker := webhooks.NewWorker(dispatcher)
+	mux := asynq.NewServeMux()
+	notificationWorker.Register(mux)
+	webhookWorker.Register(mux)
 
 	l.Info().Msg("starting notification worker")
-	if err := worker.Run(ctx); err != nil {
+	if err := asynqServer.Start(mux); err != nil {
 		l.Error().Err(err).Msg("worker stopped")
 	}
 	asynqServer.Stop()

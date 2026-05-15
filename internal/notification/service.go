@@ -34,18 +34,33 @@ type NotificationView struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 }
 
+type notificationStore interface {
+	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByProjectJobParams) (db.Notification, error)
+	UpsertByServiceJob(ctx context.Context, arg db.UpsertNotificationByServiceJobParams) (db.Notification, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error)
+	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
+	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
+	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
+	GetActiveProviderByChannel(ctx context.Context, projectID uuid.UUID, channel string) (db.Provider, error)
+	GetServiceChannelConfig(ctx context.Context, arg db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error)
+	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
+	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
+	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)
+}
+
 // Service handles notification delivery logic.
 type Service struct {
-	repo       *Repository
+	repo       notificationStore
 	registry   *registry.Registry
 	dispatcher *webhooks.Dispatcher
 }
 
-func NewService(repo *Repository) *Service {
+func NewService(repo notificationStore) *Service {
 	return &Service{repo: repo, registry: registry.NewDefault()}
 }
 
-func NewServiceWithWebhooks(repo *Repository, dispatcher *webhooks.Dispatcher) *Service {
+func NewServiceWithWebhooks(repo notificationStore, dispatcher *webhooks.Dispatcher) *Service {
 	return &Service{repo: repo, registry: registry.NewDefault(), dispatcher: dispatcher}
 }
 
@@ -125,13 +140,14 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 }
 
 func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
-	prepared, err := s.PrepareJob(ctx, job)
-	if err != nil {
-		return err
+	if job == nil {
+		return invalidSend("notification payload is required")
 	}
-	job = prepared
+	job.JobID = strings.TrimSpace(job.JobID)
+	if job.JobID == "" {
+		return invalidSend("job_id is required")
+	}
 
-	notificationID := uuid.New()
 	recipient, err := json.Marshal(job.Recipient)
 	if err != nil {
 		return err
@@ -148,8 +164,9 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 		if err != nil {
 			return fmt.Errorf("invalid project_id: %w", err)
 		}
-		if err := s.repo.InsertByProject(ctx, db.InsertNotificationByProjectParams{
-			ID:        notificationID,
+		notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByProjectJobParams{
+			ID:        uuid.New(),
+			JobID:     &job.JobID,
 			ProjectID: pgtype.UUID{Bytes: projectID, Valid: true},
 			Title:     job.Title,
 			Message:   job.Message,
@@ -159,8 +176,13 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 			Status:    "pending",
 			CreatedAt: nowTs,
 			UpdatedAt: nowTs,
-		}); err != nil {
+		})
+		if err != nil {
 			return err
+		}
+		notificationID := notificationRecord.ID
+		if isTerminalNotificationStatus(notificationRecord.Status) {
+			return nil
 		}
 
 		successCount, failureCount, skippedCount := 0, 0, len(job.SkippedChannels)
@@ -202,8 +224,9 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 	if err != nil {
 		return err
 	}
-	if err := s.repo.Insert(ctx, db.InsertNotificationParams{
-		ID:        notificationID,
+	notificationRecord, err := s.repo.UpsertByServiceJob(ctx, db.UpsertNotificationByServiceJobParams{
+		ID:        uuid.New(),
+		JobID:     &job.JobID,
 		ServiceID: serviceID,
 		Title:     job.Title,
 		Message:   job.Message,
@@ -213,8 +236,13 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 		Status:    "pending",
 		CreatedAt: nowTs,
 		UpdatedAt: nowTs,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
+	}
+	notificationID := notificationRecord.ID
+	if isTerminalNotificationStatus(notificationRecord.Status) {
+		return nil
 	}
 
 	successCount, failureCount := 0, 0
@@ -473,6 +501,15 @@ func finalNotificationStatus(successCount, failureCount, skippedCount int) strin
 	}
 }
 
+func isTerminalNotificationStatus(status string) bool {
+	switch status {
+	case "sent", "failed", "partial_failed", "partial_skipped", "skipped":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notificationID uuid.UUID, channel string, job *types.NotificationJob) error {
 	providerRecord, err := s.repo.GetActiveProviderByChannel(ctx, projectID, channel)
 	if err != nil {
@@ -561,7 +598,7 @@ func (s *Service) recordFailed(ctx context.Context, notificationID uuid.UUID, ch
 	return attemptErr
 }
 
-func now() time.Time { return time.Now().UTC() }
+var now = func() time.Time { return time.Now().UTC() }
 
 func defaultProviderForChannel(channel string) string {
 	switch channel {

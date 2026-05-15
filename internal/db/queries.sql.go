@@ -646,6 +646,47 @@ func (q *Queries) GetFirstProjectMembershipByUser(ctx context.Context, userID uu
 	return i, err
 }
 
+const getNotificationByJobID = `-- name: GetNotificationByJobID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
+FROM notifications
+WHERE job_id = $1
+`
+
+type GetNotificationByJobIDRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetNotificationByJobID(ctx context.Context, jobID *string) (GetNotificationByJobIDRow, error) {
+	row := q.db.QueryRow(ctx, getNotificationByJobID, jobID)
+	var i GetNotificationByJobIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.ProjectID,
+		&i.JobID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getOrganizationByID = `-- name: GetOrganizationByID :one
 SELECT id, name, created_at, updated_at
 FROM organizations
@@ -766,7 +807,7 @@ func (q *Queries) GetProjectMembershipByUser(ctx context.Context, arg GetProject
 }
 
 const getProjectNotificationByID = `-- name: GetProjectNotificationByID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND project_id = $2
 `
@@ -776,9 +817,24 @@ type GetProjectNotificationByIDParams struct {
 	ProjectID pgtype.UUID `db:"project_id" json:"project_id"`
 }
 
-func (q *Queries) GetProjectNotificationByID(ctx context.Context, arg GetProjectNotificationByIDParams) (Notification, error) {
+type GetProjectNotificationByIDRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetProjectNotificationByID(ctx context.Context, arg GetProjectNotificationByIDParams) (GetProjectNotificationByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProjectNotificationByID, arg.ID, arg.ProjectID)
-	var i Notification
+	var i GetProjectNotificationByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ServiceID,
@@ -789,6 +845,7 @@ func (q *Queries) GetProjectNotificationByID(ctx context.Context, arg GetProject
 		&i.Metadata,
 		&i.Status,
 		&i.ProjectID,
+		&i.JobID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1085,74 +1142,6 @@ func (q *Queries) InsertDeliveryAttempt(ctx context.Context, arg InsertDeliveryA
 	return err
 }
 
-const insertNotification = `-- name: InsertNotification :exec
-INSERT INTO notifications (id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-`
-
-type InsertNotificationParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Channels  []string           `db:"channels" json:"channels"`
-	Recipient []byte             `db:"recipient" json:"recipient"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	Status    string             `db:"status" json:"status"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
-	_, err := q.db.Exec(ctx, insertNotification,
-		arg.ID,
-		arg.ServiceID,
-		arg.Title,
-		arg.Message,
-		arg.Channels,
-		arg.Recipient,
-		arg.Metadata,
-		arg.Status,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const insertNotificationByProject = `-- name: InsertNotificationByProject :exec
-INSERT INTO notifications (id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-`
-
-type InsertNotificationByProjectParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Channels  []string           `db:"channels" json:"channels"`
-	Recipient []byte             `db:"recipient" json:"recipient"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	Status    string             `db:"status" json:"status"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) InsertNotificationByProject(ctx context.Context, arg InsertNotificationByProjectParams) error {
-	_, err := q.db.Exec(ctx, insertNotificationByProject,
-		arg.ID,
-		arg.ProjectID,
-		arg.Title,
-		arg.Message,
-		arg.Channels,
-		arg.Recipient,
-		arg.Metadata,
-		arg.Status,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
 const insertService = `-- name: InsertService :exec
 INSERT INTO services (id, name, api_key, description)
 VALUES ($1, $2, $3, $4)
@@ -1320,21 +1309,36 @@ func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID)
 }
 
 const listProjectNotifications = `-- name: ListProjectNotifications :many
-SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, created_at, updated_at
+SELECT id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
 FROM notifications
 WHERE project_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListProjectNotifications(ctx context.Context, projectID pgtype.UUID) ([]Notification, error) {
+type ListProjectNotificationsRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ListProjectNotifications(ctx context.Context, projectID pgtype.UUID) ([]ListProjectNotificationsRow, error) {
 	rows, err := q.db.Query(ctx, listProjectNotifications, projectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Notification{}
+	items := []ListProjectNotificationsRow{}
 	for rows.Next() {
-		var i Notification
+		var i ListProjectNotificationsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ServiceID,
@@ -1345,6 +1349,7 @@ func (q *Queries) ListProjectNotifications(ctx context.Context, projectID pgtype
 			&i.Metadata,
 			&i.Status,
 			&i.ProjectID,
+			&i.JobID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1829,6 +1834,154 @@ func (q *Queries) UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) 
 		&i.Channels,
 		&i.TemplateIds,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertNotificationByProjectJob = `-- name: UpsertNotificationByProjectJob :one
+INSERT INTO notifications (id, job_id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
+`
+
+type UpsertNotificationByProjectJobParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type UpsertNotificationByProjectJobRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertNotificationByProjectJob(ctx context.Context, arg UpsertNotificationByProjectJobParams) (UpsertNotificationByProjectJobRow, error) {
+	row := q.db.QueryRow(ctx, upsertNotificationByProjectJob,
+		arg.ID,
+		arg.JobID,
+		arg.ProjectID,
+		arg.Title,
+		arg.Message,
+		arg.Channels,
+		arg.Recipient,
+		arg.Metadata,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i UpsertNotificationByProjectJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.ProjectID,
+		&i.JobID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertNotificationByServiceJob = `-- name: UpsertNotificationByServiceJob :one
+INSERT INTO notifications (id, job_id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, project_id, job_id, created_at, updated_at
+`
+
+type UpsertNotificationByServiceJobParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type UpsertNotificationByServiceJobRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertNotificationByServiceJob(ctx context.Context, arg UpsertNotificationByServiceJobParams) (UpsertNotificationByServiceJobRow, error) {
+	row := q.db.QueryRow(ctx, upsertNotificationByServiceJob,
+		arg.ID,
+		arg.JobID,
+		arg.ServiceID,
+		arg.Title,
+		arg.Message,
+		arg.Channels,
+		arg.Recipient,
+		arg.Metadata,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i UpsertNotificationByServiceJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.ProjectID,
+		&i.JobID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

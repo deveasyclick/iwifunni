@@ -51,8 +51,8 @@ func main() {
 	rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
 	authService := auth.NewService(store.Queries, jwtManager, cfg.JWTRefreshTokenTTL)
-	dispatcher := webhooks.NewDispatcher(store.Queries)
-	producer := queue.NewProducer(asynqClient)
+	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
+	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 
 	application := app.New(app.Config{
 		Queries:       store.Queries,
