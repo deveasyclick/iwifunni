@@ -12,6 +12,9 @@ export default async function Layout({
   if (!cookieStore.get("access_token")?.value) {
     redirect("/auth/login");
   }
+  if (cookieStore.get("needs_onboarding")?.value === "true") {
+    redirect("/auth/onboarding");
+  }
 
   return (
     <div className="flex w-full min-h-screen">

@@ -1,4 +1,4 @@
-import { Register } from "@/app/components/auth/Register";
+import { VerifyEmail } from "@/app/components/auth/VerifyEmail";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -11,7 +11,7 @@ const page = async () => {
     redirect("/dashboard");
   }
 
-  return <Register />;
+  return <VerifyEmail />;
 };
 
 export default page;

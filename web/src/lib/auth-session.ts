@@ -10,6 +10,7 @@ const sessionCookieOptions = {
 type SessionPayload = {
   access_token?: string;
   refresh_token?: string;
+  needs_onboarding?: boolean;
 };
 
 function isSessionPayload(payload: unknown): payload is SessionPayload {
@@ -22,6 +23,21 @@ function isSessionPayload(payload: unknown): payload is SessionPayload {
     typeof candidate.access_token === "string" &&
     typeof candidate.refresh_token === "string"
   );
+}
+
+export function setOnboardingCookie(
+  response: NextResponse,
+  needsOnboarding: boolean,
+) {
+  if (needsOnboarding) {
+    response.cookies.set("needs_onboarding", "true", sessionCookieOptions);
+    return;
+  }
+
+  response.cookies.set("needs_onboarding", "", {
+    ...sessionCookieOptions,
+    maxAge: 0,
+  });
 }
 
 export function setSessionCookies(
@@ -39,6 +55,8 @@ export function setSessionCookies(
       sessionCookieOptions,
     );
   }
+
+  setOnboardingCookie(response, payload.needs_onboarding === true);
 }
 
 export function clearSessionCookies(response: NextResponse) {
@@ -47,6 +65,10 @@ export function clearSessionCookies(response: NextResponse) {
     maxAge: 0,
   });
   response.cookies.set("refresh_token", "", {
+    ...sessionCookieOptions,
+    maxAge: 0,
+  });
+  response.cookies.set("needs_onboarding", "", {
     ...sessionCookieOptions,
     maxAge: 0,
   });

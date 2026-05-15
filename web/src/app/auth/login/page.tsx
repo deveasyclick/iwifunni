@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 const page = async () => {
   const cookieStore = await cookies();
   if (cookieStore.get("access_token")?.value) {
+    if (cookieStore.get("needs_onboarding")?.value === "true") {
+      redirect("/auth/onboarding");
+    }
     redirect("/dashboard");
   }
 

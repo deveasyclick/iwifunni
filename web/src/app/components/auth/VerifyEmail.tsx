@@ -4,18 +4,17 @@ import CardBox from "../shared/CardBox";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import FullLogo from "../shared/FullLogo";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export const Login = () => {
+export const VerifyEmail = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(searchParams.get("error"));
+  const [email, setEmail] = useState(searchParams.get("email") || "");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -24,12 +23,12 @@ export const Login = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/signin", {
+      const response = await fetch("/api/auth/verify-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, code }),
       });
 
       const payload = (await response.json().catch(() => null)) as {
@@ -38,14 +37,14 @@ export const Login = () => {
       } | null;
 
       if (!response.ok) {
-        setError(payload?.error || "Unable to sign in.");
+        setError(payload?.error || "Unable to verify your email.");
         return;
       }
 
       router.replace(payload?.needs_onboarding ? "/auth/onboarding" : "/dashboard");
       router.refresh();
     } catch {
-      setError("Unable to sign in right now.");
+      setError("Unable to verify your email right now.");
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +58,7 @@ export const Login = () => {
             <FullLogo />
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Welcome back. Verified accounts continue to your dashboard or onboarding.
+            Enter the six-digit code sent to your email to continue.
           </p>
           <form onSubmit={handleSubmit}>
             <div>
@@ -79,62 +78,39 @@ export const Login = () => {
             </div>
             <div className="mt-6">
               <div className="mb-2 block">
-                <Label htmlFor="password" className="font-medium">
-                  Password
+                <Label htmlFor="code" className="font-medium">
+                  Verification code
                 </Label>
               </div>
               <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                id="code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="123456"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
                 required
               />
             </div>
-            <div className="flex flex-wrap gap-6 items-center justify-between my-6">
-              <div className="flex items-center gap-2">
-                <Checkbox id="remember" defaultChecked />
-                <Label
-                  className="text-link font-normal text-sm"
-                  htmlFor="remember"
-                >
-                  Remember this device
-                </Label>
-              </div>
-              <Link
-                href="#"
-                className="text-sm font-medium text-primary hover:text-primaryemphasis"
-              >
-                Forgot Password ?
-              </Link>
-            </div>
             {error ? (
-              <p className="mb-4 text-sm text-destructive" role="alert">
+              <p className="mt-4 text-sm text-destructive" role="alert">
                 {error}
               </p>
             ) : null}
-            <Button className="w-full" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Signing In..." : "Sign In"}
+            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Verifying..." : "Verify Email"}
             </Button>
           </form>
-          <div className="grid gap-3 mt-6">
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/google">Continue with Google</Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/api/auth/social/github">Continue with GitHub</Link>
-            </Button>
-          </div>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
-              New to Iwifunni?
+              Need a different account?
             </p>
             <Link
-              href="/auth/register"
+              href="/auth/login"
               className="text-sm font-medium text-primary hover:text-primaryemphasis"
             >
-              Create an account
+              Sign In
             </Link>
           </div>
         </CardBox>
