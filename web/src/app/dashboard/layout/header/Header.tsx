@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
 import { Icon } from "@iconify/react";
 import Profile from "./Profile";
 import Notifications from "./Notifications";
@@ -9,9 +8,10 @@ import SidebarLayout from "../sidebar/Sidebar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import Search from "./Search";
 import FullLogo from "@/app/components/shared/FullLogo";
+import { useTheme } from "@/components/theme-provider";
 
 const Header = () => {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [isSticky, setIsSticky] = useState(false);
   const [mobileMenu, setMobileMenu] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +32,7 @@ const Header = () => {
   }, []);
 
   const toggleMode = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
+    setTheme((prevTheme) => (prevTheme === "dark" ? "light" : "dark"));
   };
 
   return (
@@ -65,7 +65,7 @@ const Header = () => {
               onClick={toggleMode}
             >
               <span className="flex items-center justify-center relative after:absolute after:w-10 after:h-10 after:rounded-full after:-top-1/2 group-hover:after:bg-lightprimary">
-                {theme === "light" ? (
+                {resolvedTheme === "light" ? (
                   <Icon
                     icon="tabler:moon"
                     width="20"
@@ -107,7 +107,7 @@ const Header = () => {
                   onClick={toggleMode}
                 >
                   <span className="flex items-center justify-center relative after:absolute after:w-10 after:h-10 after:rounded-full after:-top-1/2 group-hover:after:bg-lightprimary">
-                    {theme === "light" ? (
+                    {resolvedTheme === "light" ? (
                       <Icon
                         icon="tabler:moon"
                         width="20"
