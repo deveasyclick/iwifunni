@@ -39,7 +39,7 @@ type webhookResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -54,10 +54,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wh, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID: projectID,
-		URL:       req.URL,
-		Secret:    req.Secret,
-		Events:    req.Events,
+		EnvironmentID: environmentID,
+		URL:           req.URL,
+		Secret:        req.Secret,
+		Events:        req.Events,
 	})
 	if err != nil {
 		http.Error(w, "failed to register webhook", http.StatusInternalServerError)
@@ -69,12 +69,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	whs, err := h.service.List(r.Context(), projectID)
+	whs, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list webhooks", http.StatusInternalServerError)
 		return
@@ -88,7 +88,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -98,7 +98,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid webhook id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), webhookID, projectID); err != nil {
+	if err := h.service.Delete(r.Context(), webhookID, environmentID); err != nil {
 		http.Error(w, "failed to delete webhook", http.StatusInternalServerError)
 		return
 	}

@@ -162,14 +162,14 @@ func newFakeWebhookStore() *fakeWebhookStore {
 	projectID := uuid.New()
 	return &fakeWebhookStore{
 		webhook: db.Webhook{
-			ID:        uuid.New(),
-			ProjectID: projectID,
-			Url:       "https://example.com/hooks/notify",
-			Secret:    "top-secret",
-			Events:    []string{"notification.sent"},
-			IsActive:  true,
-			CreatedAt: pgtype.Timestamptz{Valid: true},
-			UpdatedAt: pgtype.Timestamptz{Valid: true},
+			ID:            uuid.New(),
+			EnvironmentID: projectID,
+			Url:           "https://example.com/hooks/notify",
+			Secret:        "top-secret",
+			Events:        []string{"notification.sent"},
+			IsActive:      true,
+			CreatedAt:     pgtype.Timestamptz{Valid: true},
+			UpdatedAt:     pgtype.Timestamptz{Valid: true},
 		},
 	}
 }
@@ -178,7 +178,7 @@ func validWebhookJob(wh db.Webhook) types.WebhookDeliveryJob {
 	return types.WebhookDeliveryJob{
 		JobID:     uuid.NewString(),
 		WebhookID: wh.ID.String(),
-		ProjectID: wh.ProjectID.String(),
+		ProjectID: wh.EnvironmentID.String(),
 		Event:     "notification.sent",
 		Payload:   []byte(`{"event":"notification.sent"}`),
 	}

@@ -50,20 +50,20 @@ func NewDispatcher(queries webhookStore, enqueuer webhookEnqueuer) *Dispatcher {
 type EventPayload struct {
 	Event          string `json:"event"`
 	NotificationID string `json:"notification_id,omitempty"`
-	ProjectID      string `json:"project_id"`
+	EnvironmentID  string `json:"environment_id"`
 	Reason         string `json:"reason,omitempty"`
 	Timestamp      string `json:"timestamp"`
 }
 
-func (d *Dispatcher) Dispatch(ctx context.Context, projectID uuid.UUID, event string, payload EventPayload) {
+func (d *Dispatcher) Dispatch(ctx context.Context, environmentID uuid.UUID, event string, payload EventPayload) {
 	if d.enqueuer == nil {
 		logger.Get().Warn().Str("event", event).Msg("webhook dispatcher has no queue producer")
 		return
 	}
 
 	webhooks, err := d.queries.ListActiveWebhooksForEvent(ctx, db.ListActiveWebhooksForEventParams{
-		ProjectID: projectID,
-		Events:    []string{event},
+		EnvironmentID: environmentID,
+		Events:        []string{event},
 	})
 	if err != nil {
 		logger.Get().Warn().Err(err).Str("event", event).Msg("failed to list webhooks for event")
@@ -79,7 +79,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, projectID uuid.UUID, event st
 	for _, wh := range webhooks {
 		if err := d.enqueuer.EnqueueWebhook(ctx, &types.WebhookDeliveryJob{
 			WebhookID: wh.ID.String(),
-			ProjectID: projectID.String(),
+			ProjectID: environmentID.String(),
 			Event:     event,
 			Payload:   payloadBytes,
 		}); err != nil {
@@ -100,7 +100,7 @@ func (d *Dispatcher) Execute(ctx context.Context, job *types.WebhookDeliveryJob)
 		return invalidWebhookJob("webhook_id, project_id, event, and payload are required")
 	}
 
-	projectID, err := uuid.Parse(job.ProjectID)
+	environmentID, err := uuid.Parse(job.ProjectID)
 	if err != nil {
 		return invalidWebhookJob("invalid project_id")
 	}
@@ -110,8 +110,8 @@ func (d *Dispatcher) Execute(ctx context.Context, job *types.WebhookDeliveryJob)
 	}
 
 	wh, err := d.queries.GetWebhookByID(ctx, db.GetWebhookByIDParams{
-		ID:        webhookID,
-		ProjectID: projectID,
+		ID:            webhookID,
+		EnvironmentID: environmentID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

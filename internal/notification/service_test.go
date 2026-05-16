@@ -25,17 +25,17 @@ func newFakeNotificationStore() *fakeNotificationStore {
 	return &fakeNotificationStore{
 		notifications: make(map[string]db.Notification),
 		provider: db.Provider{
-			ID:        uuid.New(),
-			ProjectID: uuid.New(),
-			Name:      "test-email",
-			Channel:   "email",
-			Config:    []byte(`{"host":"smtp.example.com","port":587,"username":"user","password":"pass","from":"noreply@example.com"}`),
-			IsActive:  true,
+			ID:            uuid.New(),
+			EnvironmentID: uuid.New(),
+			Name:          "test-email",
+			Channel:       "email",
+			Config:        []byte(`{"host":"smtp.example.com","port":587,"username":"user","password":"pass","from":"noreply@example.com"}`),
+			IsActive:      true,
 		},
 	}
 }
 
-func (s *fakeNotificationStore) UpsertByProjectJob(_ context.Context, arg db.UpsertNotificationByProjectJobParams) (db.Notification, error) {
+func (s *fakeNotificationStore) UpsertByProjectJob(_ context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error) {
 	if arg.JobID != nil {
 		if existing, ok := s.notifications[*arg.JobID]; ok {
 			existing.Title = arg.Title
@@ -50,17 +50,17 @@ func (s *fakeNotificationStore) UpsertByProjectJob(_ context.Context, arg db.Ups
 	}
 	s.notificationCount++
 	notification := db.Notification{
-		ID:        arg.ID,
-		Title:     arg.Title,
-		Message:   arg.Message,
-		Channels:  append([]string(nil), arg.Channels...),
-		Recipient: arg.Recipient,
-		Metadata:  arg.Metadata,
-		Status:    arg.Status,
-		ProjectID: arg.ProjectID,
-		CreatedAt: arg.CreatedAt,
-		UpdatedAt: arg.UpdatedAt,
-		JobID:     arg.JobID,
+		ID:            arg.ID,
+		Title:         arg.Title,
+		Message:       arg.Message,
+		Channels:      append([]string(nil), arg.Channels...),
+		Recipient:     arg.Recipient,
+		Metadata:      arg.Metadata,
+		Status:        arg.Status,
+		EnvironmentID: arg.EnvironmentID,
+		CreatedAt:     arg.CreatedAt,
+		UpdatedAt:     arg.UpdatedAt,
+		JobID:         arg.JobID,
 	}
 	if arg.JobID != nil {
 		s.notifications[*arg.JobID] = notification

@@ -27,7 +27,7 @@ type ChannelStatus struct {
 }
 
 type CreateInput struct {
-	ProjectID uuid.UUID
+	EnvironmentID uuid.UUID
 	Name      string
 	Email     *string
 	Phone     *string
@@ -39,7 +39,7 @@ type CreateInput struct {
 
 type UpdateInput struct {
 	ID        uuid.UUID
-	ProjectID uuid.UUID
+	EnvironmentID uuid.UUID
 	Name      string
 	Email     *string
 	Phone     *string
@@ -65,12 +65,12 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Subscriber, er
 	return s.repo.Create(ctx, params)
 }
 
-func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]db.Subscriber, error) {
-	return s.repo.List(ctx, projectID)
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Subscriber, error) {
+	return s.repo.List(ctx, environmentID)
 }
 
-func (s *Service) GetByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error) {
-	return s.repo.GetByID(ctx, id, projectID)
+func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Subscriber, error) {
+	return s.repo.GetByID(ctx, id, environmentID)
 }
 
 func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Subscriber, error) {
@@ -81,8 +81,8 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Subscriber, er
 	return s.repo.Update(ctx, params)
 }
 
-func (s *Service) Delete(ctx context.Context, id, projectID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, projectID)
+func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, environmentID)
 }
 
 func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
@@ -102,16 +102,16 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 		return db.CreateSubscriberParams{}, err
 	}
 	return db.CreateSubscriberParams{
-		ID:        uuid.New(),
-		ProjectID: in.ProjectID,
-		Name:      name,
-		Email:     email,
-		Phone:     phone,
-		PushToken: pushToken,
-		Channels:  channels,
-		Status:    statusJSON,
-		Tags:      normalizeTags(in.Tags),
-		Metadata:  []byte(`{}`),
+		ID:            uuid.New(),
+		EnvironmentID: in.EnvironmentID,
+		Name:          name,
+		Email:         email,
+		Phone:         phone,
+		PushToken:     pushToken,
+		Channels:      channels,
+		Status:        statusJSON,
+		Tags:          normalizeTags(in.Tags),
+		Metadata:      []byte(`{}`),
 	}, validateName(name)
 }
 
@@ -132,16 +132,16 @@ func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 		return db.UpdateSubscriberParams{}, err
 	}
 	return db.UpdateSubscriberParams{
-		ID:        in.ID,
-		ProjectID: in.ProjectID,
-		Name:      name,
-		Email:     email,
-		Phone:     phone,
-		PushToken: pushToken,
-		Channels:  channels,
-		Status:    statusJSON,
-		Tags:      normalizeTags(in.Tags),
-		Metadata:  []byte(`{}`),
+		ID:            in.ID,
+		EnvironmentID: in.EnvironmentID,
+		Name:          name,
+		Email:         email,
+		Phone:         phone,
+		PushToken:     pushToken,
+		Channels:      channels,
+		Status:        statusJSON,
+		Tags:          normalizeTags(in.Tags),
+		Metadata:      []byte(`{}`),
 	}, validateName(name)
 }
 

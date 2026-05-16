@@ -52,7 +52,7 @@ type workflowResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -63,12 +63,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID:   projectID,
-		Key:         req.Key,
-		Name:        req.Name,
-		Description: req.Description,
-		Channels:    req.Channels,
-		TemplateIDs: req.TemplateIDs,
+		EnvironmentID: environmentID,
+		Key:           req.Key,
+		Name:          req.Name,
+		Description:   req.Description,
+		Channels:      req.Channels,
+		TemplateIDs:   req.TemplateIDs,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -78,12 +78,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items, err := h.service.List(r.Context(), projectID)
+	items, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list workflows", http.StatusInternalServerError)
 		return
@@ -96,7 +96,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -106,7 +106,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid workflow id", http.StatusBadRequest)
 		return
 	}
-	item, err := h.service.GetByID(r.Context(), id, projectID)
+	item, err := h.service.GetByID(r.Context(), id, environmentID)
 	if err != nil {
 		h.respondError(w, err)
 		return
@@ -115,7 +115,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -131,14 +131,14 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item, err := h.service.Update(r.Context(), UpdateInput{
-		ID:          id,
-		ProjectID:   projectID,
-		Key:         req.Key,
-		Name:        req.Name,
-		Description: req.Description,
-		Channels:    req.Channels,
-		TemplateIDs: req.TemplateIDs,
-		IsActive:    req.IsActive,
+		ID:            id,
+		EnvironmentID: environmentID,
+		Key:           req.Key,
+		Name:          req.Name,
+		Description:   req.Description,
+		Channels:      req.Channels,
+		TemplateIDs:   req.TemplateIDs,
+		IsActive:      req.IsActive,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -148,7 +148,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -158,7 +158,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid workflow id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), id, projectID); err != nil {
+	if err := h.service.Delete(r.Context(), id, environmentID); err != nil {
 		h.respondError(w, err)
 		return
 	}

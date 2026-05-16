@@ -22,20 +22,20 @@ import (
 var ErrInvalidSendRequest = errors.New("invalid notification request")
 
 type NotificationView struct {
-	ID        string         `json:"id"`
-	ServiceID *string        `json:"service_id,omitempty"`
-	ProjectID *string        `json:"project_id,omitempty"`
-	Title     string         `json:"title"`
-	Message   string         `json:"message"`
-	Channels  []string       `json:"channels"`
-	Metadata  map[string]any `json:"metadata"`
-	Status    string         `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID            string         `json:"id"`
+	ServiceID     *string        `json:"service_id,omitempty"`
+	EnvironmentID *string        `json:"environment_id,omitempty"`
+	Title         string         `json:"title"`
+	Message       string         `json:"message"`
+	Channels      []string       `json:"channels"`
+	Metadata      map[string]any `json:"metadata"`
+	Status        string         `json:"status"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 type notificationStore interface {
-	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByProjectJobParams) (db.Notification, error)
+	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error)
 	UpsertByServiceJob(ctx context.Context, arg db.UpsertNotificationByServiceJobParams) (db.Notification, error)
 	ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error)
 	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
@@ -164,18 +164,18 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 		if err != nil {
 			return fmt.Errorf("invalid project_id: %w", err)
 		}
-		notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByProjectJobParams{
-			ID:        uuid.New(),
-			JobID:     &job.JobID,
-			ProjectID: pgtype.UUID{Bytes: projectID, Valid: true},
-			Title:     job.Title,
-			Message:   job.Message,
-			Channels:  job.Channels,
-			Recipient: recipient,
-			Metadata:  metadata,
-			Status:    "pending",
-			CreatedAt: nowTs,
-			UpdatedAt: nowTs,
+		notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByEnvironmentJobParams{
+			ID:            uuid.New(),
+			JobID:         &job.JobID,
+			EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
+			Title:         job.Title,
+			Message:       job.Message,
+			Channels:      job.Channels,
+			Recipient:     recipient,
+			Metadata:      metadata,
+			Status:        "pending",
+			CreatedAt:     nowTs,
+			UpdatedAt:     nowTs,
 		})
 		if err != nil {
 			return err
@@ -212,7 +212,7 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 			s.dispatcher.Dispatch(ctx, projectID, event, webhooks.EventPayload{
 				Event:          event,
 				NotificationID: notificationID.String(),
-				ProjectID:      projectID.String(),
+				EnvironmentID:  projectID.String(),
 				Timestamp:      now().Format(time.RFC3339),
 			})
 		}
@@ -646,22 +646,22 @@ func notificationViewFromRecord(item db.Notification) NotificationView {
 		serviceID = &value
 	}
 
-	var projectID *string
-	if item.ProjectID.Valid {
-		value := uuid.UUID(item.ProjectID.Bytes).String()
-		projectID = &value
+	var environmentID *string
+	if item.EnvironmentID.Valid {
+		value := uuid.UUID(item.EnvironmentID.Bytes).String()
+		environmentID = &value
 	}
 
 	return NotificationView{
-		ID:        item.ID.String(),
-		ServiceID: serviceID,
-		ProjectID: projectID,
-		Title:     item.Title,
-		Message:   item.Message,
-		Channels:  item.Channels,
-		Metadata:  metadata,
-		Status:    item.Status,
-		CreatedAt: item.CreatedAt.Time,
-		UpdatedAt: item.UpdatedAt.Time,
+		ID:            item.ID.String(),
+		ServiceID:     serviceID,
+		EnvironmentID: environmentID,
+		Title:         item.Title,
+		Message:       item.Message,
+		Channels:      item.Channels,
+		Metadata:      metadata,
+		Status:        item.Status,
+		CreatedAt:     item.CreatedAt.Time,
+		UpdatedAt:     item.UpdatedAt.Time,
 	}
 }

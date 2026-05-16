@@ -57,7 +57,7 @@ type subscriberResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -68,14 +68,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID: projectID,
-		Name:      req.Name,
-		Email:     req.Email,
-		Phone:     req.Phone,
-		PushToken: req.PushToken,
-		Channels:  req.Channels,
-		Status:    req.Status,
-		Tags:      req.Tags,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Email:         req.Email,
+		Phone:         req.Phone,
+		PushToken:     req.PushToken,
+		Channels:      req.Channels,
+		Status:        req.Status,
+		Tags:          req.Tags,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -85,12 +85,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items, err := h.service.List(r.Context(), projectID)
+	items, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list subscribers", http.StatusInternalServerError)
 		return
@@ -103,7 +103,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -113,7 +113,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid subscriber id", http.StatusBadRequest)
 		return
 	}
-	item, err := h.service.GetByID(r.Context(), id, projectID)
+	item, err := h.service.GetByID(r.Context(), id, environmentID)
 	if err != nil {
 		h.respondError(w, err)
 		return
@@ -122,7 +122,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -138,15 +138,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item, err := h.service.Update(r.Context(), UpdateInput{
-		ID:        id,
-		ProjectID: projectID,
-		Name:      req.Name,
-		Email:     req.Email,
-		Phone:     req.Phone,
-		PushToken: req.PushToken,
-		Channels:  req.Channels,
-		Status:    req.Status,
-		Tags:      req.Tags,
+		ID:            id,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Email:         req.Email,
+		Phone:         req.Phone,
+		PushToken:     req.PushToken,
+		Channels:      req.Channels,
+		Status:        req.Status,
+		Tags:          req.Tags,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -156,7 +156,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -166,7 +166,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid subscriber id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), id, projectID); err != nil {
+	if err := h.service.Delete(r.Context(), id, environmentID); err != nil {
 		h.respondError(w, err)
 		return
 	}

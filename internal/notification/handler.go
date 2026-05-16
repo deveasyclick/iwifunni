@@ -63,9 +63,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Metadata:     payload.Metadata,
 	}
 
-	// Resolve project or legacy service from context
-	if proj := auth.GetAuthenticatedProject(r.Context()); proj != nil {
-		job.ProjectID = proj.ProjectID.String()
+	// Resolve environment or legacy service from context.
+	if environment := auth.GetAuthenticatedEnvironment(r.Context()); environment != nil {
+		job.ProjectID = environment.EnvironmentID.String()
 	} else if svc := auth.GetService(r.Context()); svc != nil {
 		job.ServiceID = svc.ID.String()
 	} else {
@@ -100,13 +100,13 @@ func (h *Handler) respondSendError(w http.ResponseWriter, err error) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := notificationProjectIDFromContext(r)
+	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	items, err := h.service.ListByProject(r.Context(), projectID)
+	items, err := h.service.ListByProject(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list notifications", http.StatusInternalServerError)
 		return
@@ -117,7 +117,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := notificationProjectIDFromContext(r)
+	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -129,7 +129,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.service.GetByProject(r.Context(), notificationID, projectID)
+	item, err := h.service.GetByProject(r.Context(), notificationID, environmentID)
 	if err != nil {
 		http.Error(w, "notification not found", http.StatusNotFound)
 		return
@@ -140,15 +140,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func notificationProjectIDFromContext(r *http.Request) (uuid.UUID, bool) {
-	if claims := auth.GetJWTClaims(r.Context()); claims != nil {
-		id, err := uuid.Parse(claims.ProjectID)
-		if err == nil {
-			return id, true
-		}
-	}
-
-	if proj := auth.GetAuthenticatedProject(r.Context()); proj != nil {
-		return proj.ProjectID, true
+	if environmentID, ok := auth.GetEnvironmentID(r.Context()); ok {
+		return environmentID, true
 	}
 
 	return uuid.Nil, false

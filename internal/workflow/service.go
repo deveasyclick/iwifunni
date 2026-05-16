@@ -17,7 +17,7 @@ var (
 )
 
 type CreateInput struct {
-	ProjectID   uuid.UUID
+	EnvironmentID uuid.UUID
 	Key         string
 	Name        string
 	Description *string
@@ -27,7 +27,7 @@ type CreateInput struct {
 
 type UpdateInput struct {
 	ID          uuid.UUID
-	ProjectID   uuid.UUID
+	EnvironmentID uuid.UUID
 	Key         string
 	Name        string
 	Description *string
@@ -52,12 +52,12 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Workflow, erro
 	return s.repo.Create(ctx, params)
 }
 
-func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]db.Workflow, error) {
-	return s.repo.List(ctx, projectID)
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Workflow, error) {
+	return s.repo.List(ctx, environmentID)
 }
 
-func (s *Service) GetByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error) {
-	return s.repo.GetByID(ctx, id, projectID)
+func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
+	return s.repo.GetByID(ctx, id, environmentID)
 }
 
 func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Workflow, error) {
@@ -68,8 +68,8 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Workflow, erro
 	return s.repo.Update(ctx, params)
 }
 
-func (s *Service) Delete(ctx context.Context, id, projectID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, projectID)
+func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, environmentID)
 }
 
 func buildCreateParams(in CreateInput) (db.CreateWorkflowParams, error) {
@@ -78,13 +78,13 @@ func buildCreateParams(in CreateInput) (db.CreateWorkflowParams, error) {
 		return db.CreateWorkflowParams{}, err
 	}
 	return db.CreateWorkflowParams{
-		ID:          uuid.New(),
-		ProjectID:   in.ProjectID,
-		Key:         key,
-		Name:        name,
-		Description: description,
-		Channels:    channels,
-		TemplateIds: templateIDs,
+		ID:            uuid.New(),
+		EnvironmentID: in.EnvironmentID,
+		Key:           key,
+		Name:          name,
+		Description:   description,
+		Channels:      channels,
+		TemplateIds:   templateIDs,
 	}, nil
 }
 
@@ -94,14 +94,14 @@ func buildUpdateParams(in UpdateInput) (db.UpdateWorkflowParams, error) {
 		return db.UpdateWorkflowParams{}, err
 	}
 	return db.UpdateWorkflowParams{
-		ID:          in.ID,
-		ProjectID:   in.ProjectID,
-		Key:         key,
-		Name:        name,
-		Description: description,
-		Channels:    channels,
-		TemplateIds: templateIDs,
-		IsActive:    in.IsActive,
+		ID:            in.ID,
+		EnvironmentID: in.EnvironmentID,
+		Key:           key,
+		Name:          name,
+		Description:   description,
+		Channels:      channels,
+		TemplateIds:   templateIDs,
+		IsActive:      in.IsActive,
 	}, nil
 }
 

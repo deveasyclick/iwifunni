@@ -17,8 +17,8 @@ func NewRepository(q *db.Queries) *Repository {
 	return &Repository{q: q}
 }
 
-func (r *Repository) UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByProjectJobParams) (db.Notification, error) {
-	row, err := r.q.UpsertNotificationByProjectJob(ctx, arg)
+func (r *Repository) UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error) {
+	row, err := r.q.UpsertNotificationByEnvironmentJob(ctx, arg)
 	if err != nil {
 		return db.Notification{}, err
 	}
@@ -34,7 +34,7 @@ func (r *Repository) UpsertByServiceJob(ctx context.Context, arg db.UpsertNotifi
 }
 
 func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error) {
-	rows, err := r.q.ListProjectNotifications(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
+	rows, err := r.q.ListEnvironmentNotifications(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +46,9 @@ func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]
 }
 
 func (r *Repository) GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error) {
-	row, err := r.q.GetProjectNotificationByID(ctx, db.GetProjectNotificationByIDParams{
-		ID:        id,
-		ProjectID: pgtype.UUID{Bytes: projectID, Valid: true},
+	row, err := r.q.GetEnvironmentNotificationByID(ctx, db.GetEnvironmentNotificationByIDParams{
+		ID:            id,
+		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
 	})
 	if err != nil {
 		return db.Notification{}, err
@@ -67,88 +67,88 @@ func (r *Repository) GetByJobID(ctx context.Context, jobID string) (db.Notificat
 	return notificationFromGetByJobIDRow(row), nil
 }
 
-func notificationFromProjectUpsertRow(row db.UpsertNotificationByProjectJobRow) db.Notification {
+func notificationFromProjectUpsertRow(row db.UpsertNotificationByEnvironmentJobRow) db.Notification {
 	return db.Notification{
-		ID:        row.ID,
-		ServiceID: row.ServiceID,
-		Title:     row.Title,
-		Message:   row.Message,
-		Channels:  row.Channels,
-		Recipient: row.Recipient,
-		Metadata:  row.Metadata,
-		Status:    row.Status,
-		ProjectID: row.ProjectID,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-		JobID:     row.JobID,
+		ID:            row.ID,
+		ServiceID:     row.ServiceID,
+		Title:         row.Title,
+		Message:       row.Message,
+		Channels:      row.Channels,
+		Recipient:     row.Recipient,
+		Metadata:      row.Metadata,
+		Status:        row.Status,
+		EnvironmentID: row.EnvironmentID,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		JobID:         row.JobID,
 	}
 }
 
 func notificationFromServiceUpsertRow(row db.UpsertNotificationByServiceJobRow) db.Notification {
 	return db.Notification{
-		ID:        row.ID,
-		ServiceID: row.ServiceID,
-		Title:     row.Title,
-		Message:   row.Message,
-		Channels:  row.Channels,
-		Recipient: row.Recipient,
-		Metadata:  row.Metadata,
-		Status:    row.Status,
-		ProjectID: row.ProjectID,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-		JobID:     row.JobID,
+		ID:            row.ID,
+		ServiceID:     row.ServiceID,
+		Title:         row.Title,
+		Message:       row.Message,
+		Channels:      row.Channels,
+		Recipient:     row.Recipient,
+		Metadata:      row.Metadata,
+		Status:        row.Status,
+		EnvironmentID: row.EnvironmentID,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		JobID:         row.JobID,
 	}
 }
 
 func notificationFromGetByJobIDRow(row db.GetNotificationByJobIDRow) db.Notification {
 	return db.Notification{
-		ID:        row.ID,
-		ServiceID: row.ServiceID,
-		Title:     row.Title,
-		Message:   row.Message,
-		Channels:  row.Channels,
-		Recipient: row.Recipient,
-		Metadata:  row.Metadata,
-		Status:    row.Status,
-		ProjectID: row.ProjectID,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-		JobID:     row.JobID,
+		ID:            row.ID,
+		ServiceID:     row.ServiceID,
+		Title:         row.Title,
+		Message:       row.Message,
+		Channels:      row.Channels,
+		Recipient:     row.Recipient,
+		Metadata:      row.Metadata,
+		Status:        row.Status,
+		EnvironmentID: row.EnvironmentID,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		JobID:         row.JobID,
 	}
 }
 
-func notificationFromListProjectRow(row db.ListProjectNotificationsRow) db.Notification {
+func notificationFromListProjectRow(row db.ListEnvironmentNotificationsRow) db.Notification {
 	return db.Notification{
-		ID:        row.ID,
-		ServiceID: row.ServiceID,
-		Title:     row.Title,
-		Message:   row.Message,
-		Channels:  row.Channels,
-		Recipient: row.Recipient,
-		Metadata:  row.Metadata,
-		Status:    row.Status,
-		ProjectID: row.ProjectID,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-		JobID:     row.JobID,
+		ID:            row.ID,
+		ServiceID:     row.ServiceID,
+		Title:         row.Title,
+		Message:       row.Message,
+		Channels:      row.Channels,
+		Recipient:     row.Recipient,
+		Metadata:      row.Metadata,
+		Status:        row.Status,
+		EnvironmentID: row.EnvironmentID,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		JobID:         row.JobID,
 	}
 }
 
-func notificationFromGetProjectRow(row db.GetProjectNotificationByIDRow) db.Notification {
+func notificationFromGetProjectRow(row db.GetEnvironmentNotificationByIDRow) db.Notification {
 	return db.Notification{
-		ID:        row.ID,
-		ServiceID: row.ServiceID,
-		Title:     row.Title,
-		Message:   row.Message,
-		Channels:  row.Channels,
-		Recipient: row.Recipient,
-		Metadata:  row.Metadata,
-		Status:    row.Status,
-		ProjectID: row.ProjectID,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-		JobID:     row.JobID,
+		ID:            row.ID,
+		ServiceID:     row.ServiceID,
+		Title:         row.Title,
+		Message:       row.Message,
+		Channels:      row.Channels,
+		Recipient:     row.Recipient,
+		Metadata:      row.Metadata,
+		Status:        row.Status,
+		EnvironmentID: row.EnvironmentID,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		JobID:         row.JobID,
 	}
 }
 
@@ -165,9 +165,9 @@ func (r *Repository) InsertDeliveryAttempt(ctx context.Context, arg db.InsertDel
 }
 
 func (r *Repository) GetActiveProviderByChannel(ctx context.Context, projectID uuid.UUID, channel string) (db.Provider, error) {
-	return r.q.GetActiveProjectProviderByChannel(ctx, db.GetActiveProjectProviderByChannelParams{
-		ProjectID: projectID,
-		Channel:   channel,
+	return r.q.GetActiveEnvironmentProviderByChannel(ctx, db.GetActiveEnvironmentProviderByChannelParams{
+		EnvironmentID: projectID,
+		Channel:       channel,
 	})
 }
 
@@ -176,13 +176,13 @@ func (r *Repository) GetServiceChannelConfig(ctx context.Context, arg db.GetServ
 }
 
 func (r *Repository) GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error) {
-	return r.q.GetWorkflowByID(ctx, db.GetWorkflowByIDParams{ID: id, ProjectID: projectID})
+	return r.q.GetWorkflowByID(ctx, db.GetWorkflowByIDParams{ID: id, EnvironmentID: projectID})
 }
 
 func (r *Repository) GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error) {
-	return r.q.GetSubscriberByID(ctx, db.GetSubscriberByIDParams{ID: id, ProjectID: projectID})
+	return r.q.GetSubscriberByID(ctx, db.GetSubscriberByIDParams{ID: id, EnvironmentID: projectID})
 }
 
 func (r *Repository) GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error) {
-	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, ProjectID: projectID})
+	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: projectID})
 }
