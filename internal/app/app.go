@@ -8,7 +8,6 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/notification"
 	"github.com/deveasyclick/iwifunni/internal/organization"
-	"github.com/deveasyclick/iwifunni/internal/project"
 	"github.com/deveasyclick/iwifunni/internal/provider"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/subscriber"
@@ -149,10 +148,6 @@ func (a *App) Router() http.Handler {
 		orgSvc := organization.NewService(orgRepo)
 		organization.NewHandler(orgSvc).Register(r)
 
-		// Projects
-		projectRepo := project.NewRepository(a.queries)
-		projectSvc := project.NewService(projectRepo)
-		project.NewHandler(projectSvc).Register(r)
 	})
 
 	return r

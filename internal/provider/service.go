@@ -20,7 +20,7 @@ func NewService(repo *Repository, encryptionKey string) *Service {
 }
 
 type CreateInput struct {
-	ProjectID   uuid.UUID
+	EnvironmentID uuid.UUID
 	Name        string
 	Channel     string
 	Credentials map[string]any
@@ -29,7 +29,7 @@ type CreateInput struct {
 
 type UpdateInput struct {
 	ID          uuid.UUID
-	ProjectID   uuid.UUID
+	EnvironmentID uuid.UUID
 	Name        string
 	Channel     string
 	Credentials map[string]any
@@ -53,21 +53,21 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 		}
 	}
 	return s.repo.Create(ctx, db.CreateProviderParams{
-		ID:          uuid.New(),
-		ProjectID:   in.ProjectID,
-		Name:        in.Name,
-		Channel:     in.Channel,
-		Credentials: []byte(`"` + encCreds + `"`),
-		Config:      configJSON,
+		ID:            uuid.New(),
+		EnvironmentID: in.EnvironmentID,
+		Name:          in.Name,
+		Channel:       in.Channel,
+		Credentials:   []byte(`"` + encCreds + `"`),
+		Config:        configJSON,
 	})
 }
 
-func (s *Service) GetByID(ctx context.Context, id, projectID uuid.UUID) (db.Provider, error) {
-	return s.repo.GetByID(ctx, id, projectID)
+func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Provider, error) {
+	return s.repo.GetByID(ctx, id, environmentID)
 }
 
-func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]db.Provider, error) {
-	return s.repo.List(ctx, projectID)
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Provider, error) {
+	return s.repo.List(ctx, environmentID)
 }
 
 func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Provider, error) {
@@ -87,15 +87,15 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Provider, erro
 		}
 	}
 	return s.repo.Update(ctx, db.UpdateProviderParams{
-		ID:          in.ID,
-		ProjectID:   in.ProjectID,
-		Name:        in.Name,
-		Channel:     in.Channel,
-		Credentials: []byte(`"` + encCreds + `"`),
-		Config:      configJSON,
+		ID:            in.ID,
+		EnvironmentID: in.EnvironmentID,
+		Name:          in.Name,
+		Channel:       in.Channel,
+		Credentials:   []byte(`"` + encCreds + `"`),
+		Config:        configJSON,
 	})
 }
 
-func (s *Service) Delete(ctx context.Context, id, projectID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, projectID)
+func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, environmentID)
 }

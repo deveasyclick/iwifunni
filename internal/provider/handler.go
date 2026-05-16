@@ -40,7 +40,7 @@ type updateRequest struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -55,11 +55,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID:   projectID,
-		Name:        req.Name,
-		Channel:     req.Channel,
-		Credentials: req.Credentials,
-		Config:      req.Config,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Credentials:   req.Credentials,
+		Config:        req.Config,
 	})
 	if err != nil {
 		http.Error(w, "failed to create provider", http.StatusInternalServerError)
@@ -68,18 +68,18 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
+		"id": p.ID, "environment_id": p.EnvironmentID, "name": p.Name,
 		"channel": p.Channel, "is_active": p.IsActive, "created_at": p.CreatedAt,
 	})
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	providers, err := h.service.List(r.Context(), projectID)
+	providers, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list providers", http.StatusInternalServerError)
 		return
@@ -100,7 +100,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -110,20 +110,20 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	p, err := h.service.GetByID(r.Context(), providerID, projectID)
+	p, err := h.service.GetByID(r.Context(), providerID, environmentID)
 	if err != nil {
 		http.Error(w, "provider not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
+		"id": p.ID, "environment_id": p.EnvironmentID, "name": p.Name,
 		"channel": p.Channel, "is_active": p.IsActive, "created_at": p.CreatedAt, "updated_at": p.UpdatedAt,
 	})
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -143,12 +143,12 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, err := h.service.Update(r.Context(), UpdateInput{
-		ID:          providerID,
-		ProjectID:   projectID,
-		Name:        req.Name,
-		Channel:     req.Channel,
-		Credentials: req.Credentials,
-		Config:      req.Config,
+		ID:            providerID,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Credentials:   req.Credentials,
+		Config:        req.Config,
 	})
 	if err != nil {
 		http.Error(w, "failed to update provider", http.StatusInternalServerError)
@@ -156,13 +156,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
+		"id": p.ID, "environment_id": p.EnvironmentID, "name": p.Name,
 		"channel": p.Channel, "is_active": p.IsActive, "updated_at": p.UpdatedAt,
 	})
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -172,7 +172,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), providerID, projectID); err != nil {
+	if err := h.service.Delete(r.Context(), providerID, environmentID); err != nil {
 		http.Error(w, "failed to delete provider", http.StatusInternalServerError)
 		return
 	}

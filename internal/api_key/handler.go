@@ -46,12 +46,12 @@ type createResponse struct {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := projectIDFromContext(r)
+	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	keys, err := h.service.List(r.Context(), projectID)
+	keys, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list api keys", http.StatusInternalServerError)
 		return
@@ -65,7 +65,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := projectIDFromContext(r)
+	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -79,7 +79,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Create(r.Context(), projectID, req.Name, req.Scopes)
+	k, err := h.service.Create(r.Context(), environmentID, req.Name, req.Scopes)
 	if err != nil {
 		http.Error(w, "failed to create api key", http.StatusInternalServerError)
 		return
@@ -93,7 +93,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := projectIDFromContext(r)
+	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -103,7 +103,7 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Rotate(r.Context(), projectID, keyID)
+	k, err := h.service.Rotate(r.Context(), environmentID, keyID)
 	if err != nil {
 		http.Error(w, "failed to rotate api key", http.StatusInternalServerError)
 		return
@@ -116,7 +116,7 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := projectIDFromContext(r)
+	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -126,7 +126,7 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Revoke(r.Context(), projectID, keyID); err != nil {
+	if err := h.service.Revoke(r.Context(), environmentID, keyID); err != nil {
 		http.Error(w, "failed to revoke api key", http.StatusInternalServerError)
 		return
 	}
@@ -138,7 +138,7 @@ type updateRequest struct {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := projectIDFromContext(r)
+	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -157,7 +157,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid status", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.UpdateStatus(r.Context(), projectID, keyID, req.Status); err != nil {
+	if err := h.service.UpdateStatus(r.Context(), environmentID, keyID, req.Status); err != nil {
 		http.Error(w, "failed to update api key", http.StatusInternalServerError)
 		return
 	}
@@ -166,6 +166,6 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": req.Status})
 }
 
-func projectIDFromContext(r *http.Request) (uuid.UUID, bool) {
-	return auth.GetProjectID(r.Context())
+func environmentIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	return auth.GetEnvironmentID(r.Context())
 }

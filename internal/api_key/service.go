@@ -30,7 +30,7 @@ type APIKeyResult struct {
 	Key       string // only set on creation/rotation
 }
 
-func (s *Service) Create(ctx context.Context, projectID uuid.UUID, name string, scopes []string) (APIKeyResult, error) {
+func (s *Service) Create(ctx context.Context, environmentID uuid.UUID, name string, scopes []string) (APIKeyResult, error) {
 	if len(scopes) == 0 {
 		scopes = []string{"notifications:write"}
 	}
@@ -53,23 +53,23 @@ func (s *Service) Create(ctx context.Context, projectID uuid.UUID, name string, 
 	now := time.Now().UTC()
 	keyID := uuid.New()
 	if err := s.repo.Create(ctx, db.CreateAPIKeyParams{
-		ID:        keyID,
-		ProjectID: projectID,
-		Name:      name,
-		KeyPrefix: prefix,
-		KeyHash:   hash,
-		Scopes:    scopesJSON,
-		Status:    "active",
-		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		ID:            keyID,
+		EnvironmentID: environmentID,
+		Name:          name,
+		KeyPrefix:     prefix,
+		KeyHash:       hash,
+		Scopes:        scopesJSON,
+		Status:        "active",
+		CreatedAt:     pgtype.Timestamptz{Time: now, Valid: true},
+		UpdatedAt:     pgtype.Timestamptz{Time: now, Valid: true},
 	}); err != nil {
 		return APIKeyResult{}, err
 	}
 	return APIKeyResult{ID: keyID, Name: name, KeyPrefix: prefix, Scopes: scopes, Status: "active", CreatedAt: now, Key: rawKey}, nil
 }
 
-func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]APIKeyResult, error) {
-	rows, err := s.repo.ListByProject(ctx, projectID)
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]APIKeyResult, error) {
+	rows, err := s.repo.ListByEnvironment(ctx, environmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +82,8 @@ func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]APIKeyResult
 	return out, nil
 }
 
-func (s *Service) Revoke(ctx context.Context, projectID, keyID uuid.UUID) error {
-	keys, err := s.repo.ListByProject(ctx, projectID)
+func (s *Service) Revoke(ctx context.Context, environmentID, keyID uuid.UUID) error {
+	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
 	if err != nil {
 		return err
 	}
@@ -104,9 +104,9 @@ func (s *Service) Revoke(ctx context.Context, projectID, keyID uuid.UUID) error 
 	return s.repo.UpdateStatus(ctx, keyID, "revoked", ts, ts)
 }
 
-func (s *Service) Rotate(ctx context.Context, projectID, keyID uuid.UUID) (APIKeyResult, error) {
+func (s *Service) Rotate(ctx context.Context, environmentID, keyID uuid.UUID) (APIKeyResult, error) {
 	// List keys and find the one being rotated to get name/scopes
-	keys, err := s.repo.ListByProject(ctx, projectID)
+	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
 	if err != nil {
 		return APIKeyResult{}, err
 	}
@@ -145,16 +145,16 @@ func (s *Service) Rotate(ctx context.Context, projectID, keyID uuid.UUID) (APIKe
 	}
 	newKeyID := uuid.New()
 	if err := s.repo.Create(ctx, db.CreateAPIKeyParams{
-		ID:          newKeyID,
-		ProjectID:   projectID,
-		Name:        old.Name,
-		KeyPrefix:   prefix,
-		KeyHash:     hash,
-		Scopes:      old.Scopes,
-		Status:      "active",
-		RotatedFrom: pgtype.UUID{Bytes: keyID, Valid: true},
-		CreatedAt:   ts,
-		UpdatedAt:   ts,
+		ID:            newKeyID,
+		EnvironmentID: environmentID,
+		Name:          old.Name,
+		KeyPrefix:     prefix,
+		KeyHash:       hash,
+		Scopes:        old.Scopes,
+		Status:        "active",
+		RotatedFrom:   pgtype.UUID{Bytes: keyID, Valid: true},
+		CreatedAt:     ts,
+		UpdatedAt:     ts,
 	}); err != nil {
 		return APIKeyResult{}, err
 	}
@@ -164,9 +164,8 @@ func (s *Service) Rotate(ctx context.Context, projectID, keyID uuid.UUID) (APIKe
 	return APIKeyResult{ID: newKeyID, Name: old.Name, KeyPrefix: prefix, Scopes: scopes, Status: "active", CreatedAt: now, Key: rawKey}, nil
 }
 
-func (s *Service) UpdateStatus(ctx context.Context, projectID, keyID uuid.UUID, status string) error {
-	// Verify key belongs to project
-	keys, err := s.repo.ListByProject(ctx, projectID)
+func (s *Service) UpdateStatus(ctx context.Context, environmentID, keyID uuid.UUID, status string) error {
+	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
 	if err != nil {
 		return err
 	}

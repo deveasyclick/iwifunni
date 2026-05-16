@@ -44,20 +44,20 @@ type renderRequest struct {
 }
 
 type templateResponse struct {
-	ID        uuid.UUID `json:"id"`
-	ProjectID uuid.UUID `json:"project_id"`
-	Name      string    `json:"name"`
-	Channel   string    `json:"channel"`
-	Subject   *string   `json:"subject"`
-	Body      string    `json:"body"`
-	Version   int32     `json:"version"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	ID            uuid.UUID `json:"id"`
+	EnvironmentID uuid.UUID `json:"environment_id"`
+	Name          string    `json:"name"`
+	Channel       string    `json:"channel"`
+	Subject       *string   `json:"subject"`
+	Body          string    `json:"body"`
+	Version       int32     `json:"version"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     string    `json:"created_at"`
+	UpdatedAt     string    `json:"updated_at"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -78,11 +78,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID: projectID,
-		Name:      req.Name,
-		Channel:   req.Channel,
-		Subject:   req.Subject,
-		Body:      req.Body,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Subject:       req.Subject,
+		Body:          req.Body,
 	})
 	if err != nil {
 		http.Error(w, "failed to create template", http.StatusInternalServerError)
@@ -91,19 +91,19 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(templateResponse{
-		ID: t.ID, ProjectID: t.ProjectID, Name: t.Name, Channel: t.Channel,
+		ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
 		Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,
 		CreatedAt: t.CreatedAt.Time.String(), UpdatedAt: t.UpdatedAt.Time.String(),
 	})
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items, err := h.service.List(r.Context(), projectID)
+	items, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list templates", http.StatusInternalServerError)
 		return
@@ -111,7 +111,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	resp := make([]templateResponse, 0, len(items))
 	for _, t := range items {
 		resp = append(resp, templateResponse{
-			ID: t.ID, ProjectID: t.ProjectID, Name: t.Name, Channel: t.Channel,
+			ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
 			Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,
 			CreatedAt: t.CreatedAt.Time.String(), UpdatedAt: t.UpdatedAt.Time.String(),
 		})
@@ -121,7 +121,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -131,21 +131,21 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid template id", http.StatusBadRequest)
 		return
 	}
-	t, err := h.service.GetByID(r.Context(), id, projectID)
+	t, err := h.service.GetByID(r.Context(), id, environmentID)
 	if err != nil {
 		http.Error(w, "template not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(templateResponse{
-		ID: t.ID, ProjectID: t.ProjectID, Name: t.Name, Channel: t.Channel,
+		ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
 		Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,
 		CreatedAt: t.CreatedAt.Time.String(), UpdatedAt: t.UpdatedAt.Time.String(),
 	})
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -164,21 +164,21 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "body is required", http.StatusBadRequest)
 		return
 	}
-	t, err := h.service.Update(r.Context(), UpdateInput{ID: id, ProjectID: projectID, Subject: req.Subject, Body: req.Body})
+	t, err := h.service.Update(r.Context(), UpdateInput{ID: id, EnvironmentID: environmentID, Subject: req.Subject, Body: req.Body})
 	if err != nil {
 		http.Error(w, "template not found or update failed", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(templateResponse{
-		ID: t.ID, ProjectID: t.ProjectID, Name: t.Name, Channel: t.Channel,
+		ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
 		Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,
 		CreatedAt: t.CreatedAt.Time.String(), UpdatedAt: t.UpdatedAt.Time.String(),
 	})
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -188,7 +188,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid template id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), id, projectID); err != nil {
+	if err := h.service.Delete(r.Context(), id, environmentID); err != nil {
 		http.Error(w, "failed to delete template", http.StatusInternalServerError)
 		return
 	}
@@ -196,7 +196,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
-	projectID, ok := auth.GetProjectID(r.Context())
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -213,7 +213,7 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
 	if req.Variables == nil {
 		req.Variables = make(map[string]any)
 	}
-	t, err := h.service.GetByID(r.Context(), req.TemplateID, projectID)
+	t, err := h.service.GetByID(r.Context(), req.TemplateID, environmentID)
 	if err != nil {
 		http.Error(w, "template not found", http.StatusNotFound)
 		return

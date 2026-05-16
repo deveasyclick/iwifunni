@@ -20,8 +20,8 @@ func (r *Repository) Create(ctx context.Context, arg db.CreateAPIKeyParams) erro
 	return r.q.CreateAPIKey(ctx, arg)
 }
 
-func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.ApiKey, error) {
-	return r.q.ListAPIKeysByProject(ctx, projectID)
+func (r *Repository) ListByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]db.ApiKey, error) {
+	return r.q.ListAPIKeysByEnvironment(ctx, environmentID)
 }
 
 func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, revokedAt, updatedAt pgtype.Timestamptz) error {
