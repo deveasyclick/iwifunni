@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 
 export const Onboarding = () => {
   const router = useRouter();
-  const [projectName, setProjectName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,7 +25,7 @@ export const Onboarding = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ project_name: projectName }),
+        body: JSON.stringify({ organization_name: organizationName }),
       });
 
       const payload = (await response.json().catch(() => null)) as {
@@ -54,21 +54,21 @@ export const Onboarding = () => {
             <FullLogo />
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Name your project to finish setting up your workspace.
+            Name your organization to finish setting up your workspace.
           </p>
           <form onSubmit={handleSubmit}>
             <div>
               <div className="mb-2 block">
-                <Label htmlFor="projectName" className="font-medium">
-                  Project name
+                <Label htmlFor="organizationName" className="font-medium">
+                  Organization name
                 </Label>
               </div>
               <Input
-                id="projectName"
+                id="organizationName"
                 type="text"
-                placeholder="Acme Notifications"
-                value={projectName}
-                onChange={(event) => setProjectName(event.target.value)}
+                placeholder="Acme"
+                value={organizationName}
+                onChange={(event) => setOrganizationName(event.target.value)}
                 required
               />
             </div>

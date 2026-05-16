@@ -186,7 +186,7 @@ func (h *authHandlerAdapter) completeOnboarding(w http.ResponseWriter, r *http.R
 	}
 
 	var req struct {
-		ProjectName string `json:"project_name"`
+		OrganizationName string `json:"organization_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
@@ -194,8 +194,8 @@ func (h *authHandlerAdapter) completeOnboarding(w http.ResponseWriter, r *http.R
 	}
 
 	result, err := h.svc.CompleteOnboarding(r.Context(), auth.CompleteOnboardingInput{
-		UserID:      userID,
-		ProjectName: req.ProjectName,
+		UserID:           userID,
+		OrganizationName: req.OrganizationName,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

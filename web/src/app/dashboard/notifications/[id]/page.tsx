@@ -185,8 +185,8 @@ export default function NotificationDetailPage() {
             <p className="text-sm font-medium">{notification.service_id ?? "N/A"}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Project ID</p>
-            <p className="text-sm font-medium">{notification.project_id ?? "N/A"}</p>
+            <p className="text-xs text-muted-foreground mb-1">Environment ID</p>
+            <p className="text-sm font-medium">{notification.environment_id ?? "N/A"}</p>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 export interface ProviderItem {
   id: string;
-  project_id?: string;
+  environment_id?: string;
   name: string;
   channel: string;
   is_active: boolean;

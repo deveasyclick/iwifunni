@@ -1,6 +1,6 @@
 export interface TemplateItem {
   id: string;
-  project_id: string;
+  environment_id: string;
   name: string;
   channel: string;
   subject?: string | null;
