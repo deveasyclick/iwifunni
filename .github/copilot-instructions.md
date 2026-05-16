@@ -18,8 +18,41 @@
 - Do not call notification providers directly from handlers or services outside the registry and channel adapter flow.
 - Do not edit generated sqlc output in [internal/db/models.go](../internal/db/models.go) or [internal/db/queries.sql.go](../internal/db/queries.sql.go) directly; change queries or schema inputs and regenerate.
 - Keep changes targeted. Avoid broad refactors unless the task explicitly requires one.
+- For every api created, include an e2e test for it
 
 ## Validation
 
 - Use [Taskfile.yml](../Taskfile.yml) commands when possible for backend validation, especially `task build`, `task lint`, and `task sqlc` when relevant.
 - For frontend work, validate with the available `pnpm` scripts in [web/package.json](../web/package.json) that match the files you touched.
+
+# Commit Message Rules
+Follow Conventional Commit format for all commits.
+
+Format:
+<type>(<scope>): <summary>
+
+Examples:
+feat(web/login): Add social logins
+fix(api/auth): Handle expired JWT tokens
+
+Allowed types:
+- feat
+- fix
+- hotfix
+- style
+- refactor
+- perf
+- docs
+- test
+- build
+- ci
+- chore
+- revert
+
+Rules:
+- Every commit must include:
+  - A short title
+  - A descriptive body
+- Keep commit messages concise and meaningful
+- Use imperative tone
+- Scope/domain should describe the affected area
