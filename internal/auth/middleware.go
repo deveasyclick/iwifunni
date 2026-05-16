@@ -30,6 +30,14 @@ type requestLimiter interface {
 	Allow(context.Context, string) (bool, error)
 }
 
+type AuthenticatedEnvironment struct {
+	EnvironmentID uuid.UUID
+	APIKeyID      uuid.UUID
+	APIKey        string
+	Scopes        []string
+	Status        string
+}
+
 type AuthenticatedProject struct {
 	ProjectID uuid.UUID
 	APIKeyID  uuid.UUID
@@ -55,7 +63,7 @@ func newAuthMiddleware(queries authQueries, limiter requestLimiter, now func() t
 
 			switch {
 			case strings.HasPrefix(header, "Bearer "):
-				handleProjectAPIKey(w, r, next, queries, limiter, now)
+				handleEnvironmentAPIKey(w, r, next, queries, limiter, now)
 			case strings.HasPrefix(header, "ApiKey "):
 				handleLegacyServiceAPIKey(w, r, next, queries, limiter)
 			default:
@@ -88,29 +96,29 @@ func handleLegacyServiceAPIKey(w http.ResponseWriter, r *http.Request, next http
 	next.ServeHTTP(w, r.WithContext(ctx))
 }
 
-func handleProjectAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, queries authQueries, limiter requestLimiter, now func() time.Time) {
+func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, queries authQueries, limiter requestLimiter, now func() time.Time) {
 	apiKey := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 	keyPrefix, err := APIKeyPrefix(apiKey)
 	if err != nil {
-		http.Error(w, "invalid project api key", http.StatusUnauthorized)
+		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
 	}
 
 	keyRecord, err := queries.GetAPIKeyByPrefix(r.Context(), keyPrefix)
 	if err != nil {
-		http.Error(w, "invalid project api key", http.StatusUnauthorized)
+		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
 	}
 	if err := CompareAPIKeyHash(apiKey, keyRecord.KeyHash); err != nil {
-		http.Error(w, "invalid project api key", http.StatusUnauthorized)
+		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
 	}
 	if !isUsableAPIKeyStatus(keyRecord.Status) {
-		http.Error(w, "inactive project api key", http.StatusUnauthorized)
+		http.Error(w, "inactive environment api key", http.StatusUnauthorized)
 		return
 	}
 	if keyRecord.ExpiresAt.Valid && !keyRecord.ExpiresAt.Time.After(now()) {
-		http.Error(w, "expired project api key", http.StatusUnauthorized)
+		http.Error(w, "expired environment api key", http.StatusUnauthorized)
 		return
 	}
 
@@ -147,14 +155,21 @@ func handleProjectAPIKey(w http.ResponseWriter, r *http.Request, next http.Handl
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), ProjectContextKey, &AuthenticatedProject{
-		ProjectID: keyRecord.ProjectID,
-		APIKeyID:  keyRecord.ID,
-		APIKey:    keyRecord.Name,
-		Scopes:    scopes,
-		Status:    keyRecord.Status,
+	ctx := context.WithValue(r.Context(), ProjectContextKey, &AuthenticatedEnvironment{
+		EnvironmentID: keyRecord.EnvironmentID,
+		APIKeyID:      keyRecord.ID,
+		APIKey:        keyRecord.Name,
+		Scopes:        scopes,
+		Status:        keyRecord.Status,
 	})
 	next.ServeHTTP(w, r.WithContext(ctx))
+}
+
+func GetAuthenticatedEnvironment(ctx context.Context) *AuthenticatedEnvironment {
+	if environment, ok := ctx.Value(ProjectContextKey).(*AuthenticatedEnvironment); ok {
+		return environment
+	}
+	return nil
 }
 
 func GetService(ctx context.Context) *db.Service {
@@ -165,8 +180,14 @@ func GetService(ctx context.Context) *db.Service {
 }
 
 func GetAuthenticatedProject(ctx context.Context) *AuthenticatedProject {
-	if project, ok := ctx.Value(ProjectContextKey).(*AuthenticatedProject); ok {
-		return project
+	if environment := GetAuthenticatedEnvironment(ctx); environment != nil {
+		return &AuthenticatedProject{
+			ProjectID: environment.EnvironmentID,
+			APIKeyID:  environment.APIKeyID,
+			APIKey:    environment.APIKey,
+			Scopes:    environment.Scopes,
+			Status:    environment.Status,
+		}
 	}
 	return nil
 }

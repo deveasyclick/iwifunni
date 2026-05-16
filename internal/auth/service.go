@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -22,17 +21,54 @@ var (
 	ErrVerificationCodeExpired   = errors.New("verification code expired")
 	ErrUnsupportedSocialProvider = errors.New("unsupported social provider")
 	ErrSocialEmailRequired       = errors.New("social account email is required")
-	ErrProjectMembershipNotFound = errors.New("project membership not found")
+	ErrOrganizationMembershipNotFound = errors.New("organization membership not found")
+	ErrDefaultEnvironmentNotFound     = errors.New("default environment not found")
 )
 
 const (
-	defaultVerificationTTL    = 15 * time.Minute
-	defaultPlaceholderProject = "Untitled Project"
+	defaultVerificationTTL        = 15 * time.Minute
+	defaultPlaceholderOrganization = "Untitled Organization"
+	defaultDevelopmentEnvironment = "development"
+	defaultProductionEnvironment  = "production"
 )
 
 type VerificationSender func(ctx context.Context, email, code string) error
 
 type ServiceOption func(*Service)
+
+type authUserStore interface {
+	CreateUser(context.Context, db.CreateUserParams) error
+	GetUserByEmail(context.Context, string) (db.GetUserByEmailRow, error)
+	GetUserByID(context.Context, uuid.UUID) (db.GetUserByIDRow, error)
+	UpdateUserEmailVerifiedAt(context.Context, db.UpdateUserEmailVerifiedAtParams) error
+	UpdateUserOnboardingCompletedAt(context.Context, db.UpdateUserOnboardingCompletedAtParams) error
+}
+
+type authVerificationStore interface {
+	UpsertEmailVerification(context.Context, db.UpsertEmailVerificationParams) error
+	GetEmailVerificationByUserID(context.Context, uuid.UUID) (db.EmailVerification, error)
+	DeleteEmailVerificationByUserID(context.Context, uuid.UUID) error
+}
+
+type authProjectStore interface {
+	CreateOrganization(context.Context, db.CreateOrganizationParams) (db.Organization, error)
+	UpdateOrganizationName(context.Context, db.UpdateOrganizationNameParams) error
+	CreateOrganizationMember(context.Context, db.CreateOrganizationMemberParams) error
+	GetFirstOrganizationMembershipByUser(context.Context, uuid.UUID) (db.OrganizationMember, error)
+	CreateEnvironment(context.Context, db.CreateEnvironmentParams) (db.Environment, error)
+	GetDefaultEnvironmentByOrganization(context.Context, uuid.UUID) (db.GetDefaultEnvironmentByOrganizationRow, error)
+}
+
+type authIdentityStore interface {
+	CreateAuthIdentity(context.Context, db.CreateAuthIdentityParams) error
+	GetAuthIdentityByProviderUserID(context.Context, db.GetAuthIdentityByProviderUserIDParams) (db.AuthIdentity, error)
+}
+
+type authSessionStore interface {
+	CreateRefreshToken(context.Context, db.CreateRefreshTokenParams) error
+	GetRefreshTokenByHash(context.Context, string) (db.RefreshToken, error)
+	DeleteRefreshTokenByHash(context.Context, string) error
+}
 
 func WithVerificationTTL(ttl time.Duration) ServiceOption {
 	return func(s *Service) {
@@ -49,28 +85,19 @@ func WithVerificationSender(sender VerificationSender) ServiceOption {
 }
 
 type authStore interface {
-	CreateUser(context.Context, db.CreateUserParams) error
-	GetUserByEmail(context.Context, string) (db.GetUserByEmailRow, error)
-	GetUserByID(context.Context, uuid.UUID) (db.GetUserByIDRow, error)
-	UpdateUserEmailVerifiedAt(context.Context, db.UpdateUserEmailVerifiedAtParams) error
-	UpdateUserOnboardingCompletedAt(context.Context, db.UpdateUserOnboardingCompletedAtParams) error
-	UpsertEmailVerification(context.Context, db.UpsertEmailVerificationParams) error
-	GetEmailVerificationByUserID(context.Context, uuid.UUID) (db.EmailVerification, error)
-	DeleteEmailVerificationByUserID(context.Context, uuid.UUID) error
-	CreateProject(context.Context, db.CreateProjectParams) error
-	UpdateProjectName(context.Context, db.UpdateProjectNameParams) error
-	CreateAuthIdentity(context.Context, db.CreateAuthIdentityParams) error
-	GetAuthIdentityByProviderUserID(context.Context, db.GetAuthIdentityByProviderUserIDParams) (db.AuthIdentity, error)
-	CreateProjectMembership(context.Context, db.CreateProjectMembershipParams) error
-	GetFirstProjectMembershipByUser(context.Context, uuid.UUID) (db.ProjectMembership, error)
-	CreateAPIKey(context.Context, db.CreateAPIKeyParams) error
-	CreateRefreshToken(context.Context, db.CreateRefreshTokenParams) error
-	GetRefreshTokenByHash(context.Context, string) (db.RefreshToken, error)
-	DeleteRefreshTokenByHash(context.Context, string) error
+	authUserStore
+	authVerificationStore
+	authProjectStore
+	authIdentityStore
+	authSessionStore
 }
 
 type Service struct {
-	store              authStore
+	users              authUserStore
+	verifications      authVerificationStore
+	tenants            authProjectStore
+	identities         authIdentityStore
+	sessions           authSessionStore
 	jwtManager         *JWTManager
 	now                func() time.Time
 	refreshTTL         time.Duration
@@ -83,18 +110,15 @@ type SignupInput struct {
 	LastName    string
 	Email       string
 	Password    string
-	ProjectName string
 	APIKeyName  string
 }
 
 type SignupResult struct {
 	UserID                uuid.UUID `json:"user_id"`
-	ProjectID             uuid.UUID `json:"project_id"`
+	OrganizationID        uuid.UUID `json:"organization_id"`
+	EnvironmentID         uuid.UUID `json:"environment_id"`
 	Email                 string    `json:"email"`
 	Role                  string    `json:"role"`
-	APIKey                string    `json:"api_key,omitempty"`
-	AccessToken           string    `json:"access_token,omitempty"`
-	RefreshToken          string    `json:"refresh_token,omitempty"`
 	VerificationRequired  bool      `json:"verification_required"`
 	VerificationExpiresAt time.Time `json:"verification_expires_at"`
 	NeedsOnboarding       bool      `json:"needs_onboarding"`
@@ -107,7 +131,8 @@ type SigninInput struct {
 
 type AuthResult struct {
 	UserID          uuid.UUID `json:"user_id"`
-	ProjectID       uuid.UUID `json:"project_id"`
+	OrganizationID  uuid.UUID `json:"organization_id"`
+	EnvironmentID   uuid.UUID `json:"environment_id"`
 	Role            string    `json:"role"`
 	AccessToken     string    `json:"access_token"`
 	RefreshToken    string    `json:"refresh_token"`
@@ -141,13 +166,14 @@ type SocialSigninInput struct {
 type SocialSigninResult = AuthResult
 
 type CompleteOnboardingInput struct {
-	UserID      uuid.UUID
-	ProjectName string
+	UserID           uuid.UUID
+	OrganizationName string
 }
 
 type CompleteOnboardingResult struct {
-	ProjectID       uuid.UUID `json:"project_id"`
-	ProjectName     string    `json:"project_name"`
+	OrganizationID  uuid.UUID `json:"organization_id"`
+	OrganizationName string   `json:"organization_name"`
+	EnvironmentID   uuid.UUID `json:"environment_id"`
 	NeedsOnboarding bool      `json:"needs_onboarding"`
 }
 
@@ -157,11 +183,15 @@ type LogoutInput struct {
 
 func NewService(store authStore, jwtManager *JWTManager, refreshTTL time.Duration, opts ...ServiceOption) *Service {
 	service := &Service{
-		store:           store,
-		jwtManager:      jwtManager,
-		now:             time.Now,
-		refreshTTL:      refreshTTL,
-		verificationTTL: defaultVerificationTTL,
+		users:            store,
+		verifications:    store,
+		tenants:          store,
+		identities:       store,
+		sessions:         store,
+		jwtManager:       jwtManager,
+		now:              time.Now,
+		refreshTTL:       refreshTTL,
+		verificationTTL:  defaultVerificationTTL,
 	}
 
 	for _, opt := range opts {
@@ -180,7 +210,7 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 		return nil, fmt.Errorf("first name, last name, email, and password are required")
 	}
 
-	if _, err := s.store.GetUserByEmail(ctx, email); err == nil {
+	if _, err := s.users.GetUserByEmail(ctx, email); err == nil {
 		return nil, ErrEmailAlreadyExists
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
@@ -188,15 +218,12 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 
 	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
 	userID := uuid.New()
-	projectID := uuid.New()
-	membershipID := uuid.New()
-	role := "owner"
 
 	passwordHash, err := HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.store.CreateUser(ctx, db.CreateUserParams{
+	if err := s.users.CreateUser(ctx, db.CreateUserParams{
 		ID:                    userID,
 		Email:                 email,
 		PasswordHash:          passwordHash,
@@ -210,23 +237,8 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 		return nil, err
 	}
 
-	if err := s.store.CreateProject(ctx, db.CreateProjectParams{
-		ID:        projectID,
-		Name:      defaultPlaceholderProject,
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}); err != nil {
-		return nil, err
-	}
-
-	if err := s.store.CreateProjectMembership(ctx, db.CreateProjectMembershipParams{
-		ID:        membershipID,
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      role,
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}); err != nil {
+	membership, environment, err := s.ensurePrimaryTenant(ctx, userID, nowTs)
+	if err != nil {
 		return nil, err
 	}
 
@@ -235,7 +247,7 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 		return nil, err
 	}
 	verificationExpiresAt := pgtype.Timestamptz{Time: nowTs.Time.Add(s.verificationTTL), Valid: true}
-	if err := s.store.UpsertEmailVerification(ctx, db.UpsertEmailVerificationParams{
+	if err := s.verifications.UpsertEmailVerification(ctx, db.UpsertEmailVerificationParams{
 		UserID:     userID,
 		CodeHash:   verificationHash,
 		ExpiresAt:  verificationExpiresAt,
@@ -252,9 +264,10 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 
 	return &SignupResult{
 		UserID:                userID,
-		ProjectID:             projectID,
+		OrganizationID:        membership.OrganizationID,
+		EnvironmentID:         environment.ID,
 		Email:                 email,
-		Role:                  role,
+		Role:                  membership.Role,
 		VerificationRequired:  true,
 		VerificationExpiresAt: verificationExpiresAt.Time,
 		NeedsOnboarding:       true,
@@ -268,7 +281,7 @@ func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) (*Ver
 		return nil, fmt.Errorf("email and verification code are required")
 	}
 
-	user, err := s.store.GetUserByEmail(ctx, email)
+	user, err := s.users.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidVerificationCode
@@ -276,7 +289,7 @@ func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) (*Ver
 		return nil, err
 	}
 
-	verification, err := s.store.GetEmailVerificationByUserID(ctx, user.ID)
+	verification, err := s.verifications.GetEmailVerificationByUserID(ctx, user.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidVerificationCode
@@ -294,26 +307,23 @@ func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) (*Ver
 	}
 
 	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
-	if err := s.store.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
+	if err := s.users.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
 		ID:              user.ID,
 		EmailVerifiedAt: nowTs,
 		UpdatedAt:       nowTs,
 	}); err != nil {
 		return nil, err
 	}
-	if err := s.store.DeleteEmailVerificationByUserID(ctx, user.ID); err != nil {
+	if err := s.verifications.DeleteEmailVerificationByUserID(ctx, user.ID); err != nil {
 		return nil, err
 	}
 
-	membership, err := s.store.GetFirstProjectMembershipByUser(ctx, user.ID)
+	membership, environment, err := s.ensurePrimaryTenant(ctx, user.ID, nowTs)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrProjectMembershipNotFound
-		}
 		return nil, err
 	}
 
-	return s.newAuthResult(ctx, user.ID, membership.ProjectID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
+	return s.newAuthResult(ctx, user.ID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
 
 func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput) (*SocialSigninResult, error) {
@@ -333,17 +343,17 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 	firstName, lastName := normalizeSocialNames(input.FirstName, input.LastName, input.FullName, email)
 	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
 
-	identity, err := s.store.GetAuthIdentityByProviderUserID(ctx, db.GetAuthIdentityByProviderUserIDParams{
+	identity, err := s.identities.GetAuthIdentityByProviderUserID(ctx, db.GetAuthIdentityByProviderUserIDParams{
 		Provider:       provider,
 		ProviderUserID: providerUserID,
 	})
 	if err == nil {
-		user, userErr := s.store.GetUserByID(ctx, identity.UserID)
+		user, userErr := s.users.GetUserByID(ctx, identity.UserID)
 		if userErr != nil {
 			return nil, userErr
 		}
 		if !user.EmailVerifiedAt.Valid {
-			if err := s.store.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
+			if err := s.users.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
 				ID:              user.ID,
 				EmailVerifiedAt: nowTs,
 				UpdatedAt:       nowTs,
@@ -351,17 +361,17 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 				return nil, err
 			}
 		}
-		membership, membershipErr := s.ensurePrimaryMembership(ctx, identity.UserID, nowTs)
+		membership, environment, membershipErr := s.ensurePrimaryTenant(ctx, identity.UserID, nowTs)
 		if membershipErr != nil {
 			return nil, membershipErr
 		}
-		return s.newAuthResult(ctx, identity.UserID, membership.ProjectID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
+		return s.newAuthResult(ctx, identity.UserID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
 
-	user, err := s.store.GetUserByEmail(ctx, email)
+	user, err := s.users.GetUserByEmail(ctx, email)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
@@ -370,7 +380,7 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 	needsOnboarding := true
 	if errors.Is(err, pgx.ErrNoRows) {
 		userID = uuid.New()
-		if err := s.store.CreateUser(ctx, db.CreateUserParams{
+		if err := s.users.CreateUser(ctx, db.CreateUserParams{
 			ID:                    userID,
 			Email:                 email,
 			PasswordHash:          "",
@@ -387,7 +397,7 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 		userID = user.ID
 		needsOnboarding = !user.OnboardingCompletedAt.Valid
 		if !user.EmailVerifiedAt.Valid {
-			if err := s.store.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
+			if err := s.users.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
 				ID:              user.ID,
 				EmailVerifiedAt: nowTs,
 				UpdatedAt:       nowTs,
@@ -397,7 +407,7 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 		}
 	}
 
-	if err := s.store.CreateAuthIdentity(ctx, db.CreateAuthIdentityParams{
+	if err := s.identities.CreateAuthIdentity(ctx, db.CreateAuthIdentityParams{
 		ID:             uuid.New(),
 		UserID:         userID,
 		Provider:       provider,
@@ -409,12 +419,12 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 		return nil, err
 	}
 
-	membership, err := s.ensurePrimaryMembership(ctx, userID, nowTs)
+	membership, environment, err := s.ensurePrimaryTenant(ctx, userID, nowTs)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.newAuthResult(ctx, userID, membership.ProjectID, membership.Role, needsOnboarding, nowTs)
+	return s.newAuthResult(ctx, userID, membership.OrganizationID, environment.ID, membership.Role, needsOnboarding, nowTs)
 }
 
 func (s *Service) Signin(ctx context.Context, input SigninInput) (*SigninResult, error) {
@@ -424,7 +434,7 @@ func (s *Service) Signin(ctx context.Context, input SigninInput) (*SigninResult,
 		return nil, fmt.Errorf("email and password are required")
 	}
 
-	user, err := s.store.GetUserByEmail(ctx, email)
+	user, err := s.users.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidCredentials
@@ -438,44 +448,41 @@ func (s *Service) Signin(ctx context.Context, input SigninInput) (*SigninResult,
 		return nil, ErrInvalidCredentials
 	}
 
-	membership, err := s.store.GetFirstProjectMembershipByUser(ctx, user.ID)
+	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
+	membership, environment, err := s.ensurePrimaryTenant(ctx, user.ID, nowTs)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrProjectMembershipNotFound
-		}
 		return nil, err
 	}
 
-	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
-	return s.newAuthResult(ctx, user.ID, membership.ProjectID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
+	return s.newAuthResult(ctx, user.ID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
 
 func (s *Service) CompleteOnboarding(ctx context.Context, input CompleteOnboardingInput) (*CompleteOnboardingResult, error) {
-	projectName := strings.TrimSpace(input.ProjectName)
+	organizationName := strings.TrimSpace(input.OrganizationName)
 	if input.UserID == uuid.Nil {
 		return nil, fmt.Errorf("user id is required")
 	}
-	if projectName == "" {
-		return nil, fmt.Errorf("project name is required")
+	if organizationName == "" {
+		return nil, fmt.Errorf("organization name is required")
 	}
 
-	membership, err := s.store.GetFirstProjectMembershipByUser(ctx, input.UserID)
+	membership, err := s.tenants.GetFirstOrganizationMembershipByUser(ctx, input.UserID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrProjectMembershipNotFound
+			return nil, ErrOrganizationMembershipNotFound
 		}
 		return nil, err
 	}
 
 	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
-	if err := s.store.UpdateProjectName(ctx, db.UpdateProjectNameParams{
-		ID:        membership.ProjectID,
-		Name:      projectName,
+	if err := s.tenants.UpdateOrganizationName(ctx, db.UpdateOrganizationNameParams{
+		ID:        membership.OrganizationID,
+		Name:      organizationName,
 		UpdatedAt: nowTs,
 	}); err != nil {
 		return nil, err
 	}
-	if err := s.store.UpdateUserOnboardingCompletedAt(ctx, db.UpdateUserOnboardingCompletedAtParams{
+	if err := s.users.UpdateUserOnboardingCompletedAt(ctx, db.UpdateUserOnboardingCompletedAtParams{
 		ID:                    input.UserID,
 		OnboardingCompletedAt: nowTs,
 		UpdatedAt:             nowTs,
@@ -483,9 +490,18 @@ func (s *Service) CompleteOnboarding(ctx context.Context, input CompleteOnboardi
 		return nil, err
 	}
 
+	defaultEnvironment, err := s.tenants.GetDefaultEnvironmentByOrganization(ctx, membership.OrganizationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrDefaultEnvironmentNotFound
+		}
+		return nil, err
+	}
+
 	return &CompleteOnboardingResult{
-		ProjectID:       membership.ProjectID,
-		ProjectName:     projectName,
+		OrganizationID:  membership.OrganizationID,
+		OrganizationName: organizationName,
+		EnvironmentID:   defaultEnvironment.ID,
 		NeedsOnboarding: false,
 	}, nil
 }
@@ -496,7 +512,7 @@ func (s *Service) Refresh(ctx context.Context, input RefreshInput) (*RefreshResu
 		return nil, fmt.Errorf("refresh token is required")
 	}
 
-	storedToken, err := s.store.GetRefreshTokenByHash(ctx, HashRefreshToken(rawRefreshToken))
+	storedToken, err := s.sessions.GetRefreshTokenByHash(ctx, HashRefreshToken(rawRefreshToken))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidCredentials
@@ -507,7 +523,7 @@ func (s *Service) Refresh(ctx context.Context, input RefreshInput) (*RefreshResu
 		return nil, ErrInvalidCredentials
 	}
 
-	user, err := s.store.GetUserByID(ctx, storedToken.UserID)
+	user, err := s.users.GetUserByID(ctx, storedToken.UserID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidCredentials
@@ -518,20 +534,17 @@ func (s *Service) Refresh(ctx context.Context, input RefreshInput) (*RefreshResu
 		return nil, ErrInvalidCredentials
 	}
 
-	membership, err := s.store.GetFirstProjectMembershipByUser(ctx, storedToken.UserID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrProjectMembershipNotFound
-		}
-		return nil, err
-	}
-
-	if err := s.store.DeleteRefreshTokenByHash(ctx, storedToken.TokenHash); err != nil {
+	if err := s.sessions.DeleteRefreshTokenByHash(ctx, storedToken.TokenHash); err != nil {
 		return nil, err
 	}
 
 	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
-	return s.newAuthResult(ctx, storedToken.UserID, membership.ProjectID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
+	membership, environment, err := s.ensurePrimaryTenant(ctx, storedToken.UserID, nowTs)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.newAuthResult(ctx, storedToken.UserID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
 
 func (s *Service) Logout(ctx context.Context, input LogoutInput) error {
@@ -540,52 +553,15 @@ func (s *Service) Logout(ctx context.Context, input LogoutInput) error {
 		return fmt.Errorf("refresh token is required")
 	}
 
-	if err := s.store.DeleteRefreshTokenByHash(ctx, HashRefreshToken(rawRefreshToken)); err != nil {
+	if err := s.sessions.DeleteRefreshTokenByHash(ctx, HashRefreshToken(rawRefreshToken)); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Service) issueAPIKey(ctx context.Context, projectID uuid.UUID, name string, nowTs pgtype.Timestamptz) (string, string, error) {
-	rawAPIKey, err := GenerateProjectAPIKey("live")
-	if err != nil {
-		return "", "", err
-	}
-	keyPrefix, err := APIKeyPrefix(rawAPIKey)
-	if err != nil {
-		return "", "", err
-	}
-	keyHash, err := HashAPIKeySecret(rawAPIKey)
-	if err != nil {
-		return "", "", err
-	}
-	scopes, err := json.Marshal([]string{"notifications:write"})
-	if err != nil {
-		return "", "", err
-	}
-
-	if err := s.store.CreateAPIKey(ctx, db.CreateAPIKeyParams{
-		ID:          uuid.New(),
-		ProjectID:   projectID,
-		Name:        name,
-		KeyPrefix:   keyPrefix,
-		KeyHash:     keyHash,
-		Scopes:      scopes,
-		Status:      "active",
-		ExpiresAt:   pgtype.Timestamptz{},
-		RotatedFrom: pgtype.UUID{},
-		CreatedAt:   nowTs,
-		UpdatedAt:   nowTs,
-	}); err != nil {
-		return "", "", err
-	}
-
-	return rawAPIKey, keyHash, nil
-}
-
-func (s *Service) issueSession(ctx context.Context, userID, projectID uuid.UUID, role string, nowTs pgtype.Timestamptz) (string, string, error) {
-	accessToken, err := s.jwtManager.GenerateAccessToken(userID.String(), projectID.String(), role)
+func (s *Service) issueSession(ctx context.Context, userID, organizationID uuid.UUID, role string, nowTs pgtype.Timestamptz) (string, string, error) {
+	accessToken, err := s.jwtManager.GenerateAccessToken(userID.String(), organizationID.String(), role)
 	if err != nil {
 		return "", "", err
 	}
@@ -593,7 +569,7 @@ func (s *Service) issueSession(ctx context.Context, userID, projectID uuid.UUID,
 	if err != nil {
 		return "", "", err
 	}
-	if err := s.store.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+	if err := s.sessions.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 		ID:        uuid.New(),
 		UserID:    userID,
 		TokenHash: hashedRefreshToken,
@@ -607,15 +583,16 @@ func (s *Service) issueSession(ctx context.Context, userID, projectID uuid.UUID,
 	return accessToken, rawRefreshToken, nil
 }
 
-func (s *Service) newAuthResult(ctx context.Context, userID, projectID uuid.UUID, role string, needsOnboarding bool, nowTs pgtype.Timestamptz) (*AuthResult, error) {
-	accessToken, refreshToken, err := s.issueSession(ctx, userID, projectID, role, nowTs)
+func (s *Service) newAuthResult(ctx context.Context, userID, organizationID, environmentID uuid.UUID, role string, needsOnboarding bool, nowTs pgtype.Timestamptz) (*AuthResult, error) {
+	accessToken, refreshToken, err := s.issueSession(ctx, userID, organizationID, role, nowTs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AuthResult{
 		UserID:          userID,
-		ProjectID:       projectID,
+		OrganizationID:  organizationID,
+		EnvironmentID:   environmentID,
 		Role:            role,
 		AccessToken:     accessToken,
 		RefreshToken:    refreshToken,
@@ -623,45 +600,99 @@ func (s *Service) newAuthResult(ctx context.Context, userID, projectID uuid.UUID
 	}, nil
 }
 
-func (s *Service) ensurePrimaryMembership(ctx context.Context, userID uuid.UUID, nowTs pgtype.Timestamptz) (db.ProjectMembership, error) {
-	membership, err := s.store.GetFirstProjectMembershipByUser(ctx, userID)
+func (s *Service) ensurePrimaryTenant(ctx context.Context, userID uuid.UUID, nowTs pgtype.Timestamptz) (db.OrganizationMember, db.Environment, error) {
+	membership, err := s.tenants.GetFirstOrganizationMembershipByUser(ctx, userID)
 	if err == nil {
-		return membership, nil
+		defaultEnvironment, envErr := s.tenants.GetDefaultEnvironmentByOrganization(ctx, membership.OrganizationID)
+		if envErr == nil {
+			return membership, environmentFromDefaultRow(defaultEnvironment), nil
+		}
+		if !errors.Is(envErr, pgx.ErrNoRows) {
+			return db.OrganizationMember{}, db.Environment{}, envErr
+		}
+
+		development, _, createErr := s.createSeedEnvironments(ctx, membership.OrganizationID, nowTs)
+		if createErr != nil {
+			return db.OrganizationMember{}, db.Environment{}, createErr
+		}
+		return membership, development, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return db.ProjectMembership{}, err
+		return db.OrganizationMember{}, db.Environment{}, err
 	}
 
-	projectID := uuid.New()
-	membershipID := uuid.New()
-	role := "owner"
-	if err := s.store.CreateProject(ctx, db.CreateProjectParams{
-		ID:        projectID,
-		Name:      defaultPlaceholderProject,
+	organization, createErr := s.tenants.CreateOrganization(ctx, db.CreateOrganizationParams{
+		ID:        uuid.New(),
+		Name:      defaultPlaceholderOrganization,
 		CreatedAt: nowTs,
 		UpdatedAt: nowTs,
-	}); err != nil {
-		return db.ProjectMembership{}, err
-	}
-	if err := s.store.CreateProjectMembership(ctx, db.CreateProjectMembershipParams{
-		ID:        membershipID,
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      role,
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}); err != nil {
-		return db.ProjectMembership{}, err
+	})
+	if createErr != nil {
+		return db.OrganizationMember{}, db.Environment{}, createErr
 	}
 
-	return db.ProjectMembership{
-		ID:        membershipID,
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      role,
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}, nil
+	membership = db.OrganizationMember{
+		ID:             uuid.New(),
+		OrganizationID: organization.ID,
+		UserID:         userID,
+		Role:           "owner",
+		CreatedAt:      nowTs,
+	}
+	if err := s.tenants.CreateOrganizationMember(ctx, db.CreateOrganizationMemberParams{
+		ID:             membership.ID,
+		OrganizationID: membership.OrganizationID,
+		UserID:         membership.UserID,
+		Role:           membership.Role,
+		CreatedAt:      membership.CreatedAt,
+	}); err != nil {
+		return db.OrganizationMember{}, db.Environment{}, err
+	}
+
+	development, _, err := s.createSeedEnvironments(ctx, organization.ID, nowTs)
+	if err != nil {
+		return db.OrganizationMember{}, db.Environment{}, err
+	}
+
+	return membership, development, nil
+}
+
+func environmentFromDefaultRow(row db.GetDefaultEnvironmentByOrganizationRow) db.Environment {
+	return db.Environment{
+		ID:             row.ID,
+		OrganizationID: row.OrganizationID,
+		Name:           row.Name,
+		IsDefault:      row.IsDefault,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+func (s *Service) createSeedEnvironments(ctx context.Context, organizationID uuid.UUID, nowTs pgtype.Timestamptz) (db.Environment, db.Environment, error) {
+	development, err := s.tenants.CreateEnvironment(ctx, db.CreateEnvironmentParams{
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           defaultDevelopmentEnvironment,
+		IsDefault:      true,
+		CreatedAt:      nowTs,
+		UpdatedAt:      nowTs,
+	})
+	if err != nil {
+		return db.Environment{}, db.Environment{}, err
+	}
+
+	production, err := s.tenants.CreateEnvironment(ctx, db.CreateEnvironmentParams{
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           defaultProductionEnvironment,
+		IsDefault:      false,
+		CreatedAt:      nowTs,
+		UpdatedAt:      nowTs,
+	})
+	if err != nil {
+		return db.Environment{}, db.Environment{}, err
+	}
+
+	return development, production, nil
 }
 
 func isSupportedSocialProvider(provider string) bool {

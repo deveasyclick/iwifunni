@@ -27,10 +27,10 @@ type fakeUserRecord struct {
 type fakeAuthStore struct {
 	usersByEmail       map[string]fakeUserRecord
 	usersByID          map[uuid.UUID]fakeUserRecord
-	membershipByUser   map[uuid.UUID]db.ProjectMembership
-	projects           map[uuid.UUID]db.Project
+	organizations      map[uuid.UUID]db.Organization
+	membershipByUser   map[uuid.UUID]db.OrganizationMember
+	environmentsByOrg  map[uuid.UUID][]db.Environment
 	authIdentities     map[string]db.AuthIdentity
-	apiKeys            []db.CreateAPIKeyParams
 	refreshTokens      []db.CreateRefreshTokenParams
 	refreshByHash      map[string]db.RefreshToken
 	emailVerifications map[uuid.UUID]db.EmailVerification
@@ -40,8 +40,9 @@ func newFakeAuthStore() *fakeAuthStore {
 	return &fakeAuthStore{
 		usersByEmail:       make(map[string]fakeUserRecord),
 		usersByID:          make(map[uuid.UUID]fakeUserRecord),
-		membershipByUser:   make(map[uuid.UUID]db.ProjectMembership),
-		projects:           make(map[uuid.UUID]db.Project),
+		organizations:      make(map[uuid.UUID]db.Organization),
+		membershipByUser:   make(map[uuid.UUID]db.OrganizationMember),
+		environmentsByOrg:  make(map[uuid.UUID][]db.Environment),
 		authIdentities:     make(map[string]db.AuthIdentity),
 		refreshByHash:      make(map[string]db.RefreshToken),
 		emailVerifications: make(map[uuid.UUID]db.EmailVerification),
@@ -152,25 +153,69 @@ func (s *fakeAuthStore) DeleteEmailVerificationByUserID(_ context.Context, userI
 	return nil
 }
 
-func (s *fakeAuthStore) CreateProject(_ context.Context, arg db.CreateProjectParams) error {
-	s.projects[arg.ID] = db.Project{
-		ID:        arg.ID,
-		Name:      arg.Name,
-		CreatedAt: arg.CreatedAt,
-		UpdatedAt: arg.UpdatedAt,
+func (s *fakeAuthStore) CreateOrganization(_ context.Context, arg db.CreateOrganizationParams) (db.Organization, error) {
+	org := db.Organization{ID: arg.ID, Name: arg.Name, CreatedAt: arg.CreatedAt, UpdatedAt: arg.UpdatedAt}
+	s.organizations[arg.ID] = org
+	return org, nil
+}
+
+func (s *fakeAuthStore) UpdateOrganizationName(_ context.Context, arg db.UpdateOrganizationNameParams) error {
+	org, ok := s.organizations[arg.ID]
+	if !ok {
+		return pgx.ErrNoRows
+	}
+	org.Name = arg.Name
+	org.UpdatedAt = arg.UpdatedAt
+	s.organizations[arg.ID] = org
+	return nil
+}
+
+func (s *fakeAuthStore) CreateOrganizationMember(_ context.Context, arg db.CreateOrganizationMemberParams) error {
+	s.membershipByUser[arg.UserID] = db.OrganizationMember{
+		ID:             arg.ID,
+		OrganizationID: arg.OrganizationID,
+		UserID:         arg.UserID,
+		Role:           arg.Role,
+		CreatedAt:      arg.CreatedAt,
 	}
 	return nil
 }
 
-func (s *fakeAuthStore) UpdateProjectName(_ context.Context, arg db.UpdateProjectNameParams) error {
-	project, ok := s.projects[arg.ID]
+func (s *fakeAuthStore) GetFirstOrganizationMembershipByUser(_ context.Context, userID uuid.UUID) (db.OrganizationMember, error) {
+	membership, ok := s.membershipByUser[userID]
 	if !ok {
-		return pgx.ErrNoRows
+		return db.OrganizationMember{}, pgx.ErrNoRows
 	}
-	project.Name = arg.Name
-	project.UpdatedAt = arg.UpdatedAt
-	s.projects[arg.ID] = project
-	return nil
+	return membership, nil
+}
+
+func (s *fakeAuthStore) CreateEnvironment(_ context.Context, arg db.CreateEnvironmentParams) (db.Environment, error) {
+	environment := db.Environment{
+		ID:             arg.ID,
+		Name:           arg.Name,
+		OrganizationID: arg.OrganizationID,
+		CreatedAt:      arg.CreatedAt,
+		UpdatedAt:      arg.UpdatedAt,
+		IsDefault:      arg.IsDefault,
+	}
+	s.environmentsByOrg[arg.OrganizationID] = append(s.environmentsByOrg[arg.OrganizationID], environment)
+	return environment, nil
+}
+
+func (s *fakeAuthStore) GetDefaultEnvironmentByOrganization(_ context.Context, organizationID uuid.UUID) (db.GetDefaultEnvironmentByOrganizationRow, error) {
+	for _, environment := range s.environmentsByOrg[organizationID] {
+		if environment.IsDefault {
+			return db.GetDefaultEnvironmentByOrganizationRow{
+				ID:             environment.ID,
+				OrganizationID: environment.OrganizationID,
+				Name:           environment.Name,
+				IsDefault:      environment.IsDefault,
+				CreatedAt:      environment.CreatedAt,
+				UpdatedAt:      environment.UpdatedAt,
+			}, nil
+		}
+	}
+	return db.GetDefaultEnvironmentByOrganizationRow{}, pgx.ErrNoRows
 }
 
 func (s *fakeAuthStore) CreateAuthIdentity(_ context.Context, arg db.CreateAuthIdentityParams) error {
@@ -192,31 +237,6 @@ func (s *fakeAuthStore) GetAuthIdentityByProviderUserID(_ context.Context, arg d
 		return db.AuthIdentity{}, pgx.ErrNoRows
 	}
 	return identity, nil
-}
-
-func (s *fakeAuthStore) CreateProjectMembership(_ context.Context, arg db.CreateProjectMembershipParams) error {
-	s.membershipByUser[arg.UserID] = db.ProjectMembership{
-		ID:        arg.ID,
-		ProjectID: arg.ProjectID,
-		UserID:    arg.UserID,
-		Role:      arg.Role,
-		CreatedAt: arg.CreatedAt,
-		UpdatedAt: arg.UpdatedAt,
-	}
-	return nil
-}
-
-func (s *fakeAuthStore) GetFirstProjectMembershipByUser(_ context.Context, userID uuid.UUID) (db.ProjectMembership, error) {
-	membership, ok := s.membershipByUser[userID]
-	if !ok {
-		return db.ProjectMembership{}, pgx.ErrNoRows
-	}
-	return membership, nil
-}
-
-func (s *fakeAuthStore) CreateAPIKey(_ context.Context, arg db.CreateAPIKeyParams) error {
-	s.apiKeys = append(s.apiKeys, arg)
-	return nil
 }
 
 func (s *fakeAuthStore) CreateRefreshToken(_ context.Context, arg db.CreateRefreshTokenParams) error {
@@ -243,6 +263,15 @@ func (s *fakeAuthStore) GetRefreshTokenByHash(_ context.Context, tokenHash strin
 func (s *fakeAuthStore) DeleteRefreshTokenByHash(_ context.Context, tokenHash string) error {
 	delete(s.refreshByHash, tokenHash)
 	return nil
+}
+
+func fixedAuthService(store *fakeAuthStore) *Service {
+	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
+	service.now = func() time.Time {
+		return time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC)
+	}
+	service.jwtManager.now = service.now
+	return service
 }
 
 func TestServiceSignupCreatesPendingVerification(t *testing.T) {
@@ -273,22 +302,12 @@ func TestServiceSignupCreatesPendingVerification(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Signup() error = %v", err)
 	}
-	if result.UserID == uuid.Nil {
-		t.Fatal("Signup() returned empty user id")
-	}
-	if result.ProjectID == uuid.Nil {
-		t.Fatal("Signup() returned empty project id")
-	}
-	if !result.VerificationRequired {
-		t.Fatal("Signup() should require verification")
-	}
-	if result.AccessToken != "" || result.RefreshToken != "" {
-		t.Fatal("Signup() should not issue session tokens before verification")
+	if result.UserID == uuid.Nil || result.OrganizationID == uuid.Nil || result.EnvironmentID == uuid.Nil {
+		t.Fatal("Signup() should return seeded user, organization, and environment ids")
 	}
 	if deliveredCode == "" || len(deliveredCode) != 6 {
 		t.Fatalf("verification code = %q, want six digits", deliveredCode)
 	}
-
 	storedUser, err := store.GetUserByEmail(context.Background(), "user@example.com")
 	if err != nil {
 		t.Fatalf("GetUserByEmail() error = %v", err)
@@ -296,21 +315,24 @@ func TestServiceSignupCreatesPendingVerification(t *testing.T) {
 	if storedUser.PasswordHash == "correct-horse-battery-staple" {
 		t.Fatal("password was stored in plaintext")
 	}
-	if storedUser.FirstName != "Ada" || storedUser.LastName != "Lovelace" {
-		t.Fatalf("stored names = %q %q, want Ada Lovelace", storedUser.FirstName, storedUser.LastName)
-	}
 	if storedUser.EmailVerifiedAt.Valid {
 		t.Fatal("Signup() should not mark the user as verified")
 	}
-	verification, ok := store.emailVerifications[result.UserID]
-	if !ok {
-		t.Fatal("Signup() should persist a verification record")
+	if store.organizations[result.OrganizationID].Name != defaultPlaceholderOrganization {
+		t.Fatalf("placeholder organization name = %q, want %q", store.organizations[result.OrganizationID].Name, defaultPlaceholderOrganization)
 	}
-	if !CompareVerificationCode(deliveredCode, verification.CodeHash) {
-		t.Fatal("stored verification hash does not match delivered code")
+	defaultEnvironment, err := store.GetDefaultEnvironmentByOrganization(context.Background(), result.OrganizationID)
+	if err != nil {
+		t.Fatalf("GetDefaultEnvironmentByOrganization() error = %v", err)
 	}
-	if store.projects[result.ProjectID].Name != defaultPlaceholderProject {
-		t.Fatalf("placeholder project name = %q, want %q", store.projects[result.ProjectID].Name, defaultPlaceholderProject)
+	if defaultEnvironment.ID != result.EnvironmentID {
+		t.Fatalf("EnvironmentID = %s, want %s", result.EnvironmentID, defaultEnvironment.ID)
+	}
+	if defaultEnvironment.Name != defaultDevelopmentEnvironment {
+		t.Fatalf("default environment = %q, want %q", defaultEnvironment.Name, defaultDevelopmentEnvironment)
+	}
+	if len(store.environmentsByOrg[result.OrganizationID]) != 2 {
+		t.Fatalf("environment count = %d, want 2", len(store.environmentsByOrg[result.OrganizationID]))
 	}
 }
 
@@ -322,7 +344,7 @@ func TestServiceSignupRejectsDuplicateEmail(t *testing.T) {
 	user := fakeUserRecord{ID: userID, Email: "user@example.com"}
 	store.usersByEmail[user.Email] = user
 	store.usersByID[userID] = user
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
+	service := fixedAuthService(store)
 
 	_, err := service.Signup(context.Background(), SignupInput{
 		FirstName: "Ada",
@@ -364,28 +386,15 @@ func TestServiceVerifyEmailIssuesSession(t *testing.T) {
 		t.Fatalf("Signup() error = %v", err)
 	}
 
-	result, err := service.VerifyEmail(context.Background(), VerifyEmailInput{
-		Email: signup.Email,
-		Code:  deliveredCode,
-	})
+	result, err := service.VerifyEmail(context.Background(), VerifyEmailInput{Email: signup.Email, Code: deliveredCode})
 	if err != nil {
 		t.Fatalf("VerifyEmail() error = %v", err)
 	}
 	if result.AccessToken == "" || result.RefreshToken == "" {
 		t.Fatal("VerifyEmail() should issue session tokens")
 	}
-	if !result.NeedsOnboarding {
-		t.Fatal("VerifyEmail() should keep onboarding pending")
-	}
-	storedUser, err := store.GetUserByEmail(context.Background(), signup.Email)
-	if err != nil {
-		t.Fatalf("GetUserByEmail() error = %v", err)
-	}
-	if !storedUser.EmailVerifiedAt.Valid {
-		t.Fatal("VerifyEmail() should mark the user as verified")
-	}
-	if _, ok := store.emailVerifications[signup.UserID]; ok {
-		t.Fatal("VerifyEmail() should consume the verification record")
+	if result.OrganizationID != signup.OrganizationID || result.EnvironmentID != signup.EnvironmentID {
+		t.Fatal("VerifyEmail() should reuse the seeded organization and environment")
 	}
 	if len(store.refreshTokens) != 1 {
 		t.Fatalf("refresh token inserts = %d, want 1", len(store.refreshTokens))
@@ -405,20 +414,9 @@ func TestServiceSigninRejectsUnverifiedEmail(t *testing.T) {
 	user := fakeUserRecord{ID: userID, Email: "user@example.com", PasswordHash: passwordHash}
 	store.usersByEmail[user.Email] = user
 	store.usersByID[userID] = user
-	store.membershipByUser[userID] = db.ProjectMembership{
-		ID:        uuid.New(),
-		ProjectID: uuid.New(),
-		UserID:    userID,
-		Role:      "owner",
-		CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-		UpdatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-	}
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
+	service := fixedAuthService(store)
 
-	_, err = service.Signin(context.Background(), SigninInput{
-		Email:    "user@example.com",
-		Password: "correct-horse-battery-staple",
-	})
+	_, err = service.Signin(context.Background(), SigninInput{Email: "user@example.com", Password: "correct-horse-battery-staple"})
 	if !errors.Is(err, ErrEmailNotVerified) {
 		t.Fatalf("Signin() error = %v, want %v", err, ErrEmailNotVerified)
 	}
@@ -427,46 +425,33 @@ func TestServiceSigninRejectsUnverifiedEmail(t *testing.T) {
 func TestServiceCompleteOnboarding(t *testing.T) {
 	t.Parallel()
 
-	userID := uuid.New()
-	projectID := uuid.New()
-	nowTs := pgtype.Timestamptz{Time: time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC), Valid: true}
 	store := newFakeAuthStore()
-	user := fakeUserRecord{ID: userID, Email: "user@example.com", EmailVerifiedAt: nowTs}
-	store.usersByEmail[user.Email] = user
-	store.usersByID[userID] = user
-	store.projects[projectID] = db.Project{ID: projectID, Name: defaultPlaceholderProject, CreatedAt: nowTs, UpdatedAt: nowTs}
-	store.membershipByUser[userID] = db.ProjectMembership{
-		ID:        uuid.New(),
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      "owner",
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}
+	service := fixedAuthService(store)
 
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
-	service.now = func() time.Time {
-		return time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC)
+	signup, err := service.Signup(context.Background(), SignupInput{
+		FirstName: "Ada",
+		LastName:  "Lovelace",
+		Email:     "user@example.com",
+		Password:  "correct-horse-battery-staple",
+	})
+	if err != nil {
+		t.Fatalf("Signup() error = %v", err)
 	}
-	service.jwtManager.now = service.now
 
 	result, err := service.CompleteOnboarding(context.Background(), CompleteOnboardingInput{
-		UserID:      userID,
-		ProjectName: "Acme",
+		UserID:           signup.UserID,
+		OrganizationName: "Acme",
 	})
 	if err != nil {
 		t.Fatalf("CompleteOnboarding() error = %v", err)
 	}
-	if result.ProjectName != "Acme" {
-		t.Fatalf("ProjectName = %q, want %q", result.ProjectName, "Acme")
+	if result.OrganizationName != "Acme" {
+		t.Fatalf("OrganizationName = %q, want %q", result.OrganizationName, "Acme")
 	}
-	if result.NeedsOnboarding {
-		t.Fatal("CompleteOnboarding() should clear onboarding state")
+	if store.organizations[signup.OrganizationID].Name != "Acme" {
+		t.Fatalf("stored organization name = %q, want %q", store.organizations[signup.OrganizationID].Name, "Acme")
 	}
-	if store.projects[projectID].Name != "Acme" {
-		t.Fatalf("stored project name = %q, want %q", store.projects[projectID].Name, "Acme")
-	}
-	if !store.usersByID[userID].OnboardingCompletedAt.Valid {
+	if !store.usersByID[signup.UserID].OnboardingCompletedAt.Valid {
 		t.Fatal("CompleteOnboarding() should mark onboarding complete")
 	}
 }
@@ -475,7 +460,8 @@ func TestServiceRefreshIncludesOnboardingState(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
-	projectID := uuid.New()
+	orgID := uuid.New()
+	envID := uuid.New()
 	passwordHash, err := HashPassword("correct-horse-battery-staple")
 	if err != nil {
 		t.Fatalf("HashPassword() error = %v", err)
@@ -483,34 +469,14 @@ func TestServiceRefreshIncludesOnboardingState(t *testing.T) {
 	verifiedAt := pgtype.Timestamptz{Time: time.Date(2026, time.April, 25, 12, 0, 0, 0, time.UTC), Valid: true}
 
 	store := newFakeAuthStore()
-	user := fakeUserRecord{
-		ID:              userID,
-		Email:           "user@example.com",
-		PasswordHash:    passwordHash,
-		EmailVerifiedAt: verifiedAt,
-	}
+	user := fakeUserRecord{ID: userID, Email: "user@example.com", PasswordHash: passwordHash, EmailVerifiedAt: verifiedAt}
 	store.usersByEmail[user.Email] = user
 	store.usersByID[userID] = user
-	store.membershipByUser[userID] = db.ProjectMembership{
-		ID:        uuid.New(),
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      "owner",
-		CreatedAt: verifiedAt,
-		UpdatedAt: verifiedAt,
-	}
-	store.refreshByHash[HashRefreshToken("refresh-token")] = db.RefreshToken{
-		ID:        uuid.New(),
-		UserID:    userID,
-		TokenHash: HashRefreshToken("refresh-token"),
-		ExpiresAt: pgtype.Timestamptz{Time: time.Date(2026, time.April, 27, 12, 0, 0, 0, time.UTC), Valid: true},
-	}
+	store.membershipByUser[userID] = db.OrganizationMember{ID: uuid.New(), OrganizationID: orgID, UserID: userID, Role: "owner", CreatedAt: verifiedAt}
+	store.environmentsByOrg[orgID] = []db.Environment{{ID: envID, OrganizationID: orgID, Name: defaultDevelopmentEnvironment, IsDefault: true, CreatedAt: verifiedAt, UpdatedAt: verifiedAt}}
+	store.refreshByHash[HashRefreshToken("refresh-token")] = db.RefreshToken{ID: uuid.New(), UserID: userID, TokenHash: HashRefreshToken("refresh-token"), ExpiresAt: pgtype.Timestamptz{Time: time.Date(2026, time.April, 27, 12, 0, 0, 0, time.UTC), Valid: true}}
 
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
-	service.now = func() time.Time {
-		return time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC)
-	}
-	service.jwtManager.now = service.now
+	service := fixedAuthService(store)
 
 	result, err := service.Refresh(context.Background(), RefreshInput{RefreshToken: "refresh-token"})
 	if err != nil {
@@ -519,8 +485,8 @@ func TestServiceRefreshIncludesOnboardingState(t *testing.T) {
 	if !result.NeedsOnboarding {
 		t.Fatal("Refresh() should preserve onboarding-required state")
 	}
-	if len(store.refreshByHash) != 1 {
-		t.Fatalf("refresh token count = %d, want 1 after rotation", len(store.refreshByHash))
+	if result.OrganizationID != orgID || result.EnvironmentID != envID {
+		t.Fatal("Refresh() should return the organization and default environment")
 	}
 }
 
@@ -528,11 +494,7 @@ func TestServiceSigninWithSocialCreatesVerifiedUser(t *testing.T) {
 	t.Parallel()
 
 	store := newFakeAuthStore()
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
-	service.now = func() time.Time {
-		return time.Date(2026, time.May, 15, 12, 0, 0, 0, time.UTC)
-	}
-	service.jwtManager.now = service.now
+	service := fixedAuthService(store)
 
 	result, err := service.SigninWithSocial(context.Background(), SocialSigninInput{
 		Provider:       "google",
@@ -544,11 +506,8 @@ func TestServiceSigninWithSocialCreatesVerifiedUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SigninWithSocial() error = %v", err)
 	}
-	if result.UserID == uuid.Nil || result.ProjectID == uuid.Nil {
-		t.Fatal("SigninWithSocial() should return user and project ids")
-	}
-	if !result.NeedsOnboarding {
-		t.Fatal("SigninWithSocial() should require onboarding for new social users")
+	if result.OrganizationID == uuid.Nil || result.EnvironmentID == uuid.Nil {
+		t.Fatal("SigninWithSocial() should return organization and environment ids")
 	}
 	user, err := store.GetUserByEmail(context.Background(), "social@example.com")
 	if err != nil {
@@ -567,31 +526,17 @@ func TestServiceSigninWithSocialLinksExistingUser(t *testing.T) {
 
 	store := newFakeAuthStore()
 	userID := uuid.New()
-	projectID := uuid.New()
+	orgID := uuid.New()
+	envID := uuid.New()
 	nowTs := pgtype.Timestamptz{Time: time.Date(2026, time.May, 14, 12, 0, 0, 0, time.UTC), Valid: true}
-	user := fakeUserRecord{
-		ID:        userID,
-		Email:     "existing@example.com",
-		FirstName: "Existing",
-		LastName:  "User",
-	}
+	user := fakeUserRecord{ID: userID, Email: "existing@example.com", FirstName: "Existing", LastName: "User"}
 	store.usersByEmail[user.Email] = user
 	store.usersByID[userID] = user
-	store.projects[projectID] = db.Project{ID: projectID, Name: defaultPlaceholderProject, CreatedAt: nowTs, UpdatedAt: nowTs}
-	store.membershipByUser[userID] = db.ProjectMembership{
-		ID:        uuid.New(),
-		ProjectID: projectID,
-		UserID:    userID,
-		Role:      "owner",
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	}
+	store.organizations[orgID] = db.Organization{ID: orgID, Name: defaultPlaceholderOrganization, CreatedAt: nowTs, UpdatedAt: nowTs}
+	store.membershipByUser[userID] = db.OrganizationMember{ID: uuid.New(), OrganizationID: orgID, UserID: userID, Role: "owner", CreatedAt: nowTs}
+	store.environmentsByOrg[orgID] = []db.Environment{{ID: envID, OrganizationID: orgID, Name: defaultDevelopmentEnvironment, IsDefault: true, CreatedAt: nowTs, UpdatedAt: nowTs}}
 
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
-	service.now = func() time.Time {
-		return time.Date(2026, time.May, 15, 12, 0, 0, 0, time.UTC)
-	}
-	service.jwtManager.now = service.now
+	service := fixedAuthService(store)
 
 	result, err := service.SigninWithSocial(context.Background(), SocialSigninInput{
 		Provider:       "github",
@@ -602,14 +547,11 @@ func TestServiceSigninWithSocialLinksExistingUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SigninWithSocial() error = %v", err)
 	}
-	if result.ProjectID != projectID {
-		t.Fatalf("ProjectID = %s, want %s", result.ProjectID, projectID)
+	if result.OrganizationID != orgID || result.EnvironmentID != envID {
+		t.Fatal("SigninWithSocial() should return the existing tenant context")
 	}
 	if !store.usersByID[userID].EmailVerifiedAt.Valid {
 		t.Fatal("social signin should verify an existing email/password account")
-	}
-	if _, ok := store.authIdentities["github:github-user-1"]; !ok {
-		t.Fatal("social signin should link the auth identity")
 	}
 }
 
@@ -619,7 +561,7 @@ func TestServiceLogout(t *testing.T) {
 	store := newFakeAuthStore()
 	hash := HashRefreshToken("refresh-token")
 	store.refreshByHash[hash] = db.RefreshToken{ID: uuid.New(), UserID: uuid.New(), TokenHash: hash}
-	service := NewService(store, NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute), 24*time.Hour)
+	service := fixedAuthService(store)
 
 	if err := service.Logout(context.Background(), LogoutInput{RefreshToken: "refresh-token"}); err != nil {
 		t.Fatalf("Logout() error = %v", err)

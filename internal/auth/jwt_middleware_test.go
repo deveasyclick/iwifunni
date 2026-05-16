@@ -15,7 +15,7 @@ func TestJWTMiddlewareInjectsClaims(t *testing.T) {
 		return time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC)
 	}
 
-	token, err := manager.GenerateAccessToken("user-123", "project-456", "owner")
+	token, err := manager.GenerateAccessToken("user-123", "org-456", "owner")
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
@@ -26,8 +26,8 @@ func TestJWTMiddlewareInjectsClaims(t *testing.T) {
 		if claims == nil {
 			t.Fatal("GetJWTClaims() returned nil")
 		}
-		if claims.ProjectID != "project-456" {
-			t.Fatalf("ProjectID = %q, want %q", claims.ProjectID, "project-456")
+		if claims.OrganizationID != "org-456" {
+			t.Fatalf("OrganizationID = %q, want %q", claims.OrganizationID, "org-456")
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
