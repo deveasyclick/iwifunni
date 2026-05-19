@@ -57,15 +57,15 @@ export const TopWorkflows = () => {
               </div>
 
               <div className="text-sm text-muted-foreground w-20 text-right capitalize">
-                {item.channels.length} channels
+                {item.triggerEvent || item.definition?.trigger?.event || `${item.channels?.length ?? 0} channels`}
               </div>
 
               <div
                 className={`text-sm font-medium w-20 text-right ${
-                  item.isActive ? "text-success" : "text-muted-foreground"
+                  item.status === "active" || item.isActive ? "text-success" : "text-muted-foreground"
                 }`}
               >
-                {item.isActive ? "Active" : "Archived"}
+                {item.status || (item.isActive ? "Active" : "Archived")}
               </div>
             </div>
           ))

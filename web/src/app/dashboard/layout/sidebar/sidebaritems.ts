@@ -46,7 +46,7 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         name: "Workflows",
         icon: "octicon:workflow-24",
-        url: "/dashboard/apps/workflows",
+        url: "/dashboard/workflows",
         isPro: false,
       },
       {

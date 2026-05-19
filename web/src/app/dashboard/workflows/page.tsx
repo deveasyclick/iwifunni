@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import BreadcrumbComp from "../../layout/shared/breadcrumb/BreadcrumbComp";
-import WorkflowManagement from "../../components/workflows";
+import BreadcrumbComp from "../layout/shared/breadcrumb/BreadcrumbComp";
+import WorkflowManagement from "../components/workflows";
 
 export const metadata: Metadata = {
   title: "Workflows",
