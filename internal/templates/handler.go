@@ -18,12 +18,20 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router) {
+	h.RegisterDashboardRoutes(r)
+	h.RegisterAPIRoutes(r)
+}
+
+func (h *Handler) RegisterDashboardRoutes(r chi.Router) {
 	r.Post("/templates", h.create)
 	r.Get("/templates", h.list)
-	r.Post("/templates/render", h.render) // before /{templateID}
 	r.Get("/templates/{templateID}", h.get)
 	r.Patch("/templates/{templateID}", h.update)
 	r.Delete("/templates/{templateID}", h.delete)
+}
+
+func (h *Handler) RegisterAPIRoutes(r chi.Router) {
+	r.Post("/templates/render", h.render)
 }
 
 type createRequest struct {

@@ -73,7 +73,7 @@ func (a *App) Router() http.Handler {
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		r.Use(auth.NewJWTMiddleware(a.jwtManager))
+		r.Use(auth.NewJWTMiddleware(a.jwtManager, a.queries))
 		r.Post("/auth/onboarding", a.authHandler().completeOnboarding)
 
 		// API Keys management (dashboard)
@@ -94,7 +94,7 @@ func (a *App) Router() http.Handler {
 		// Template management (dashboard)
 		tplRepo := templates.NewRepository(a.queries)
 		tplSvc := templates.NewService(tplRepo)
-		templates.NewHandler(tplSvc).Register(r)
+		templates.NewHandler(tplSvc).RegisterDashboardRoutes(r)
 
 		// Subscriber management (dashboard)
 		subscriberRepo := subscriber.NewRepository(a.queries)
@@ -103,8 +103,8 @@ func (a *App) Router() http.Handler {
 
 		// Workflow management (dashboard)
 		workflowRepo := workflow.NewRepository(a.queries)
-		workflowSvc := workflow.NewService(workflowRepo)
-		workflow.NewHandler(workflowSvc).Register(r)
+		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
+		workflow.NewHandler(workflowSvc).RegisterDashboardRoutes(r)
 
 		// Webhook management (dashboard)
 		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
@@ -122,7 +122,7 @@ func (a *App) Router() http.Handler {
 		// Templates
 		tplRepo := templates.NewRepository(a.queries)
 		tplSvc := templates.NewService(tplRepo)
-		templates.NewHandler(tplSvc).Register(r)
+		templates.NewHandler(tplSvc).RegisterAPIRoutes(r)
 
 		// Subscribers
 		subscriberRepo := subscriber.NewRepository(a.queries)
@@ -131,8 +131,8 @@ func (a *App) Router() http.Handler {
 
 		// Workflows
 		workflowRepo := workflow.NewRepository(a.queries)
-		workflowSvc := workflow.NewService(workflowRepo)
-		workflow.NewHandler(workflowSvc).Register(r)
+		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
+		workflow.NewHandler(workflowSvc).RegisterAPIRoutes(r)
 
 		// Providers
 		providerRepo := provider.NewRepository(a.queries)
