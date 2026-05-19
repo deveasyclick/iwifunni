@@ -71,6 +71,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@unlayer/types':
+        specifier: file:/tmp/unlayer-types.tgz
+        version: file:../../../../../../../tmp/unlayer-types.tgz
       '@xyflow/react':
         specifier: ^12.10.2
         version: 12.10.2(@types/react@19.2.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -134,6 +137,9 @@ importers:
       react-dom:
         specifier: ^19.2.3
         version: 19.2.6(react@19.2.6)
+      react-email-editor:
+        specifier: file:/tmp/react-email-editor.tgz
+        version: file:../../../../../../../tmp/react-email-editor.tgz(react@19.2.6)
       react-icons:
         specifier: ^5.5.0
         version: 5.6.0(react@19.2.6)
@@ -1652,6 +1658,13 @@ packages:
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
 
+  '@unlayer/types@1.408.0':
+    resolution: {integrity: sha512-YeQJnZGQ11IwFsDHDV3qyCMYbIwychfqzW+fV4QmEHrPuGDJ6ikhOf5eYWsbgQTSDNQsgBgWXVm8JiGCxA3sRw==}
+
+  '@unlayer/types@file:../../../../../../../tmp/unlayer-types.tgz':
+    resolution: {integrity: sha512-YeQJnZGQ11IwFsDHDV3qyCMYbIwychfqzW+fV4QmEHrPuGDJ6ikhOf5eYWsbgQTSDNQsgBgWXVm8JiGCxA3sRw==, tarball: file:../../../../../../../tmp/unlayer-types.tgz}
+    version: 1.408.0
+
   '@xyflow/react@12.10.2':
     resolution: {integrity: sha512-CgIi6HwlcHXwlkTpr0fxLv/0sRVNZ8IdwKLzzeCscaYBwpvfcH1QFOCeaTCuEn1FQEs/B8CjnTSjhs8udgmBgQ==}
     peerDependencies:
@@ -2254,6 +2267,13 @@ packages:
     resolution: {integrity: sha512-0prMI+hvBbPjsWnxDLxlCGyM8PN6UuWjEUCYmZhO67xIV9Xasa/r/vDnq+Xyq4Lo27g8QSbO5YzARu0D1Sps3g==}
     peerDependencies:
       react: ^19.2.6
+
+  react-email-editor@file:../../../../../../../tmp/react-email-editor.tgz:
+    resolution: {integrity: sha512-wauG/fES4k3VueIYVvsnxL+6+AAOw8oG3r1QlQclnC2aErpsjJSDmYgQRmDBhkts0QTKJf4uPiXOd3OxPv50OA==, tarball: file:../../../../../../../tmp/react-email-editor.tgz}
+    version: 1.8.0
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=15'
 
   react-icons@5.6.0:
     resolution: {integrity: sha512-RH93p5ki6LfOiIt0UtDyNg/cee+HLVR6cHHtW3wALfo+eOHTp8RnU2kRkI6E+H19zMIs03DyxUG/GfZMOGvmiA==}
@@ -3930,6 +3950,10 @@ snapshots:
 
   '@types/unist@2.0.11': {}
 
+  '@unlayer/types@1.408.0': {}
+
+  '@unlayer/types@file:../../../../../../../tmp/unlayer-types.tgz': {}
+
   '@xyflow/react@12.10.2(@types/react@19.2.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@xyflow/system': 0.0.76
@@ -4531,6 +4555,11 @@ snapshots:
     dependencies:
       react: 19.2.6
       scheduler: 0.27.0
+
+  react-email-editor@file:../../../../../../../tmp/react-email-editor.tgz(react@19.2.6):
+    dependencies:
+      '@unlayer/types': 1.408.0
+      react: 19.2.6
 
   react-icons@5.6.0(react@19.2.6):
     dependencies:

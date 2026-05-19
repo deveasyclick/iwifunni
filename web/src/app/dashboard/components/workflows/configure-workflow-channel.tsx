@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CardBox from "@/app/components/shared/CardBox";
 import { workflowApi } from "@/app/dashboard/components/workflows/api";
@@ -14,6 +15,16 @@ import type { WorkflowChannel, WorkflowDefinition, WorkflowNode } from "@/app/ty
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { UnlayerEmailEditorHandle } from "./unlayer-email-editor";
+
+const UnlayerEmailEditor = dynamic(() => import("./unlayer-email-editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-border/50 text-sm text-muted-foreground">
+      Loading email editor…
+    </div>
+  ),
+});
 
 type ConfigureWorkflowChannelProps = {
   workflowId: string;
@@ -64,11 +75,21 @@ const parseError = async (response: Response): Promise<string> => {
   }
 };
 
+const getNodeName = (node: WorkflowNode | null, fallbackNodeId: string) => {
+  const config = (node?.config || {}) as Record<string, unknown>;
+  if (typeof config.name === "string" && config.name.trim()) {
+    return config.name.trim();
+  }
+
+  return node?.id || fallbackNodeId;
+};
+
 const ConfigureWorkflowChannel = ({
   workflowId,
   nodeId,
 }: ConfigureWorkflowChannelProps) => {
   const router = useRouter();
+  const emailEditorRef = useRef<UnlayerEmailEditorHandle>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +101,7 @@ const ConfigureWorkflowChannel = ({
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState("");
 
   useEffect(() => {
     if (!workflowId || !nodeId) {
@@ -160,13 +182,23 @@ const ConfigureWorkflowChannel = ({
   }, [nodeId, workflowId]);
 
   const labels = useMemo(() => channelConfigLabels[channel], [channel]);
+  const previewSubject = subject.trim() || labels.subject;
+  const previewBody = body.trim() || `Preview your ${channel} content here.`;
 
   const saveChannelConfiguration = async () => {
     if (!workflow || !node) {
       setError("Workflow draft is not ready");
       return;
     }
-    if (!body.trim()) {
+
+    let resolvedBody = body;
+    if (channel === "email") {
+      if (!emailEditorRef.current) {
+        setError("Email editor is not ready");
+        return;
+      }
+      resolvedBody = await emailEditorRef.current.getEncodedBody();
+    } else if (!body.trim()) {
       setError(`${labels.body} is required`);
       return;
     }
@@ -176,9 +208,9 @@ const ConfigureWorkflowChannel = ({
 
     try {
       const templatePayload: CreateTemplatePayload = {
-        name: `${workflow.name} ${node.id} ${channel}`,
+        name: `${workflow.name} ${getNodeName(node, nodeId)} ${channel}`,
         channel,
-        body: body.trim(),
+        body: resolvedBody,
         subject: channel === "sms" ? undefined : subject.trim() || undefined,
       };
 
@@ -285,7 +317,7 @@ const ConfigureWorkflowChannel = ({
               {workflow?.name || "Workflow draft"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Node: {node?.id || nodeId} · Channel: {channel}
+              Step: {getNodeName(node, nodeId)} · ID: {node?.id || nodeId} · Channel: {channel}
             </p>
           </div>
 
@@ -295,31 +327,106 @@ const ConfigureWorkflowChannel = ({
             </p>
           ) : null}
 
-          {channel !== "sms" ? (
-            <div>
-              <label className="mb-2 block text-sm font-medium" htmlFor="channel-subject">
-                {labels.subject}
-              </label>
-              <Input
-                id="channel-subject"
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                placeholder={channel === "push" ? "Push title" : "Welcome to Iwifunni"}
-              />
-            </div>
-          ) : null}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <div className="rounded-2xl border border-border/50 bg-card p-5">
+              <div className="mb-4">
+                <h6 className="font-medium text-foreground">Editor</h6>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Update the template content for this workflow step.
+                </p>
+              </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium" htmlFor="channel-body">
-              {labels.body}
-            </label>
-            <Textarea
-              id="channel-body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              className="min-h-64"
-              placeholder={channel === "sms" ? "Hi {{.name}}, your update is ready." : "Hello {{.name}}"}
-            />
+              <div className="space-y-4">
+                {channel !== "sms" ? (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium" htmlFor="channel-subject">
+                      {labels.subject}
+                    </label>
+                    <Input
+                      id="channel-subject"
+                      value={subject}
+                      onChange={(event) => setSubject(event.target.value)}
+                      placeholder={channel === "push" ? "Push title" : "Welcome to Iwifunni"}
+                    />
+                  </div>
+                ) : null}
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium" htmlFor="channel-body">
+                    {labels.body}
+                  </label>
+                  {channel === "email" ? (
+                    <UnlayerEmailEditor
+                      ref={emailEditorRef}
+                      initialValue={body}
+                      onHtmlChange={setEmailPreviewHtml}
+                    />
+                  ) : (
+                    <Textarea
+                      id="channel-body"
+                      value={body}
+                      onChange={(event) => setBody(event.target.value)}
+                      className="min-h-72 font-mono text-sm"
+                      placeholder={channel === "sms" ? "Hi {{.name}}, your update is ready." : "Hello {{.name}}"}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/50 bg-card p-5">
+              <div className="mb-4">
+                <h6 className="font-medium text-foreground">Preview</h6>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Live preview of the content that will be used for this notification.
+                </p>
+              </div>
+
+              {channel === "email" ? (
+                <div className="rounded-2xl border border-border/50 bg-white text-slate-900 shadow-sm">
+                  <div className="border-b border-slate-200 px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Subject</p>
+                    <p className="mt-2 text-sm font-semibold">{previewSubject}</p>
+                  </div>
+                  <div className="px-1 py-1">
+                    {emailPreviewHtml ? (
+                      <iframe
+                        srcDoc={emailPreviewHtml}
+                        title="Email preview"
+                        className="h-[480px] w-full rounded-b-xl border-0"
+                        sandbox="allow-same-origin"
+                      />
+                    ) : (
+                      <p className="px-3 py-4 text-sm text-slate-400">
+                        Start editing to see a live preview.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {channel === "sms" ? (
+                <div className="rounded-[28px] border border-border/40 bg-dark p-4">
+                  <div className="ml-auto max-w-[85%] rounded-3xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground shadow-lg whitespace-pre-wrap">
+                    {previewBody}
+                  </div>
+                </div>
+              ) : null}
+
+              {channel === "push" ? (
+                <div className="rounded-3xl border border-border/40 bg-dark p-4">
+                  <div className="rounded-2xl border border-border/50 bg-card px-4 py-3 shadow-lg">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                      Iwifunni notification
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">{previewSubject}</p>
+                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                      {previewBody}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
