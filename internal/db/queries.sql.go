@@ -498,7 +498,7 @@ INSERT INTO workflows (
 	is_active
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, created_at, updated_at
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
 `
 
 type CreateWorkflowParams struct {
@@ -531,6 +531,203 @@ func (q *Queries) CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) 
 		&i.Channels,
 		&i.TemplateIds,
 		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowDefinition = `-- name: CreateWorkflowDefinition :one
+INSERT INTO workflows (
+	id,
+	environment_id,
+	key,
+	name,
+	description,
+	status,
+	version,
+	trigger_event,
+	definition_json,
+	is_active
+)
+VALUES (
+	$1,
+	$2,
+	$3,
+	$4,
+	$5,
+	$6,
+	$7,
+	$8,
+	$9,
+	CASE WHEN $6 = 'active' THEN true ELSE false END
+)
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type CreateWorkflowDefinitionParams struct {
+	ID             uuid.UUID `db:"id" json:"id"`
+	EnvironmentID  uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key            string    `db:"key" json:"key"`
+	Name           string    `db:"name" json:"name"`
+	Description    *string   `db:"description" json:"description"`
+	Status         string    `db:"status" json:"status"`
+	Version        int32     `db:"version" json:"version"`
+	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
+	DefinitionJson []byte    `db:"definition_json" json:"definition_json"`
+}
+
+func (q *Queries) CreateWorkflowDefinition(ctx context.Context, arg CreateWorkflowDefinitionParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, createWorkflowDefinition,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Status,
+		arg.Version,
+		arg.TriggerEvent,
+		arg.DefinitionJson,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowExecution = `-- name: CreateWorkflowExecution :one
+INSERT INTO workflow_executions (
+	id,
+	workflow_id,
+	environment_id,
+	subscriber_id,
+	status,
+	current_step_id,
+	trigger_payload
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type CreateWorkflowExecutionParams struct {
+	ID             uuid.UUID   `db:"id" json:"id"`
+	WorkflowID     uuid.UUID   `db:"workflow_id" json:"workflow_id"`
+	EnvironmentID  uuid.UUID   `db:"environment_id" json:"environment_id"`
+	SubscriberID   pgtype.UUID `db:"subscriber_id" json:"subscriber_id"`
+	Status         string      `db:"status" json:"status"`
+	CurrentStepID  *string     `db:"current_step_id" json:"current_step_id"`
+	TriggerPayload []byte      `db:"trigger_payload" json:"trigger_payload"`
+}
+
+func (q *Queries) CreateWorkflowExecution(ctx context.Context, arg CreateWorkflowExecutionParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, createWorkflowExecution,
+		arg.ID,
+		arg.WorkflowID,
+		arg.EnvironmentID,
+		arg.SubscriberID,
+		arg.Status,
+		arg.CurrentStepID,
+		arg.TriggerPayload,
+	)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowStepExecution = `-- name: CreateWorkflowStepExecution :one
+INSERT INTO workflow_step_executions (
+	id,
+	execution_id,
+	step_id,
+	step_type,
+	status,
+	attempts,
+	input_json,
+	output_json,
+	error_json,
+	started_at,
+	completed_at,
+	failed_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type CreateWorkflowStepExecutionParams struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID uuid.UUID          `db:"execution_id" json:"execution_id"`
+	StepID      string             `db:"step_id" json:"step_id"`
+	StepType    string             `db:"step_type" json:"step_type"`
+	Status      string             `db:"status" json:"status"`
+	Attempts    int32              `db:"attempts" json:"attempts"`
+	InputJson   []byte             `db:"input_json" json:"input_json"`
+	OutputJson  []byte             `db:"output_json" json:"output_json"`
+	ErrorJson   []byte             `db:"error_json" json:"error_json"`
+	StartedAt   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt    pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) CreateWorkflowStepExecution(ctx context.Context, arg CreateWorkflowStepExecutionParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, createWorkflowStepExecution,
+		arg.ID,
+		arg.ExecutionID,
+		arg.StepID,
+		arg.StepType,
+		arg.Status,
+		arg.Attempts,
+		arg.InputJson,
+		arg.OutputJson,
+		arg.ErrorJson,
+		arg.StartedAt,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -691,6 +888,54 @@ func (q *Queries) GetActiveEnvironmentProviderByChannel(ctx context.Context, arg
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getActiveWorkflowsByTriggerEvent = `-- name: GetActiveWorkflowsByTriggerEvent :many
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE environment_id = $1
+	AND trigger_event = $2
+	AND status = 'active'
+ORDER BY updated_at DESC
+`
+
+type GetActiveWorkflowsByTriggerEventParams struct {
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	TriggerEvent  *string   `db:"trigger_event" json:"trigger_event"`
+}
+
+func (q *Queries) GetActiveWorkflowsByTriggerEvent(ctx context.Context, arg GetActiveWorkflowsByTriggerEventParams) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, getActiveWorkflowsByTriggerEvent, arg.EnvironmentID, arg.TriggerEvent)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
+			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAuthIdentityByProviderUserID = `-- name: GetAuthIdentityByProviderUserID :one
@@ -1306,7 +1551,7 @@ func (q *Queries) GetWebhookByID(ctx context.Context, arg GetWebhookByIDParams) 
 }
 
 const getWorkflowByID = `-- name: GetWorkflowByID :one
-SELECT id, environment_id, key, name, description, channels, template_ids, is_active, created_at, updated_at FROM workflows
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
 WHERE id = $1 AND environment_id = $2
 `
 
@@ -1327,6 +1572,104 @@ func (q *Queries) GetWorkflowByID(ctx context.Context, arg GetWorkflowByIDParams
 		&i.Channels,
 		&i.TemplateIds,
 		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowDefinitionByID = `-- name: GetWorkflowDefinitionByID :one
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetWorkflowDefinitionByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetWorkflowDefinitionByID(ctx context.Context, arg GetWorkflowDefinitionByIDParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, getWorkflowDefinitionByID, arg.ID, arg.EnvironmentID)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowExecutionByID = `-- name: GetWorkflowExecutionByID :one
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetWorkflowExecutionByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetWorkflowExecutionByID(ctx context.Context, arg GetWorkflowExecutionByIDParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, getWorkflowExecutionByID, arg.ID, arg.EnvironmentID)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowStepExecution = `-- name: GetWorkflowStepExecution :one
+SELECT id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_step_executions
+WHERE execution_id = $1 AND step_id = $2
+`
+
+type GetWorkflowStepExecutionParams struct {
+	ExecutionID uuid.UUID `db:"execution_id" json:"execution_id"`
+	StepID      string    `db:"step_id" json:"step_id"`
+}
+
+func (q *Queries) GetWorkflowStepExecution(ctx context.Context, arg GetWorkflowStepExecutionParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, getWorkflowStepExecution, arg.ExecutionID, arg.StepID)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1779,8 +2122,173 @@ func (q *Queries) ListWebhooksByEnvironment(ctx context.Context, environmentID u
 	return items, nil
 }
 
+const listWorkflowDefinitionsByEnvironment = `-- name: ListWorkflowDefinitionsByEnvironment :many
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE environment_id = $1
+ORDER BY updated_at DESC
+`
+
+func (q *Queries) ListWorkflowDefinitionsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, listWorkflowDefinitionsByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
+			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowExecutionsByEnvironment = `-- name: ListWorkflowExecutionsByEnvironment :many
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE environment_id = $1
+ORDER BY started_at DESC
+`
+
+func (q *Queries) ListWorkflowExecutionsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]WorkflowExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowExecutionsByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowExecution{}
+	for rows.Next() {
+		var i WorkflowExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkflowID,
+			&i.EnvironmentID,
+			&i.SubscriberID,
+			&i.Status,
+			&i.CurrentStepID,
+			&i.TriggerPayload,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowExecutionsByWorkflow = `-- name: ListWorkflowExecutionsByWorkflow :many
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE workflow_id = $1 AND environment_id = $2
+ORDER BY started_at DESC
+`
+
+type ListWorkflowExecutionsByWorkflowParams struct {
+	WorkflowID    uuid.UUID `db:"workflow_id" json:"workflow_id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) ListWorkflowExecutionsByWorkflow(ctx context.Context, arg ListWorkflowExecutionsByWorkflowParams) ([]WorkflowExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowExecutionsByWorkflow, arg.WorkflowID, arg.EnvironmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowExecution{}
+	for rows.Next() {
+		var i WorkflowExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkflowID,
+			&i.EnvironmentID,
+			&i.SubscriberID,
+			&i.Status,
+			&i.CurrentStepID,
+			&i.TriggerPayload,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowStepExecutionsByExecution = `-- name: ListWorkflowStepExecutionsByExecution :many
+SELECT id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_step_executions
+WHERE execution_id = $1
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListWorkflowStepExecutionsByExecution(ctx context.Context, executionID uuid.UUID) ([]WorkflowStepExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowStepExecutionsByExecution, executionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowStepExecution{}
+	for rows.Next() {
+		var i WorkflowStepExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExecutionID,
+			&i.StepID,
+			&i.StepType,
+			&i.Status,
+			&i.Attempts,
+			&i.InputJson,
+			&i.OutputJson,
+			&i.ErrorJson,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkflowsByEnvironment = `-- name: ListWorkflowsByEnvironment :many
-SELECT id, environment_id, key, name, description, channels, template_ids, is_active, created_at, updated_at FROM workflows
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
 WHERE environment_id = $1 AND is_active = true
 ORDER BY created_at DESC
 `
@@ -1803,6 +2311,10 @@ func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID 
 			&i.Channels,
 			&i.TemplateIds,
 			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -2107,7 +2619,7 @@ SET key = $3,
 	is_active = $8,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2
-RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, created_at, updated_at
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
 `
 
 type UpdateWorkflowParams struct {
@@ -2142,6 +2654,177 @@ func (q *Queries) UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) 
 		&i.Channels,
 		&i.TemplateIds,
 		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowDefinition = `-- name: UpdateWorkflowDefinition :one
+UPDATE workflows
+SET key = $3,
+	name = $4,
+	description = $5,
+	status = $6,
+	version = $7,
+	trigger_event = $8,
+	definition_json = $9,
+	is_active = CASE WHEN $6 = 'active' THEN true ELSE false END,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type UpdateWorkflowDefinitionParams struct {
+	ID             uuid.UUID `db:"id" json:"id"`
+	EnvironmentID  uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key            string    `db:"key" json:"key"`
+	Name           string    `db:"name" json:"name"`
+	Description    *string   `db:"description" json:"description"`
+	Status         string    `db:"status" json:"status"`
+	Version        int32     `db:"version" json:"version"`
+	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
+	DefinitionJson []byte    `db:"definition_json" json:"definition_json"`
+}
+
+func (q *Queries) UpdateWorkflowDefinition(ctx context.Context, arg UpdateWorkflowDefinitionParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowDefinition,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Status,
+		arg.Version,
+		arg.TriggerEvent,
+		arg.DefinitionJson,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowExecutionState = `-- name: UpdateWorkflowExecutionState :one
+UPDATE workflow_executions
+SET status = $3,
+	current_step_id = $4,
+	completed_at = $5,
+	failed_at = $6,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type UpdateWorkflowExecutionStateParams struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
+	Status        string             `db:"status" json:"status"`
+	CurrentStepID *string            `db:"current_step_id" json:"current_step_id"`
+	CompletedAt   pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt      pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) UpdateWorkflowExecutionState(ctx context.Context, arg UpdateWorkflowExecutionStateParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowExecutionState,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Status,
+		arg.CurrentStepID,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowStepExecutionState = `-- name: UpdateWorkflowStepExecutionState :one
+UPDATE workflow_step_executions
+SET status = $3,
+	attempts = $4,
+	input_json = $5,
+	output_json = $6,
+	error_json = $7,
+	started_at = $8,
+	completed_at = $9,
+	failed_at = $10,
+	updated_at = now()
+WHERE execution_id = $1 AND step_id = $2
+RETURNING id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type UpdateWorkflowStepExecutionStateParams struct {
+	ExecutionID uuid.UUID          `db:"execution_id" json:"execution_id"`
+	StepID      string             `db:"step_id" json:"step_id"`
+	Status      string             `db:"status" json:"status"`
+	Attempts    int32              `db:"attempts" json:"attempts"`
+	InputJson   []byte             `db:"input_json" json:"input_json"`
+	OutputJson  []byte             `db:"output_json" json:"output_json"`
+	ErrorJson   []byte             `db:"error_json" json:"error_json"`
+	StartedAt   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt    pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) UpdateWorkflowStepExecutionState(ctx context.Context, arg UpdateWorkflowStepExecutionStateParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowStepExecutionState,
+		arg.ExecutionID,
+		arg.StepID,
+		arg.Status,
+		arg.Attempts,
+		arg.InputJson,
+		arg.OutputJson,
+		arg.ErrorJson,
+		arg.StartedAt,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -200,14 +200,50 @@ type WebhookDelivery struct {
 }
 
 type Workflow struct {
-	ID            uuid.UUID          `db:"id" json:"id"`
-	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
-	Key           string             `db:"key" json:"key"`
-	Name          string             `db:"name" json:"name"`
-	Description   *string            `db:"description" json:"description"`
-	Channels      []string           `db:"channels" json:"channels"`
-	TemplateIds   []byte             `db:"template_ids" json:"template_ids"`
-	IsActive      bool               `db:"is_active" json:"is_active"`
-	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID             uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID  uuid.UUID          `db:"environment_id" json:"environment_id"`
+	Key            string             `db:"key" json:"key"`
+	Name           string             `db:"name" json:"name"`
+	Description    *string            `db:"description" json:"description"`
+	Channels       []string           `db:"channels" json:"channels"`
+	TemplateIds    []byte             `db:"template_ids" json:"template_ids"`
+	IsActive       bool               `db:"is_active" json:"is_active"`
+	Status         string             `db:"status" json:"status"`
+	Version        int32              `db:"version" json:"version"`
+	TriggerEvent   *string            `db:"trigger_event" json:"trigger_event"`
+	DefinitionJson []byte             `db:"definition_json" json:"definition_json"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type WorkflowExecution struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	WorkflowID     uuid.UUID          `db:"workflow_id" json:"workflow_id"`
+	EnvironmentID  uuid.UUID          `db:"environment_id" json:"environment_id"`
+	SubscriberID   pgtype.UUID        `db:"subscriber_id" json:"subscriber_id"`
+	Status         string             `db:"status" json:"status"`
+	CurrentStepID  *string            `db:"current_step_id" json:"current_step_id"`
+	TriggerPayload []byte             `db:"trigger_payload" json:"trigger_payload"`
+	StartedAt      pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt    pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt       pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type WorkflowStepExecution struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID uuid.UUID          `db:"execution_id" json:"execution_id"`
+	StepID      string             `db:"step_id" json:"step_id"`
+	StepType    string             `db:"step_type" json:"step_type"`
+	Status      string             `db:"status" json:"status"`
+	Attempts    int32              `db:"attempts" json:"attempts"`
+	InputJson   []byte             `db:"input_json" json:"input_json"`
+	OutputJson  []byte             `db:"output_json" json:"output_json"`
+	ErrorJson   []byte             `db:"error_json" json:"error_json"`
+	StartedAt   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt    pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
