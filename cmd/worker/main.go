@@ -13,6 +13,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/storage"
 	"github.com/deveasyclick/iwifunni/internal/webhooks"
+	"github.com/deveasyclick/iwifunni/internal/workflow"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -70,10 +71,14 @@ func main() {
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 	notifRepo := notification.NewRepository(store.Queries)
 	notifSvc := notification.NewServiceWithWebhooks(notifRepo, dispatcher)
+	workflowRepo := workflow.NewRepository(store.Queries)
+	workflowSvc := workflow.NewService(workflowRepo).WithProducer(producer)
 	notificationWorker := notification.NewWorker(asynqServer, notifSvc)
+	workflowWorker := workflow.NewWorker(asynqServer, workflowSvc)
 	webhookWorker := webhooks.NewWorker(dispatcher)
 	mux := asynq.NewServeMux()
 	notificationWorker.Register(mux)
+	workflowWorker.Register(mux)
 	webhookWorker.Register(mux)
 
 	l.Info().Msg("starting notification worker")

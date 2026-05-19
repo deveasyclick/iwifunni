@@ -12,6 +12,7 @@ import (
 
 const TaskTypeNotificationSend = "notification:send"
 const TaskTypeWebhookDeliver = "webhook:deliver"
+const TaskTypeWorkflowStep = "workflow:step"
 
 const NotificationQueueName = "default"
 
@@ -82,6 +83,37 @@ func (p *Producer) EnqueueWebhook(ctx context.Context, job *types.WebhookDeliver
 		asynq.MaxRetry(p.maxRetry),
 		asynq.Timeout(p.taskTimeout),
 		asynq.Unique(p.uniqueTTL),
+	)
+	return err
+}
+
+func (p *Producer) EnqueueWorkflowStep(ctx context.Context, job *types.WorkflowStepJob) error {
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	task := asynq.NewTask(TaskTypeWorkflowStep, payload)
+	_, err = p.client.EnqueueContext(ctx, task,
+		asynq.Queue(NotificationQueueName),
+		asynq.MaxRetry(p.maxRetry),
+		asynq.Timeout(p.taskTimeout),
+		asynq.Unique(p.uniqueTTL),
+	)
+	return err
+}
+
+func (p *Producer) EnqueueWorkflowStepIn(ctx context.Context, job *types.WorkflowStepJob, delay time.Duration) error {
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	task := asynq.NewTask(TaskTypeWorkflowStep, payload)
+	_, err = p.client.EnqueueContext(ctx, task,
+		asynq.Queue(NotificationQueueName),
+		asynq.MaxRetry(p.maxRetry),
+		asynq.Timeout(p.taskTimeout),
+		asynq.Unique(p.uniqueTTL),
+		asynq.ProcessIn(delay),
 	)
 	return err
 }
