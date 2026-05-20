@@ -820,7 +820,9 @@ func (q *Queries) DeleteWebhook(ctx context.Context, arg DeleteWebhookParams) er
 
 const deleteWorkflow = `-- name: DeleteWorkflow :exec
 UPDATE workflows
-SET is_active = false, updated_at = now()
+SET is_active = false,
+	status = 'archived',
+	updated_at = now()
 WHERE id = $1 AND environment_id = $2
 `
 
@@ -2289,8 +2291,9 @@ func (q *Queries) ListWorkflowStepExecutionsByExecution(ctx context.Context, exe
 
 const listWorkflowsByEnvironment = `-- name: ListWorkflowsByEnvironment :many
 SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
-WHERE environment_id = $1 AND is_active = true
-ORDER BY created_at DESC
+WHERE environment_id = $1
+	AND status <> 'archived'
+ORDER BY updated_at DESC
 `
 
 func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Workflow, error) {
