@@ -1,6 +1,10 @@
+# Provider Integrations
+
+Dashboard-managed provider integrations currently support **SendGrid email only**.
+
 # 🖥️ 1. Frontend: User Connects Provider
 
-User connects SendGrid or Twilio:
+User connects SendGrid:
 
 ```text
 Dashboard → Connect Provider → Fill form → Submit
@@ -10,7 +14,7 @@ Request:
 
 ```json
 {
-  "provider": "sendgrid",
+  "name": "sendgrid",
   "channel": "email",
   "credentials": {
     "api_key": "SG.xxx"
@@ -27,7 +31,7 @@ Request:
 
 ```text
 1. Validate input
-2. Validate credentials (call SendGrid/Twilio API)
+2. Validate SendGrid credentials shape
 3. Encrypt credentials
 4. Store in DB
 ```
@@ -157,7 +161,7 @@ IF failure:
 
 ```text
 [ FRONTEND ]
-User connects SendGrid/Twilio
+User connects SendGrid
         ↓
 POST /providers
 
@@ -175,7 +179,7 @@ Queued
 1. Fetch provider config from DB
 2. Decrypt credentials
 3. 🔌 Lookup provider in REGISTRY
-4. Call adapter (SendGrid/Twilio)
+4. Call adapter (SendGrid)
 5. Handle result (retry/fallback)
 
         ↓

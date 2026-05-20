@@ -2,9 +2,11 @@ package notification
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/deveasyclick/iwifunni/internal/crypto"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/registry"
 	"github.com/deveasyclick/iwifunni/internal/types"
@@ -137,14 +139,22 @@ func (s *fakeNotificationStore) GetTemplateByID(_ context.Context, _, _ uuid.UUI
 }
 
 type fakeProvider struct {
-	channel   string
-	sendCount int
+	name           string
+	channel        string
+	sendCount      int
+	lastConfigJSON []byte
 }
 
-func (p *fakeProvider) Name() string { return "test-email" }
+func (p *fakeProvider) Name() string {
+	if p.name != "" {
+		return p.name
+	}
+	return "test-email"
+}
 func (p *fakeProvider) Channel() string { return p.channel }
-func (p *fakeProvider) Send(_ context.Context, job *types.NotificationJob, _ []byte) ([]registry.DeliveryAttempt, error) {
+func (p *fakeProvider) Send(_ context.Context, job *types.NotificationJob, configJSON []byte) ([]registry.DeliveryAttempt, error) {
 	p.sendCount++
+	p.lastConfigJSON = append([]byte(nil), configJSON...)
 	return []registry.DeliveryAttempt{{Destination: job.Recipient.Email}}, nil
 }
 
@@ -153,7 +163,7 @@ func TestServiceSendIsIdempotentByJobID(t *testing.T) {
 
 	store := newFakeNotificationStore()
 	provider := &fakeProvider{channel: "email"}
-	service := NewService(store)
+	service := NewService(store, "0123456789abcdef0123456789abcdef")
 	service.registry = registry.New(provider)
 
 	originalNow := now
@@ -198,5 +208,54 @@ func TestServiceSendIsIdempotentByJobID(t *testing.T) {
 	}
 	if stored.Status != "sent" {
 		t.Fatalf("stored status = %s, want sent", stored.Status)
+	}
+}
+
+func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
+	t.Parallel()
+
+	encryptionKey := "0123456789abcdef0123456789abcdef"
+	encrypted, err := crypto.Encrypt([]byte(`{"api_key":"SG.secret"}`), encryptionKey)
+	if err != nil {
+		t.Fatalf("Encrypt() error = %v", err)
+	}
+
+	store := newFakeNotificationStore()
+	store.provider = db.Provider{
+		ID:            uuid.New(),
+		EnvironmentID: uuid.New(),
+		Name:          "sendgrid",
+		Channel:       "email",
+		Credentials:   []byte(`"` + encrypted + `"`),
+		Config:        []byte(`{"from_email":"no-reply@example.com"}`),
+		IsActive:      true,
+	}
+
+	provider := &fakeProvider{name: "sendgrid", channel: "email"}
+	service := NewService(store, encryptionKey)
+	service.registry = registry.New(provider)
+
+	job := &types.NotificationJob{
+		JobID:     "job-sendgrid",
+		ProjectID: uuid.New().String(),
+		Title:     "Welcome",
+		Message:   "Hello there",
+		Channels:  []string{"email"},
+		Recipient: types.Recipient{Email: "user@example.com"},
+	}
+
+	if err := service.Send(context.Background(), job); err != nil {
+		t.Fatalf("Send() error = %v", err)
+	}
+
+	var config map[string]string
+	if err := json.Unmarshal(provider.lastConfigJSON, &config); err != nil {
+		t.Fatalf("Unmarshal(lastConfigJSON) error = %v", err)
+	}
+	if config["api_key"] != "SG.secret" {
+		t.Fatalf("config.api_key = %q, want SG.secret", config["api_key"])
+	}
+	if config["from_email"] != "no-reply@example.com" {
+		t.Fatalf("config.from_email = %q, want no-reply@example.com", config["from_email"])
 	}
 }

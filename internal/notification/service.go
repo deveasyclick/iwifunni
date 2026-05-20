@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deveasyclick/iwifunni/internal/crypto"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/registry"
 	"github.com/deveasyclick/iwifunni/internal/templates"
@@ -51,17 +52,18 @@ type notificationStore interface {
 
 // Service handles notification delivery logic.
 type Service struct {
-	repo       notificationStore
-	registry   *registry.Registry
-	dispatcher *webhooks.Dispatcher
+	repo          notificationStore
+	registry      *registry.Registry
+	dispatcher    *webhooks.Dispatcher
+	encryptionKey string
 }
 
-func NewService(repo notificationStore) *Service {
-	return &Service{repo: repo, registry: registry.NewDefault()}
+func NewService(repo notificationStore, encryptionKey string) *Service {
+	return &Service{repo: repo, registry: registry.NewDefault(), encryptionKey: encryptionKey}
 }
 
-func NewServiceWithWebhooks(repo notificationStore, dispatcher *webhooks.Dispatcher) *Service {
-	return &Service{repo: repo, registry: registry.NewDefault(), dispatcher: dispatcher}
+func NewServiceWithWebhooks(repo notificationStore, dispatcher *webhooks.Dispatcher, encryptionKey string) *Service {
+	return &Service{repo: repo, registry: registry.NewDefault(), dispatcher: dispatcher, encryptionKey: encryptionKey}
 }
 
 func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*types.NotificationJob, error) {
@@ -519,7 +521,11 @@ func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notifica
 	if !ok || p.Channel() != channel {
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("provider %s not registered for channel %s", providerRecord.Name, channel))
 	}
-	attempts, providerErr := p.Send(ctx, job, providerRecord.Config)
+	providerConfig, err := s.buildProjectProviderConfig(providerRecord)
+	if err != nil {
+		return s.recordFailed(ctx, notificationID, channel, "", err)
+	}
+	attempts, providerErr := p.Send(ctx, job, providerConfig)
 	for _, a := range attempts {
 		if a.Err != nil {
 			_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
@@ -528,6 +534,50 @@ func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notifica
 		_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
 	}
 	return providerErr
+}
+
+func (s *Service) buildProjectProviderConfig(providerRecord db.Provider) ([]byte, error) {
+	if len(providerRecord.Credentials) == 0 {
+		return providerRecord.Config, nil
+	}
+
+	var encrypted string
+	if err := json.Unmarshal(providerRecord.Credentials, &encrypted); err != nil {
+		return nil, fmt.Errorf("invalid provider credentials payload: %w", err)
+	}
+	if strings.TrimSpace(encrypted) == "" {
+		return providerRecord.Config, nil
+	}
+	if strings.TrimSpace(s.encryptionKey) == "" {
+		return nil, fmt.Errorf("provider encryption key is not configured")
+	}
+
+	decrypted, err := crypto.Decrypt(encrypted, s.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt provider credentials: %w", err)
+	}
+
+	merged := map[string]any{}
+	if len(providerRecord.Config) > 0 {
+		if err := json.Unmarshal(providerRecord.Config, &merged); err != nil {
+			return nil, fmt.Errorf("invalid provider config: %w", err)
+		}
+	}
+
+	var credentials map[string]any
+	if err := json.Unmarshal(decrypted, &credentials); err != nil {
+		return nil, fmt.Errorf("invalid decrypted provider credentials: %w", err)
+	}
+	for key, value := range credentials {
+		merged[key] = value
+	}
+
+	configJSON, err := json.Marshal(merged)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode provider config: %w", err)
+	}
+
+	return configJSON, nil
 }
 
 func (s *Service) recordSkipped(ctx context.Context, notificationID uuid.UUID, channel, reason string) error {

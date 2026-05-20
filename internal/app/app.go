@@ -21,43 +21,43 @@ import (
 
 // App wires all domain handlers and builds the HTTP router.
 type App struct {
-	queries       *db.Queries
-	rateLimiter   *auth.RateLimiter
-	authService   authServiceFull
-	jwtManager    *auth.JWTManager
+	queries         *db.Queries
+	rateLimiter     *auth.RateLimiter
+	authService     authServiceFull
+	jwtManager      *auth.JWTManager
 	frontendBaseURL string
 	socialProviders map[string]bool
-	cookieSecure bool
-	encryptionKey string
-	producer      *queue.Producer
-	dispatcher    *webhooks.Dispatcher
+	cookieSecure    bool
+	encryptionKey   string
+	producer        *queue.Producer
+	dispatcher      *webhooks.Dispatcher
 }
 
 type Config struct {
-	Queries       *db.Queries
-	RateLimiter   *auth.RateLimiter
-	AuthService   authServiceFull
-	JWTManager    *auth.JWTManager
+	Queries         *db.Queries
+	RateLimiter     *auth.RateLimiter
+	AuthService     authServiceFull
+	JWTManager      *auth.JWTManager
 	FrontendBaseURL string
 	SocialProviders map[string]bool
-	CookieSecure bool
-	EncryptionKey string
-	Producer      *queue.Producer
-	Dispatcher    *webhooks.Dispatcher
+	CookieSecure    bool
+	EncryptionKey   string
+	Producer        *queue.Producer
+	Dispatcher      *webhooks.Dispatcher
 }
 
 func New(cfg Config) *App {
 	return &App{
-		queries:       cfg.Queries,
-		rateLimiter:   cfg.RateLimiter,
-		authService:   cfg.AuthService,
-		jwtManager:    cfg.JWTManager,
+		queries:         cfg.Queries,
+		rateLimiter:     cfg.RateLimiter,
+		authService:     cfg.AuthService,
+		jwtManager:      cfg.JWTManager,
 		frontendBaseURL: cfg.FrontendBaseURL,
 		socialProviders: cfg.SocialProviders,
-		cookieSecure: cfg.CookieSecure,
-		encryptionKey: cfg.EncryptionKey,
-		producer:      cfg.Producer,
-		dispatcher:    cfg.Dispatcher,
+		cookieSecure:    cfg.CookieSecure,
+		encryptionKey:   cfg.EncryptionKey,
+		producer:        cfg.Producer,
+		dispatcher:      cfg.Dispatcher,
 	}
 }
 
@@ -87,7 +87,7 @@ func (a *App) Router() http.Handler {
 
 		// Notification reads (dashboard)
 		notifRepo := notification.NewRepository(a.queries)
-		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher)
+		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
 		notification.NewHandler(notifSvc, a.producer).RegisterReadRoutes(r)
 
 		// Provider management (dashboard)
@@ -120,7 +120,7 @@ func (a *App) Router() http.Handler {
 
 		// Notifications
 		notifRepo := notification.NewRepository(a.queries)
-		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher)
+		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
 		notification.NewHandler(notifSvc, a.producer).RegisterSendRoutes(r)
 
 		// Templates
