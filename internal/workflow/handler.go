@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -349,6 +350,7 @@ func (h *Handler) getExecution(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, err error) {
+	var pgErr *pgconn.PgError
 	switch {
 	case errors.Is(err, ErrInvalidWorkflow):
 		http.Error(w, "invalid workflow payload", http.StatusBadRequest)
@@ -358,6 +360,8 @@ func (h *Handler) respondError(w http.ResponseWriter, err error) {
 		http.Error(w, "invalid workflow event payload", http.StatusBadRequest)
 	case errors.Is(err, pgx.ErrNoRows):
 		http.Error(w, "workflow not found", http.StatusNotFound)
+	case errors.As(err, &pgErr) && pgErr.Code == "23505":
+		http.Error(w, "a workflow with this key already exists", http.StatusConflict)
 	default:
 		logger.Get().Error().Err(err).Msg("workflow: unhandled error")
 		http.Error(w, "workflow request failed", http.StatusInternalServerError)

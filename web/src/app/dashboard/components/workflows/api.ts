@@ -18,14 +18,14 @@ type WorkflowRequestInit = Omit<RequestInit, "body"> & {
 const parseError = async (response: Response): Promise<string> => {
   const fallback = "Request failed";
 
+  const text = await response.text().catch(() => "");
+  if (!text) return fallback;
+
   try {
-    const body = (await response.json()) as {
-      error?: string;
-      message?: string;
-    };
+    const body = JSON.parse(text) as { error?: string; message?: string };
     return body.error || body.message || fallback;
   } catch {
-    return fallback;
+    return text.trim() || fallback;
   }
 };
 
