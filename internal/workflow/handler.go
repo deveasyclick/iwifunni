@@ -10,6 +10,7 @@ import (
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -358,6 +359,7 @@ func (h *Handler) respondError(w http.ResponseWriter, err error) {
 	case errors.Is(err, pgx.ErrNoRows):
 		http.Error(w, "workflow not found", http.StatusNotFound)
 	default:
+		logger.Get().Error().Err(err).Msg("workflow: unhandled error")
 		http.Error(w, "workflow request failed", http.StatusInternalServerError)
 	}
 }

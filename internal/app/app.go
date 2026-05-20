@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"time"
 
 	apikey "github.com/deveasyclick/iwifunni/internal/api_key"
 	"github.com/deveasyclick/iwifunni/internal/auth"
@@ -14,6 +15,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/templates"
 	"github.com/deveasyclick/iwifunni/internal/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/workflow"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -61,6 +63,8 @@ func New(cfg Config) *App {
 
 func (a *App) Router() http.Handler {
 	r := chi.NewRouter()
+
+	r.Use(httpLogger)
 
 	// Auth routes (no auth middleware)
 	r.Post("/auth/signup", a.authHandler().signup)
@@ -151,4 +155,31 @@ func (a *App) Router() http.Handler {
 	})
 
 	return r
+}
+
+// httpLogger is a zerolog-based HTTP request logging middleware.
+func httpLogger(next http.Handler) http.Handler {
+	log := logger.Get()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(ww, r)
+		log.Info().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Int("status", ww.status).
+			Dur("duration", time.Since(start)).
+			Str("remote", r.RemoteAddr).
+			Msg("http request")
+	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.ResponseWriter.WriteHeader(status)
 }
