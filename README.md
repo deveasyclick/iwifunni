@@ -2,7 +2,7 @@
 
 A multi-tenant, API-driven notification platform in Go.
 
-Iwifunni lets your backend services and SDKs send notifications through a single REST API. Projects are the top-level tenant unit. Each project owns its own providers, templates, API keys, subscribers, and webhooks. Notifications are processed asynchronously via a Redis-backed queue and delivered through pluggable channel providers.
+Iwifunni lets your backend services and dashboard clients work with project-scoped notifications, subscribers, workflows, providers, templates, API keys, and webhooks through a single backend. Notifications are processed asynchronously through a Redis-backed queue and delivered through pluggable channel providers. The active send contract now supports both direct sends and workflow-targeted sends, including workflow-linked template rendering and skip-aware subscriber delivery.
 
 ## Supported Delivery Channels
 
@@ -12,19 +12,21 @@ Iwifunni lets your backend services and SDKs send notifications through a single
 
 ## Authentication
 
-Iwifunni uses two auth systems:
+Iwifunni currently uses two primary auth systems plus one legacy compatibility path:
 
 | Mechanism | Format | Purpose |
 |-----------|--------|---------|
 | API Key | `Bearer nk_live_<token>` | Machine-to-machine — sending notifications and managing resources |
 | JWT | `Bearer <jwt>` | Dashboard users — signup, signin, managing project settings |
 
+Legacy compatibility mode: `Authorization: ApiKey <service_key>` is still active in code for older service-scoped sends.
+
 ## Architecture at a Glance
 
 ```
 Client (SDK / API)
   ↓
-API Key or JWT Middleware  →  resolve project_id
+API Key or JWT Middleware  →  resolve project or user context
   ↓
 Validate request
   ↓
@@ -38,7 +40,7 @@ Deliver via channel provider (Email / SMS / Push)
   ↓
 Update notification status (sent / partial_failed / failed)
   ↓
-Fire webhooks for subscribed events
+Fire webhooks for emitted events
 ```
 
 ## Features
@@ -47,21 +49,26 @@ Fire webhooks for subscribed events
 - Dual auth: API keys for SDK/backend, JWT for dashboard users
 - Project-scoped provider registry — configure different email/SMS/push providers per project
 - Template management — store and render Go text/template notification templates per project
+- Subscriber management — store project-scoped subscriber contacts, channel status, and tags
+- Workflow management — store workflow keys, channel order, and optional template mappings per project
 - API key management — create, rotate, and revoke project API keys
 - Webhook delivery — register endpoints to receive `notification.sent` / `notification.failed` events with HMAC-SHA256 signatures
 - Asynchronous processing via Redis-backed Asynq workers
 - Per-project rate limiting
 - AES-GCM encryption for provider credentials at rest
 
+Current v1 implementation baseline: [docs/current-v1-contract.md](docs/current-v1-contract.md)
+
 ## Delivery Flow
 
-1. Client sends `POST /notifications` with `Authorization: Bearer nk_live_<key>`.
-2. Middleware resolves the project and enforces rate limits.
-3. Request includes `workflow_id`, `to` subscriber target, and `data`; API resolves existing subscribers or creates new subscribers when needed.
-4. Request is enqueued; API returns immediately with one notification record per subscriber.
-5. Worker stores the notification record (`pending`), resolves channels from the workflow, skips unsubscribed/bounced subscriber channels, resolves active providers, and attempts delivery.
-6. Notification status is updated (`sent`, `partial_failed`, or `failed`).
-7. Webhooks subscribed to the resulting event are called asynchronously.
+1. Client sends `POST /notifications` with either `Authorization: Bearer nk_live_<key>` or the legacy `Authorization: ApiKey <service_key>` format.
+2. Middleware resolves project or service context and enforces rate limits.
+3. Request includes either direct notification fields (`title`, `message`, `channels`, `recipient`) or workflow-targeted fields (`workflow_id`, `subscriber_id`, `title`, `message`) plus optional `metadata`.
+4. The API enqueues the notification job and returns immediately.
+5. Workflow-targeted sends resolve channels from the workflow record, render linked templates per channel, and skip unsubscribed, bounced, or unmapped channels.
+6. The worker persists the notification, resolves an active provider by channel, and attempts delivery through the provider registry.
+7. Notification status is updated to `sent`, `partial_failed`, `failed`, `partial_skipped`, or `skipped`.
+8. Webhooks subscribed to `notification.sent` or `notification.failed` are dispatched asynchronously when configured.
 
 ## Getting Started
 
@@ -83,7 +90,7 @@ DATABASE_URL=postgres://...
 REDIS_ADDR=localhost:6379
 JWT_SECRET=<random-256-bit-hex>
 ENCRYPTION_KEY=<random-32-byte-hex>
-API_SERVICE_PORT=8080
+API_PORT=8080
 ```
 
 ### Run Migrations
@@ -95,7 +102,19 @@ goose -dir migrations postgres "$DATABASE_URL" up
 ### Run the Service
 
 ```bash
-go run ./cmd/iwifunni
+task server
+```
+
+### Run the Worker
+
+```bash
+task worker
+```
+
+### Run the Frontend
+
+```bash
+task web
 ```
 
 ### Docker Compose
@@ -124,21 +143,48 @@ docker compose up --build
 **Example request:**
 ```json
 {
-  "workflow_id": "wf_welcome",
-  "to": {
-    "subscriber_id": "sub_123"
+  "title": "Welcome",
+  "message": "Thanks for joining",
+  "channels": ["email"],
+  "recipient": {
+    "email": "user@example.com",
+    "reference": "customer-123"
   },
-  "data": {
-    "name": "John Doe"
+  "metadata": {
+    "source": "signup"
   }
 }
 ```
 
 Rules:
-- Existing subscriber requires `to.subscriber_id`.
-- New subscriber via notification send requires `to.subscriber_id` plus contact fields (for example `email`, `phone`, `push_token`).
-- For bulk sends, call POST /notifications once per subscriber; one notification record is created per request.
-- Channels are selected by workflow; `channel` and `channels` are not accepted on this endpoint.
+- Current v1 accepts either:
+  - direct `title`, `message`, `channels`, `recipient`, and optional `metadata`
+  - or `workflow_id`, `subscriber_id`, `title`, `message`, and optional `metadata`
+- Workflow-targeted sends resolve channels from the workflow record, recipient data from the subscriber record, and rendered per-channel content from linked templates.
+- Workflow channels without linked templates, required contact data, or active subscriber consent are skipped instead of failing the whole send.
+- Workflow-targeted sends require project-scoped auth and are not supported through the legacy `Authorization: ApiKey <service_key>` path.
+- `recipient` can include `email`, `phone_number`, `push_tokens`, and `reference`.
+- The endpoint returns `202 Accepted` when the job is enqueued successfully.
+
+### Subscribers
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/subscribers` | API Key or JWT | Create a subscriber |
+| GET | `/subscribers` | API Key or JWT | List subscribers |
+| GET | `/subscribers/{subscriberID}` | API Key or JWT | Get a subscriber |
+| PUT | `/subscribers/{subscriberID}` | API Key or JWT | Update a subscriber |
+| DELETE | `/subscribers/{subscriberID}` | API Key or JWT | Delete a subscriber |
+
+### Workflows
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workflows` | API Key or JWT | Create a workflow |
+| GET | `/workflows` | API Key or JWT | List workflows |
+| GET | `/workflows/{workflowID}` | API Key or JWT | Get a workflow |
+| PUT | `/workflows/{workflowID}` | API Key or JWT | Update a workflow |
+| DELETE | `/workflows/{workflowID}` | API Key or JWT | Archive a workflow |
 
 ### Templates
 
@@ -167,10 +213,11 @@ Provider `credentials` are encrypted with AES-GCM before storage.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api-keys` | API Key | List API keys for the project |
-| POST | `/api-keys` | API Key | Create a new API key |
-| POST | `/api-keys/{keyID}/rotate` | API Key | Rotate (regenerate) an API key |
-| DELETE | `/api-keys/{keyID}` | API Key | Revoke an API key |
+| GET | `/api-keys` | JWT | List API keys for the project |
+| POST | `/api-keys` | JWT | Create a new API key |
+| POST | `/api-keys/{keyID}/rotate` | JWT | Rotate (regenerate) an API key |
+| DELETE | `/api-keys/{keyID}` | JWT | Revoke an API key |
+| PATCH | `/api-keys/{keyID}` | JWT | Update API key status |
 
 API keys are in the format `nk_live_<token>`. Only the prefix is stored; the full key is shown once on creation.
 
@@ -215,14 +262,14 @@ go test ./...
 
 ```bash
 curl -X POST http://localhost:8080/notifications \
-  -H "Authorization: ApiKey YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_PROJECT_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"workflow_id":"wf_welcome","to":{"subscriber_id":"sub_123","email":"user@example.com"},"data":{"title":"Hello","message":"Welcome"}}'
+  -d '{"title":"Hello","message":"Welcome","channels":["email"],"recipient":{"email":"user@example.com","reference":"user-123"},"metadata":{"source":"manual-test"}}'
 ```
 
 ## Manual Testing
 
-Use this flow to test the app like a real client service would: create a service key, configure channels for that service, send a notification, and verify persisted delivery outcomes.
+Use this flow to test the currently implemented project-scoped contract. This flow avoids the older service-key bootstrap path and uses the auth and notification behavior that exists in code today.
 
 ### 1. Start Postgres and Redis
 
@@ -241,57 +288,64 @@ REDIS_PASSWORD=
 API_PORT=8080
 RATE_LIMIT_PER_MINUTE=60
 ENVIRONMENT=development
+JWT_SECRET=development-jwt-secret-change-me
+ENCRYPTION_KEY=dev-encryption-key-32bytes-padded
 ```
 
-### 3. Create a service API key for authentication
+### 3. Run the API server and worker
 
 ```bash
-go run ./cmd/iwifunni create-service --name manual-test-service --description "manual testing"
+task server
 ```
 
-Copy the printed API key for the send request. Also fetch the service ID for channel setup:
+In another terminal:
 
 ```bash
-psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "select id, name, created_at from services order by created_at desc limit 5;"
+task worker
 ```
 
-### 4. Configure enabled channels for the service
-
-Replace `SERVICE_ID` below with the UUID from the previous query.
+### 4. Sign up and capture the returned tokens
 
 ```bash
-psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "insert into service_channel_configs (id, service_id, channel, enabled, provider, config_json)
-      values
-        (gen_random_uuid(), 'SERVICE_ID', 'email', true, 'smtp', '{\"host\":\"smtp-relay.brevo.com\",\"port\":587,\"username\":\"apikey\",\"password\":\"secret\",\"from\":\"notifications@example.com\"}'::jsonb),
-        (gen_random_uuid(), 'SERVICE_ID', 'sms', true, 'termii', '{\"provider\":\"termii\",\"api_key\":\"secret\",\"sender_id\":\"iwifunni\"}'::jsonb),
-        (gen_random_uuid(), 'SERVICE_ID', 'push', true, 'fcm', '{\"provider\":\"fcm\",\"server_key\":\"secret\"}'::jsonb)
-      on conflict (service_id, channel) do update
-      set enabled = excluded.enabled,
-          provider = excluded.provider,
-          config_json = excluded.config_json,
-          updated_at = now();"
+curl -i -X POST http://localhost:8080/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@example.com","password":"supersecret","project_name":"Manual Test Project","api_key_name":"Manual Test Key"}'
 ```
 
-### 5. Run the service
+Capture the returned:
+
+- `access_token`
+- `refresh_token`
+- `api_key`
+
+### 5. Create a provider with the project API key
 
 ```bash
-go run ./cmd/iwifunni
+curl -i -X POST http://localhost:8080/providers \
+  -H "Authorization: Bearer YOUR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"smtp","channel":"email","credentials":{"host":"smtp-relay.brevo.com","port":587,"username":"apikey","password":"secret","from":"notifications@example.com"}}'
 ```
 
-### 6. Send a notification as a client service
+### 6. Optionally create a template
+
+```bash
+curl -i -X POST http://localhost:8080/templates \
+  -H "Authorization: Bearer YOUR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Welcome Email","channel":"email","subject":"Welcome","body":"Hello {{.name}}"}'
+```
+
+### 7. Send a notification with the current v1 payload
 
 ```bash
 curl -i -X POST http://localhost:8080/notifications \
-  -H "Authorization: ApiKey YOUR_GENERATED_API_KEY" \
+  -H "Authorization: Bearer YOUR_PROJECT_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"workflow_id":"wf_order_update","to":{"subscriber_id":"sub_123"},"data":{"title":"Welcome","message":"Your order has shipped"}}'
+  -d '{"title":"Welcome","message":"Your order has shipped","channels":["email"],"recipient":{"email":"user@example.com","reference":"user-123"},"metadata":{"source":"manual-test"}}'
 ```
 
-For bulk sends, POST /notifications once per subscriber.
-
-### 7. Verify persistence and delivery status
+### 8. Verify persistence and delivery status
 
 - The API returns `202 Accepted`.
 - The terminal logs show delivery attempts for the requested channels.
@@ -301,7 +355,7 @@ Confirm notification persistence with:
 
 ```bash
 psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
-  -c "select id, service_id, subscriber_id, workflow_id, data, status, created_at from notifications order by created_at desc limit 5;"
+  -c "select id, project_id, service_id, title, message, channels, status, created_at from notifications order by created_at desc limit 5;"
 ```
 
 Confirm channel attempts with:
@@ -313,21 +367,13 @@ psql "postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable" \
 
 ### Manual test scenarios
 
-#### Missing subscriber target
+#### Missing auth
 
-Send a payload without `to.subscriber_id` and confirm `400 Bad Request`.
-
-#### Unsubscribed channel
-
-Use a subscriber that is `unsubscribed` for one workflow channel and confirm the channel is skipped.
+Send the same request without an authorization header and confirm `401 Unauthorized`.
 
 #### Invalid API key
 
 Send the same request with a bad API key and confirm the API returns `401 Unauthorized`.
-
-#### Missing required fields
-
-Remove `workflow_id` or `data` and confirm the API returns `400 Bad Request`.
 
 #### Rate limiting
 
@@ -339,12 +385,14 @@ The current channel adapters are still provider stubs for push and SMS; test flo
 
 ## Project Structure
 
-- `cmd/iwifunni`: application entrypoint
-- `internal/handlers`: REST handler and middleware
-- `internal/auth`: API key authentication and rate limiting
-- `internal/storage`: PostgreSQL storage wrapper and sqlc queries
-- `internal/worker`: Redis job producer and consumer
-- `internal/notifications`: notification orchestration and delivery attempt tracking
-- `internal/channels`: provider-specific delivery adapters
-- `migrations`: goose migration files
+- `cmd/api`: HTTP API entrypoint
+- `cmd/worker`: background worker entrypoint
+- `internal/app`: HTTP router wiring and auth handler adapter
+- `internal/auth`: JWT, project API key, legacy service-key auth, and rate limiting
+- `internal/notification`: notification handlers, service orchestration, repository, and worker integration
+- `internal/provider`: project-scoped provider management and secret encryption
+- `internal/templates`: project-scoped template management and rendering
+- `internal/webhooks`: outbound webhook management and dispatch
+- `internal/storage`: PostgreSQL store bootstrap
 - `internal/db/queries`: sqlc query definitions
+- `migrations`: goose migration files

@@ -11,17 +11,21 @@ This API powers a multi-tenant notification system supporting:
 
 - Email
 - SMS
-- Push (future)
+- Push
 - Multi-provider routing
+- Subscribers
+- Workflows
 - Templates
 - Delivery tracking
 - Webhooks
+
+Current implementation baseline: [current-v1-contract.md](./current-v1-contract.md). If this file and the baseline disagree, treat the baseline and current code as the active behavior.
 
 ---
 
 # Authentication
 
-The API supports two authentication methods:
+The API currently supports two primary authentication methods and one legacy compatibility path:
 
 ---
 
@@ -39,7 +43,7 @@ Authorization: Bearer nk_live_xxx
 ### Behavior
 - API key resolves `project_id`
 - All requests are scoped to a project
-- Required for all `/notifications` endpoints
+- Used for `/notifications`, `/templates`, `/providers`, `/webhooks`, `/subscribers`, and `/workflows`
 
 ---
 
@@ -58,6 +62,24 @@ Authorization: Bearer <jwt_token>
 - user_id
 - project_id
 - role
+
+---
+
+## 3. Legacy Service-Key Authentication (Compatibility Path)
+
+This path is still active in code for older service-scoped sends.
+
+### Header
+```
+
+Authorization: ApiKey <service_api_key>
+
+```
+
+### Behavior
+- Resolves legacy service context
+- Rate limits by service ID
+- Only use this path when working with legacy compatibility behavior
 
 ---
 
@@ -80,10 +102,8 @@ JWT required
 ```json id="ak1"
 {
   "name": "Production Key",
-  "expires_in_days": 365,
   "scopes": [
-    "notifications:write",
-    "templates:read"
+    "notifications:write"
   ]
 }
 ````
@@ -92,9 +112,13 @@ JWT required
 
 ```json id="ak2"
 {
-  "id": "key_id",
-  "api_key": "nk_live_8f3Kx91AbcQz",
-  "status": "active"
+  "id": "uuid",
+  "name": "Production Key",
+  "key_prefix": "nk_live_xxxxxxxx",
+  "scopes": ["notifications:write"],
+  "status": "active",
+  "created_at": "2026-04-26T10:00:00Z",
+  "key": "nk_live_8f3Kx91AbcQz"
 }
 ```
 
@@ -109,16 +133,16 @@ GET /api-keys
 ### Response
 
 ```json id="ak3"
-{
-  "keys": [
-    {
-      "id": "key_id",
-      "name": "Production Key",
-      "status": "active",
-      "last_used_at": "2026-04-26T10:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "uuid",
+    "name": "Production Key",
+    "key_prefix": "nk_live_xxxxxxxx",
+    "scopes": ["notifications:write"],
+    "status": "active",
+    "created_at": "2026-04-26T10:00:00Z"
+  }
+]
 ```
 
 ---
@@ -133,8 +157,13 @@ POST /api-keys/{id}/rotate
 
 ```json id="ak4"
 {
-  "new_api_key": "nk_live_new123",
-  "old_key_expires_at": "2026-05-03T00:00:00Z"
+  "id": "uuid",
+  "name": "Production Key",
+  "key_prefix": "nk_live_xxxxxxxx",
+  "scopes": ["notifications:write"],
+  "status": "active",
+  "created_at": "2026-04-26T10:00:00Z",
+  "key": "nk_live_new123"
 }
 ```
 
@@ -148,11 +177,28 @@ DELETE /api-keys/{id}
 
 ### Response
 
-```json id="ak5"
+`204 No Content`
+
+---
+
+## Update API Key Status
+
+```
+PATCH /api-keys/{id}
+```
+
+### Request
+
+```json
 {
-  "status": "revoked"
+  "status": "disabled"
 }
 ```
+
+### Supported values
+
+- `active`
+- `disabled`
 
 ---
 
@@ -168,7 +214,7 @@ POST /providers
 
 ### Auth
 
-JWT required
+Project API key required. The legacy `Authorization: ApiKey <service_api_key>` path also remains active in code.
 
 ### Request (SendGrid example)
 
@@ -176,7 +222,7 @@ SendGrid
 
 ```json id="p1"
 {
-  "provider": "sendgrid",
+  "name": "sendgrid",
   "channel": "email",
   "credentials": {
     "api_key": "SG.xxxxx"
@@ -196,7 +242,7 @@ Twilio
 
 ```json id="p2"
 {
-  "provider": "twilio",
+  "name": "twilio",
   "channel": "sms",
   "credentials": {
     "account_sid": "ACxxx",
@@ -212,8 +258,12 @@ Twilio
 
 ```json id="p3"
 {
-  "id": "provider_id",
-  "status": "connected"
+  "id": "uuid",
+  "project_id": "uuid",
+  "name": "sendgrid",
+  "channel": "email",
+  "is_active": true,
+  "created_at": "2026-04-26T10:00:00Z"
 }
 ```
 
@@ -228,16 +278,15 @@ GET /providers
 ### Response
 
 ```json id="p4"
-{
-  "providers": [
-    {
-      "id": "provider_id",
-      "provider": "sendgrid",
-      "channel": "email",
-      "status": "active"
-    }
-  ]
-}
+[
+  {
+    "id": "uuid",
+    "name": "sendgrid",
+    "channel": "email",
+    "is_active": true,
+    "created_at": "2026-04-26T10:00:00Z"
+  }
+]
 ```
 
 ---
@@ -246,6 +295,114 @@ GET /providers
 
 ```
 DELETE /providers/{id}
+```
+
+---
+
+# SUBSCRIBERS
+
+---
+
+## Create Subscriber
+
+```
+POST /subscribers
+```
+
+### Auth
+
+Project API key or JWT required.
+
+### Request
+
+```json
+{
+  "name": "Ada Nwosu",
+  "email": "ada@example.com",
+  "channels": ["email"],
+  "status": {
+    "email": "subscribed"
+  },
+  "tags": ["vip"]
+}
+```
+
+### Current Rules
+
+- At least one channel is required.
+- Each selected channel must have a matching contact field.
+- Supported channel values are `email`, `sms`, and `push`.
+
+## List Subscribers
+
+```
+GET /subscribers
+```
+
+## Update Subscriber
+
+```
+PUT /subscribers/{id}
+```
+
+## Delete Subscriber
+
+```
+DELETE /subscribers/{id}
+```
+
+---
+
+# WORKFLOWS
+
+---
+
+## Create Workflow
+
+```
+POST /workflows
+```
+
+### Auth
+
+Project API key or JWT required.
+
+### Request
+
+```json
+{
+  "key": "user_onboarding",
+  "name": "User Onboarding",
+  "description": "Welcome sequence for new users",
+  "channels": ["email", "sms"],
+  "templateIds": {
+    "email": "template-uuid"
+  }
+}
+```
+
+### Current Rules
+
+- Workflows are project-scoped configuration records.
+- They currently store channel order and optional template linkage.
+- They do not yet change the active `POST /notifications` send contract.
+
+## List Workflows
+
+```
+GET /workflows
+```
+
+## Update Workflow
+
+```
+PUT /workflows/{id}
+```
+
+## Delete Workflow
+
+```
+DELETE /workflows/{id}
 ```
 
 ---
@@ -270,25 +427,43 @@ API Key required
 
 ```json id="n1"
 {
-  "workflow_id": "wf_123",
-  "to": {
-    "subscriber_id": "sub_123"
+  "title": "Welcome",
+  "message": "Thanks for joining",
+  "channels": ["email"],
+  "recipient": {
+    "email": "john@example.com",
+    "reference": "customer-123"
   },
-  "data": {
-    "name": "John",
-    "code": "123456"
+  "metadata": {
+    "source": "signup"
   }
 }
 ```
 
-### Targeting Rules
+### Current Rules
 
-- `to` is subscriber-centric.
-- Existing subscriber: send `to.subscriber_id`.
-- New subscriber on send: send `to.subscriber_id` plus subscriber details such as `email`, `phone`, or `push_token`.
-- For bulk notifications: POST /notifications once per subscriber; one notification record is created per request.
-- Subscribers can also be created explicitly via the Subscribers API before sending.
-- Channel selection is derived from `workflow_id`; request payload does not accept `channel` or `channels`.
+- Current v1 accepts either:
+  - direct `title`, `message`, `channels`, `recipient`, and optional `metadata`
+  - or `workflow_id`, `subscriber_id`, `title`, `message`, and optional `metadata`
+- `recipient` may include `email`, `phone_number`, `push_tokens`, and `reference`.
+- Workflow-targeted sends resolve channels from the workflow record, recipient data from the subscriber record, and rendered per-channel content from linked templates.
+- Workflow channels without linked templates, required contact data, or active subscriber consent are skipped instead of failing the whole send.
+- Workflow-targeted sends require project API key auth and are not supported through the legacy `Authorization: ApiKey <service_api_key>` path.
+- The endpoint resolves either project API key context or legacy service context and enqueues the job.
+
+### Workflow-targeted request example
+
+```json
+{
+  "workflow_id": "uuid",
+  "subscriber_id": "uuid",
+  "title": "Welcome",
+  "message": "Thanks for joining",
+  "metadata": {
+    "source": "signup"
+  }
+}
+```
 
 ---
 
@@ -296,47 +471,22 @@ API Key required
 
 ```json id="n2"
 {
-  "notification_id": "notif_123",
   "status": "queued"
 }
 ```
 
 ---
 
-## Get Notification Status
+## Notification Read Endpoints
 
-```
-GET /notifications/{id}
-```
-
-### Response
-
-```json id="n3"
-{
-  "id": "notif_123",
-  "status": "sent",
-  "provider": "sendgrid",
-  "timeline": [
-    { "status": "queued", "timestamp": "..." },
-    { "status": "sent", "timestamp": "..." }
-  ]
-}
-```
-
----
-
-## List Notifications
+These routes currently exist for dashboard JWT traffic:
 
 ```
 GET /notifications
+GET /notifications/{id}
 ```
 
-### Query params
-
-* status
-* channel
-* limit
-* cursor
+They expose project-scoped notification history and detail records for the authenticated dashboard project.
 
 ---
 
@@ -349,6 +499,10 @@ GET /notifications
 ```
 POST /templates
 ```
+
+### Auth
+
+Project API key required. The legacy `Authorization: ApiKey <service_api_key>` path also remains active in code.
 
 ### Request
 
@@ -371,10 +525,34 @@ GET /templates
 
 ---
 
-## Update Template (versioned)
+## Get Template
 
 ```
-PUT /templates/{id}
+GET /templates/{id}
+```
+
+---
+
+## Update Template
+
+```
+PATCH /templates/{id}
+```
+
+---
+
+## Delete Template
+
+```
+DELETE /templates/{id}
+```
+
+---
+
+## Render Template
+
+```
+POST /templates/render
 ```
 
 ---
@@ -388,6 +566,10 @@ PUT /templates/{id}
 ```
 POST /webhooks
 ```
+
+### Auth
+
+Project API key required. The legacy `Authorization: ApiKey <service_api_key>` path also remains active in code.
 
 ### Request
 
@@ -423,7 +605,9 @@ POST /webhooks
 ```json id="w3"
 {
   "event": "notification.failed",
-  "reason": "provider_error"
+  "notification_id": "uuid",
+  "project_id": "uuid",
+  "timestamp": "2026-04-27T12:00:00Z"
 }
 ```
 
