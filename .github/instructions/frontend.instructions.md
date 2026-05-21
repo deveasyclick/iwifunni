@@ -21,3 +21,8 @@ applyTo:
 - Preserve the current app shell conventions in [web/src/app/layout.tsx](../../web/src/app/layout.tsx), including theme provider usage and global styles.
 - If a frontend task depends on backend behavior, verify the actual API contract in the Go handlers or docs before building UI around it. Some docs describe capabilities that are ahead of the current implementation.
 - Prefer the smallest validation that matches the change. Use the relevant `pnpm` script from [web/package.json](../../web/package.json), usually `pnpm build`, and run a narrower check when one exists.
+- For form validation, use the [zod](https://github.com/colinhacks/zod) library. It's a zero-dependency library that provides a type-safe schema for validation and error handling.
+- For form, input, and select components, use the [react-hook-form](https://react-hook-form.com/) and shadcn/ui form components. They provide a simpler API and a more consistent UX.
+- For icons, use the [iconify](https://iconify.design/docs/icon-components/react/) library. It's a zero-dependency library that provides a set of SVG icons and a React component for rendering them.
+- Prefer breaking large components into smaller, more focused components. This makes it easier to reuse and test.
+- Always update pasted codes styling to follow my theme's color scheme in [web/src/app/css/globals.css](../../web/src/app/css/globals.css)
