@@ -1,6 +1,14 @@
 import type { WorkflowChannel } from "@/app/types/workflow";
+import type { DelayUnit } from "./types";
 
 export const notificationChannels: WorkflowChannel[] = ["email", "sms", "push"];
+export const delayUnits: DelayUnit[] = [
+  "seconds",
+  "minutes",
+  "hours",
+  "days",
+  "weeks",
+];
 export const conditionOperators = [
   "equals",
   "not_equals",

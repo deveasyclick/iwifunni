@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
 import BreadcrumbComp from "../../../../layout/shared/breadcrumb/BreadcrumbComp";
 import ConfigureWorkflowChannel from "../../../../components/workflows/configure-workflow-channel";
-import { workflowIdFromRecord } from "../../../../components/workflows/create-workflow-metadata";
+import {
+  buildWorkflowBuilderHref,
+  buildWorkflowChannelConfigureHref,
+  workflowIdFromRecord,
+} from "../../../../components/workflows/create-workflow-metadata";
 
 export const metadata: Metadata = {
   title: "Configure Channel",
 };
-
-const BCrumb = [
-  {
-    to: "/dashboard/workflows",
-    title: "Workflows",
-  },
-];
 
 type WorkflowChannelPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,14 +18,30 @@ type WorkflowChannelPageProps = {
 const firstValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] || "" : value || "";
 
-const WorkflowChannelPage = async ({ searchParams }: WorkflowChannelPageProps) => {
+const WorkflowChannelPage = async ({
+  searchParams,
+}: WorkflowChannelPageProps) => {
   const params = await searchParams;
   const workflowId = workflowIdFromRecord(params);
   const nodeId = firstValue(params.nodeId);
+  const breadcrumbItems = [
+    {
+      to: "/dashboard/workflows",
+      title: "Workflows",
+    },
+    {
+      to: buildWorkflowBuilderHref({ workflowId }),
+      title: "Workflow Builder",
+    },
+    {
+      to: buildWorkflowChannelConfigureHref(workflowId, nodeId),
+      title: "Configure Channel",
+    },
+  ];
 
   return (
     <>
-      <BreadcrumbComp title="Configure Channel" items={BCrumb} />
+      <BreadcrumbComp title="Configure Channel" items={breadcrumbItems} />
       <ConfigureWorkflowChannel workflowId={workflowId} nodeId={nodeId} />
     </>
   );

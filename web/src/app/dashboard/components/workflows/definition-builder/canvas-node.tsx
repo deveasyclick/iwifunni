@@ -20,8 +20,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { uuidPattern } from "./constants";
-import { buildNodeSubtitle } from "./utils";
+import {
+  buildNodeDescription,
+  buildNodeSubtitle,
+  getNodeDisplayName,
+  hasConfiguredTemplateId,
+} from "./utils";
 import type { WorkflowCanvasNode } from "./types";
 
 const handleClassName =
@@ -35,7 +39,9 @@ const getNodeMeta = (node: WorkflowCanvasNode["data"]["draft"]) => {
     case "trigger":
       return {
         icon: Rocket,
-        iconClassName: "bg-lightsuccess text-success",
+        description: "Starts the workflow run.",
+        iconClassName:
+          "border border-success/25 bg-lightsuccess/80 text-success",
         label: "Trigger",
         status: "Entry",
         statusClassName: "border-success/20 bg-lightsuccess text-success",
@@ -43,7 +49,9 @@ const getNodeMeta = (node: WorkflowCanvasNode["data"]["draft"]) => {
     case "delay":
       return {
         icon: Clock3,
-        iconClassName: "bg-lightwarning text-warning",
+        description: "Pauses before the next step.",
+        iconClassName:
+          "border border-warning/25 bg-lightwarning/80 text-warning",
         label: "Delay",
         status: "Wait",
         statusClassName: "border-warning/20 bg-lightwarning text-warning",
@@ -51,7 +59,8 @@ const getNodeMeta = (node: WorkflowCanvasNode["data"]["draft"]) => {
     case "condition":
       return {
         icon: GitBranch,
-        iconClassName: "bg-lightinfo text-info",
+        description: "Legacy branching step.",
+        iconClassName: "border border-info/25 bg-lightinfo/80 text-info",
         label: "Condition",
         status: "Unsupported",
         statusClassName: "border-info/20 bg-lightinfo text-info",
@@ -66,16 +75,28 @@ const getNodeMeta = (node: WorkflowCanvasNode["data"]["draft"]) => {
 
       return {
         icon: channelIcon,
-        iconClassName: "bg-lightprimary text-primary",
+        description: "Sends a configured channel message.",
+        iconClassName:
+          node.channel === "sms"
+            ? "border border-success/25 bg-lightsuccess/80 text-success"
+            : node.channel === "push"
+              ? "border border-warning/25 bg-lightwarning/80 text-warning"
+              : "border border-primary/25 bg-lightprimary/80 text-primary",
         label: "Notification",
-        status: uuidPattern.test(node.templateId.trim()) ? "Ready" : "Configure",
-        statusClassName: "border-primary/20 bg-lightprimary text-primary",
+        status: hasConfiguredTemplateId(node.templateId)
+          ? "Ready"
+          : "Configure",
+        statusClassName: hasConfiguredTemplateId(node.templateId)
+          ? "border-primary/20 bg-lightprimary text-primary"
+          : "border-warning/20 bg-lightwarning text-warning",
       };
     }
     default:
       return {
         icon: BellRing,
-        iconClassName: "bg-lightprimary text-primary",
+        description: "Workflow step",
+        iconClassName:
+          "border border-primary/25 bg-lightprimary/80 text-primary",
         label: "Step",
         status: "Draft",
         statusClassName: "border-primary/20 bg-lightprimary text-primary",
@@ -109,18 +130,24 @@ const WorkflowCanvasNodeComponent = memo(
       {
         icon: PencilLine,
         label: "Edit node",
+        hoverClassName:
+          "hover:border-info/60 hover:bg-lightinfo/15 hover:text-info",
         enabled: true,
         onClick: data.onEditNode,
       },
       {
         icon: Copy,
         label: canDuplicate ? "Duplicate node" : "Trigger cannot be duplicated",
+        hoverClassName:
+          "hover:border-warning/60 hover:bg-lightwarning/15 hover:text-warning",
         enabled: canDuplicate,
         onClick: data.onDuplicateNode,
       },
       {
         icon: Trash2,
         label: canDelete ? "Delete node" : "Trigger cannot be deleted",
+        hoverClassName:
+          "hover:border-destructive/60 hover:bg-destructive/15 hover:text-destructive",
         enabled: canDelete,
         onClick: data.onRemoveNode,
       },
@@ -140,7 +167,10 @@ const WorkflowCanvasNodeComponent = memo(
                       type="button"
                       className={cn(
                         actionButtonClassName,
-                        action.enabled ? "" : "cursor-not-allowed opacity-45 hover:text-bodytext",
+                        action.hoverClassName,
+                        action.enabled
+                          ? ""
+                          : "cursor-not-allowed opacity-45 hover:text-bodytext",
                       )}
                       aria-label={action.label}
                       onClick={(event) =>
@@ -179,19 +209,14 @@ const WorkflowCanvasNodeComponent = memo(
           )}
 
           <div className="flex items-start gap-2.5">
-            <div
-              className={cn(
-                "rounded-lg p-2",
-                meta.iconClassName,
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
+            <div className={cn("rounded-lg p-1.5", meta.iconClassName)}>
+              <Icon className="h-3 w-3" />
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-sm font-semibold text-white">
-                  {draft.id.trim() || meta.label}
+                  {getNodeDisplayName(draft)}
                 </p>
 
                 {meta.status ? (
@@ -206,6 +231,10 @@ const WorkflowCanvasNodeComponent = memo(
                   </div>
                 ) : null}
               </div>
+
+              <p className="mt-1 text-[11px] leading-relaxed text-bodytext/85">
+                {meta.description || buildNodeDescription(draft)}
+              </p>
 
               <p className="mt-1 text-xs leading-relaxed text-bodytext">
                 {buildNodeSubtitle(draft, triggerEvent)}

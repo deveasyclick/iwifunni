@@ -15,6 +15,7 @@ import {
 } from "./constants";
 import type {
   BuilderNodeDraft,
+  DelayUnit,
   WorkflowBuilderDraft,
   WorkflowCanvasEdge,
   WorkflowCanvasNode,
@@ -26,6 +27,126 @@ const createCanvasNodeId = () =>
   `canvas_${Math.random().toString(36).slice(2, 10)}`;
 const createCanvasEdgeId = () =>
   `edge_${Math.random().toString(36).slice(2, 10)}`;
+
+const formatDurationAmount = (value: number) => {
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return String(Number(value.toFixed(2)));
+};
+
+export const buildDefaultNodeName = (
+  type: WorkflowNodeType,
+  channel?: WorkflowChannel | "",
+) => {
+  switch (type) {
+    case "trigger":
+      return "Test trigger";
+    case "delay":
+      return "Delay step";
+    case "condition":
+      return "Condition step";
+    case "notification":
+      switch (channel) {
+        case "sms":
+          return "SMS notification";
+        case "push":
+          return "Push notification";
+        default:
+          return "Email notification";
+      }
+    default:
+      return "Workflow step";
+  }
+};
+
+export const getNodeDisplayName = (draft: BuilderNodeDraft) =>
+  draft.name.trim() || buildDefaultNodeName(draft.type, draft.channel);
+
+export const buildNodeDescription = (draft: BuilderNodeDraft) => {
+  switch (draft.type) {
+    case "trigger":
+      return "Starts the workflow when you test or receive the trigger event.";
+    case "delay":
+      return "Waits for a fixed amount of time before the next step runs.";
+    case "notification":
+      return "Sends a channel message using the content configured for this step.";
+    case "condition":
+      return "Legacy branching step retained for compatibility.";
+    default:
+      return "Configure the behavior for this workflow step.";
+  }
+};
+
+export const hasConfiguredTemplateId = (templateId: string) => {
+  const normalizedTemplateId = templateId.trim();
+
+  return (
+    normalizedTemplateId !== "" &&
+    normalizedTemplateId !== zeroUUID &&
+    uuidPattern.test(normalizedTemplateId)
+  );
+};
+
+export const parseDelayDuration = (
+  duration: string,
+): { amount: string; unit: DelayUnit } => {
+  const normalizedDuration = duration.trim();
+  const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)(s|m|h)$/);
+
+  if (!match) {
+    return {
+      amount: normalizedDuration ? normalizedDuration : "",
+      unit: "minutes",
+    };
+  }
+
+  const amount = Number(match[1]);
+  const token = match[2];
+
+  if (token === "h") {
+    if (amount >= 168 && amount % 168 === 0) {
+      return { amount: formatDurationAmount(amount / 168), unit: "weeks" };
+    }
+    if (amount >= 24 && amount % 24 === 0) {
+      return { amount: formatDurationAmount(amount / 24), unit: "days" };
+    }
+    return { amount: formatDurationAmount(amount), unit: "hours" };
+  }
+
+  return {
+    amount: formatDurationAmount(amount),
+    unit: token === "s" ? "seconds" : "minutes",
+  };
+};
+
+export const formatDelayDuration = (amount: string, unit: DelayUnit) => {
+  const normalizedAmount = amount.trim();
+  if (!normalizedAmount) {
+    return "";
+  }
+
+  const numericAmount = Number(normalizedAmount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return normalizedAmount;
+  }
+
+  switch (unit) {
+    case "seconds":
+      return `${formatDurationAmount(numericAmount)}s`;
+    case "minutes":
+      return `${formatDurationAmount(numericAmount)}m`;
+    case "hours":
+      return `${formatDurationAmount(numericAmount)}h`;
+    case "days":
+      return `${formatDurationAmount(numericAmount * 24)}h`;
+    case "weeks":
+      return `${formatDurationAmount(numericAmount * 168)}h`;
+    default:
+      return `${formatDurationAmount(numericAmount)}m`;
+  }
+};
 
 const normalizeImportedTemplateId = (value: unknown) => {
   const templateId = typeof value === "string" ? value.trim() : "";
@@ -44,6 +165,7 @@ export const createNodeDraft = (
   if (type === "trigger") {
     return {
       id: "trigger_1",
+      name: buildDefaultNodeName(type),
       type,
       duration: "5m",
       templateId: "",
@@ -59,6 +181,7 @@ export const createNodeDraft = (
       type === "notification"
         ? `${channel || "email"}_${Math.random().toString(36).slice(2, 6)}`
         : `${type}_${Math.random().toString(36).slice(2, 6)}`,
+    name: buildDefaultNodeName(type, channel),
     type,
     duration: "5m",
     templateId: type === "notification" ? zeroUUID : "",
@@ -76,6 +199,7 @@ export const normalizeNodeDraftForType = (
   if (type === "trigger") {
     return {
       ...draft,
+      name: draft.name,
       type,
       duration: "5m",
       templateId: "",
@@ -88,8 +212,9 @@ export const normalizeNodeDraftForType = (
 
   return {
     id: draft.id,
+    name: draft.name,
     type,
-    duration: type === "delay" ? draft.duration || "5m" : "5m",
+    duration: type === "delay" ? draft.duration : "5m",
     templateId: type === "notification" ? draft.templateId || zeroUUID : "",
     channel: type === "notification" ? draft.channel || "email" : "",
     field: type === "condition" ? draft.field || "data.plan" : "data.plan",
@@ -101,11 +226,21 @@ export const normalizeNodeDraftForType = (
 export const createDefaultWorkflowBuilderDraft = (): WorkflowBuilderDraft => ({
   triggerEvent: "user.signup",
   nodes: [
-    { ...createNodeDraft("trigger"), id: "trigger_1" },
-    { ...createNodeDraft("delay"), id: "delay_1", duration: "5m" },
+    {
+      ...createNodeDraft("trigger"),
+      id: "trigger_1",
+      name: "Test trigger",
+    },
+    {
+      ...createNodeDraft("delay"),
+      id: "delay_1",
+      name: "Wait 5 minutes",
+      duration: "5m",
+    },
     {
       ...createNodeDraft("notification", "email"),
       id: "email_1",
+      name: "Send welcome email",
       templateId: zeroUUID,
       channel: "email",
     },
@@ -127,18 +262,23 @@ export const builderDraftFromDefinition = (
     triggerEvent: definition.trigger?.event || "",
     nodes: definition.nodes.map((node) => {
       const config = (node.config || {}) as Record<string, unknown>;
+      const channel =
+        Array.isArray(config.channels) && typeof config.channels[0] === "string"
+          ? (config.channels[0] as WorkflowChannel)
+          : "";
+
       return normalizeNodeDraftForType(
         {
           id: node.id,
+          name:
+            typeof config.name === "string" && config.name.trim()
+              ? config.name.trim()
+              : buildDefaultNodeName(node.type, channel),
           type: node.type,
           duration:
             typeof config.duration === "string" ? config.duration : "5m",
           templateId: normalizeImportedTemplateId(config.template_id),
-          channel:
-            Array.isArray(config.channels) &&
-            typeof config.channels[0] === "string"
-              ? (config.channels[0] as WorkflowChannel)
-              : "",
+          channel,
           field: typeof config.field === "string" ? config.field : "data.plan",
           operator:
             typeof config.operator === "string" ? config.operator : "equals",
@@ -174,21 +314,32 @@ export const workflowDefinitionFromBuilderDraft = (
   draft: WorkflowBuilderDraft,
 ): WorkflowDefinition => {
   const nodes: WorkflowNode[] = draft.nodes.map((node) => {
+    const nodeName = node.name.trim();
+    const namedConfig = nodeName ? { name: nodeName } : {};
     const base = {
       id: node.id.trim(),
       type: node.type,
     } as WorkflowNode;
 
     switch (node.type) {
+      case "trigger":
+        return {
+          ...base,
+          config: Object.keys(namedConfig).length > 0 ? namedConfig : undefined,
+        };
       case "delay":
         return {
           ...base,
-          config: { duration: node.duration.trim() },
+          config: {
+            ...namedConfig,
+            duration: node.duration.trim(),
+          },
         };
       case "notification":
         return {
           ...base,
           config: {
+            ...namedConfig,
             template_id: node.templateId.trim(),
             channels: node.channel ? [node.channel] : [],
           },
@@ -197,13 +348,17 @@ export const workflowDefinitionFromBuilderDraft = (
         return {
           ...base,
           config: {
+            ...namedConfig,
             field: node.field.trim(),
             operator: node.operator.trim(),
             value: node.value.trim(),
           },
         };
       default:
-        return base;
+        return {
+          ...base,
+          config: Object.keys(namedConfig).length > 0 ? namedConfig : undefined,
+        };
     }
   });
 
@@ -295,7 +450,11 @@ export const validateWorkflowDefinitionDraft = (
             (channel): channel is string => typeof channel === "string",
           )
         : [];
-      if (!uuidPattern.test(templateID)) {
+      if (
+        templateID &&
+        templateID !== zeroUUID &&
+        !uuidPattern.test(templateID)
+      ) {
         issues.push({
           path: `${nodePath}.template_id`,
           message: "Notification template ID must be a valid UUID.",
@@ -500,9 +659,9 @@ export const buildNodeSubtitle = (
     case "delay":
       return draft.duration ? `Wait ${draft.duration}` : "Configure delay";
     case "notification":
-      return draft.channel
-        ? `${draft.channel.toUpperCase()} notification`
-        : "Choose a channel";
+      return hasConfiguredTemplateId(draft.templateId)
+        ? `${draft.channel.toUpperCase()} content configured`
+        : `${draft.channel.toUpperCase()} content needs configuration`;
     case "condition":
       return "Unsupported in linear workflows";
     default:

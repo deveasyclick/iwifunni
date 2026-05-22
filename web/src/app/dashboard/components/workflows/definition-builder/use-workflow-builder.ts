@@ -4,7 +4,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { createWorkflowBuilderStore } from "./store";
 import type { WorkflowDefinitionBuilderProps } from "./types";
-import { buildDraftFromCanvas } from "./utils";
+import { buildDraftFromCanvas, getNodeDisplayName } from "./utils";
 
 export const useWorkflowBuilder = ({
   value,
@@ -34,7 +34,8 @@ export const useWorkflowBuilder = ({
     () => buildDraftFromCanvas(triggerEvent, nodes, edges),
     [edges, nodes, triggerEvent],
   );
-  const canvasVerticalOffset = 640;
+  const canvasHorizontalOffset = 220;
+  const canvasVerticalOffset = 120;
 
   const canvasNodes = useMemo(
     () =>
@@ -42,6 +43,7 @@ export const useWorkflowBuilder = ({
         ...node,
         position: {
           ...node.position,
+          x: node.position.x + canvasHorizontalOffset,
           y: node.position.y + canvasVerticalOffset,
         },
         data: {
@@ -56,6 +58,7 @@ export const useWorkflowBuilder = ({
         },
       })),
     [
+      canvasHorizontalOffset,
       canvasVerticalOffset,
       duplicateNode,
       nodes,
@@ -131,10 +134,34 @@ export const useWorkflowBuilder = ({
     ? edges.filter((edge) => edge.source === selectedNode.id).length
     : 0;
   const selectedEdgeSourceLabel = selectedEdge
-    ? nodes.find((node) => node.id === selectedEdge.source)?.data.draft.id || ""
+    ? getNodeDisplayName(
+        nodes.find((node) => node.id === selectedEdge.source)?.data.draft ?? {
+          id: "",
+          name: "",
+          type: "delay",
+          duration: "",
+          templateId: "",
+          channel: "",
+          field: "",
+          operator: "",
+          value: "",
+        },
+      )
     : "";
   const selectedEdgeTargetLabel = selectedEdge
-    ? nodes.find((node) => node.id === selectedEdge.target)?.data.draft.id || ""
+    ? getNodeDisplayName(
+        nodes.find((node) => node.id === selectedEdge.target)?.data.draft ?? {
+          id: "",
+          name: "",
+          type: "delay",
+          duration: "",
+          templateId: "",
+          channel: "",
+          field: "",
+          operator: "",
+          value: "",
+        },
+      )
     : "";
 
   useEffect(() => {

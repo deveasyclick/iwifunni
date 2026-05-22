@@ -16,6 +16,7 @@ export type WorkflowNodeType = WorkflowNode["type"];
 
 export type BuilderNodeDraft = {
   id: string;
+  name: string;
   type: WorkflowNodeType;
   duration: string;
   templateId: string;
@@ -24,6 +25,8 @@ export type BuilderNodeDraft = {
   operator: string;
   value: string;
 };
+
+export type DelayUnit = "seconds" | "minutes" | "hours" | "days" | "weeks";
 
 export type BuilderEdgeDraft = {
   source: string;
@@ -49,6 +52,9 @@ export type WorkflowDefinitionBuilderProps = {
   workflowSetup?: WorkflowSetupSummary;
   autosaveState?: WorkflowAutosaveState;
   onConfigureNotificationNode?: (nodeId: string) => void;
+  onWorkflowSetupChange?: (
+    values: Partial<Pick<WorkflowSetupSummary, "name" | "description">>,
+  ) => void;
 };
 
 export type WorkflowSetupSummary = {

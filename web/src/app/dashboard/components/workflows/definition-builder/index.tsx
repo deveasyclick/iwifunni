@@ -25,6 +25,7 @@ export const WorkflowDefinitionBuilder = ({
   workflowSetup,
   autosaveState,
   onConfigureNotificationNode,
+  onWorkflowSetupChange,
 }: WorkflowDefinitionBuilderProps) => {
   const builder = useWorkflowBuilder({ value, onChange, issues });
 
@@ -37,7 +38,9 @@ export const WorkflowDefinitionBuilder = ({
           onNodesChange={builder.onNodesChange}
           onEdgesChange={builder.onEdgesChange}
           onConnect={builder.connectNodes}
-          onPaneClick={() => builder.setSelection({ nodeId: null, edgeId: null })}
+          onPaneClick={() =>
+            builder.setSelection({ nodeId: null, edgeId: null })
+          }
           onNodeClick={(_, node) =>
             builder.setSelection({ nodeId: node.id, edgeId: null })
           }
@@ -61,6 +64,7 @@ export const WorkflowDefinitionBuilder = ({
           workflowSetup={workflowSetup}
           autosaveState={autosaveState}
           onConfigureNotificationNode={onConfigureNotificationNode}
+          onWorkflowSetupChange={onWorkflowSetupChange}
         />
       </div>
     </div>

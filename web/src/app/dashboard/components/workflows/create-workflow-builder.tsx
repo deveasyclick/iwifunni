@@ -14,9 +14,7 @@ import {
   WorkflowDefinitionBuilder,
   workflowDefinitionFromBuilderDraft,
 } from "@/app/dashboard/components/workflows/definition-builder";
-import {
-  buildWorkflowChannelConfigureHref,
-} from "./create-workflow-metadata";
+import { buildWorkflowChannelConfigureHref } from "./create-workflow-metadata";
 
 type CreateWorkflowBuilderProps = {
   workflowId: string;
@@ -26,6 +24,17 @@ type AutosaveState = {
   status: "loading" | "saving" | "saved" | "error" | "invalid";
   message: string;
 };
+
+const buildSaveSignature = (
+  definitionSignature: string,
+  workflowName: string,
+  workflowDescription: string,
+) =>
+  JSON.stringify({
+    definitionSignature,
+    workflowName,
+    workflowDescription,
+  });
 
 const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
   const router = useRouter();
@@ -50,6 +59,19 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
   const definitionIssues = useMemo(
     () => validateWorkflowDefinitionDraft(definition),
     [definition],
+  );
+  const draftSignature = useMemo(
+    () => JSON.stringify(definitionDraft),
+    [definitionDraft],
+  );
+  const saveSignature = useMemo(
+    () =>
+      buildSaveSignature(
+        draftSignature,
+        workflow?.name || "",
+        workflow?.description || "",
+      ),
+    [draftSignature, workflow?.description, workflow?.name],
   );
 
   useEffect(() => {
@@ -77,7 +99,11 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
         }
 
         const nextDraft = builderDraftFromDefinition(nextWorkflow.definition);
-        lastSavedSignatureRef.current = JSON.stringify(nextDraft);
+        lastSavedSignatureRef.current = buildSaveSignature(
+          JSON.stringify(nextDraft),
+          nextWorkflow.name,
+          nextWorkflow.description || "",
+        );
         setWorkflow(nextWorkflow);
         setDefinitionDraft(nextDraft);
         setAutosaveState({ status: "saved", message: "Draft ready" });
@@ -111,8 +137,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
       return;
     }
 
-    const nextSignature = JSON.stringify(definitionDraft);
-    if (nextSignature === lastSavedSignatureRef.current) {
+    if (saveSignature === lastSavedSignatureRef.current) {
       return;
     }
 
@@ -134,26 +159,30 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
 
     const timeoutId = window.setTimeout(async () => {
       try {
-        const updatedWorkflow = await workflowApi.updateWorkflow(workflow.id, payload);
+        const updatedWorkflow = await workflowApi.updateWorkflow(
+          workflow.id,
+          payload,
+        );
         setWorkflow(updatedWorkflow);
-        lastSavedSignatureRef.current = nextSignature;
+        lastSavedSignatureRef.current = saveSignature;
         setAutosaveState({ status: "saved", message: "All changes saved" });
       } catch (err) {
         setAutosaveState({
           status: "error",
-          message:
-            err instanceof Error ? err.message : "Autosave failed",
+          message: err instanceof Error ? err.message : "Autosave failed",
         });
       }
     }, 700);
 
     return () => window.clearTimeout(timeoutId);
-  }, [definition, definitionDraft, definitionIssues.length, workflow]);
+  }, [definition, definitionIssues.length, saveSignature, workflow]);
 
   if (loading) {
     return (
       <CardBox className="p-6">
-        <p className="text-sm text-muted-foreground">Loading workflow draft...</p>
+        <p className="text-sm text-muted-foreground">
+          Loading workflow draft...
+        </p>
       </CardBox>
     );
   }
@@ -179,26 +208,6 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
         </p>
       ) : null}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/50 bg-card px-4 py-3">
-        <div>
-          <p className="text-sm font-medium text-foreground">{workflow.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {workflow.description || workflow.key}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded-full border border-border/60 px-2 py-1 text-muted-foreground">
-            {workflow.key}
-          </span>
-          <span className="rounded-full border border-border/60 px-2 py-1 text-foreground">
-            {autosaveState.message}
-          </span>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/workflows">Close</Link>
-          </Button>
-        </div>
-      </div>
-
       <WorkflowDefinitionBuilder
         value={definitionDraft}
         onChange={setDefinitionDraft}
@@ -210,6 +219,18 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
           description: workflow.description || "",
         }}
         autosaveState={autosaveState}
+        onWorkflowSetupChange={(values) =>
+          setWorkflow((currentWorkflow) =>
+            currentWorkflow
+              ? {
+                  ...currentWorkflow,
+                  name: values.name ?? currentWorkflow.name,
+                  description:
+                    values.description ?? currentWorkflow.description,
+                }
+              : currentWorkflow,
+          )
+        }
         onConfigureNotificationNode={(nodeId: string) =>
           router.push(buildWorkflowChannelConfigureHref(workflow.id, nodeId))
         }
