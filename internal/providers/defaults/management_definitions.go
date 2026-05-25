@@ -396,3 +396,84 @@ func requiredInt(value any) (int, error) {
 		return 0, fmt.Errorf("invalid integer")
 	}
 }
+
+// newDemoEmailDefinition returns a catalog definition for the demo email provider.
+// No credentials are required — only the owner's email address is stored in config.
+func newDemoEmailDefinition() catalog.Definition {
+	return definition{
+		name:    "demo-email",
+		channel: "email",
+		normalize: func(credentials, config map[string]any, current *catalog.StoredInput) (catalog.NormalizedInput, error) {
+			ownerEmail, err := requiredString(config, "owner_email")
+			if err != nil {
+				if current != nil && len(current.Config) > 0 {
+					return catalog.NormalizedInput{
+						Name:       "demo-email",
+						Channel:    "email",
+						ConfigJSON: current.Config,
+					}, nil
+				}
+				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-email: owner_email is required")
+			}
+			ownerEmail = strings.TrimSpace(ownerEmail)
+			if ownerEmail == "" {
+				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-email: owner_email is required")
+			}
+			if _, err := mail.ParseAddress(ownerEmail); err != nil {
+				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-email: a valid owner_email is required")
+			}
+			senderName, _ := config["sender_name"].(string)
+
+			configJSON, err := json.Marshal(map[string]string{
+				"owner_email": ownerEmail,
+				"sender_name": strings.TrimSpace(senderName),
+			})
+			if err != nil {
+				return catalog.NormalizedInput{}, err
+			}
+			return catalog.NormalizedInput{
+				Name:       "demo-email",
+				Channel:    "email",
+				ConfigJSON: configJSON,
+			}, nil
+		},
+	}
+}
+
+// newDemoSMSDefinition returns a catalog definition for the demo SMS provider.
+// No credentials are required — only the owner's phone number is stored in config.
+func newDemoSMSDefinition() catalog.Definition {
+	return definition{
+		name:    "demo-sms",
+		channel: "sms",
+		normalize: func(credentials, config map[string]any, current *catalog.StoredInput) (catalog.NormalizedInput, error) {
+			ownerPhone, err := requiredString(config, "owner_phone")
+			if err != nil {
+				if current != nil && len(current.Config) > 0 {
+					return catalog.NormalizedInput{
+						Name:       "demo-sms",
+						Channel:    "sms",
+						ConfigJSON: current.Config,
+					}, nil
+				}
+				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-sms: owner_phone is required")
+			}
+			ownerPhone = strings.TrimSpace(ownerPhone)
+			if ownerPhone == "" {
+				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-sms: owner_phone is required")
+			}
+
+			configJSON, err := json.Marshal(map[string]string{
+				"owner_phone": ownerPhone,
+			})
+			if err != nil {
+				return catalog.NormalizedInput{}, err
+			}
+			return catalog.NormalizedInput{
+				Name:       "demo-sms",
+				Channel:    "sms",
+				ConfigJSON: configJSON,
+			}, nil
+		},
+	}
+}

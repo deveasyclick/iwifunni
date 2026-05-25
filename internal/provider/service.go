@@ -48,16 +48,22 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 	if err != nil {
 		return db.Provider{}, err
 	}
-	encCreds, err := crypto.Encrypt(credJSON, s.encryptionKey)
-	if err != nil {
-		return db.Provider{}, err
+
+	var credentials []byte
+	if len(credJSON) > 0 {
+		encCreds, encErr := crypto.Encrypt(credJSON, s.encryptionKey)
+		if encErr != nil {
+			return db.Provider{}, encErr
+		}
+		credentials = []byte(`"` + encCreds + `"`)
 	}
+
 	return s.repo.Create(ctx, db.CreateProviderParams{
 		ID:            uuid.New(),
 		EnvironmentID: in.EnvironmentID,
 		Name:          name,
 		Channel:       channel,
-		Credentials:   []byte(`"` + encCreds + `"`),
+		Credentials:   credentials,
 		Config:        configJSON,
 	})
 }

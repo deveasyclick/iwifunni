@@ -58,8 +58,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	if req.Name == "" || req.Channel == "" || len(req.Credentials) == 0 {
-		http.Error(w, "name, channel, and credentials are required", http.StatusBadRequest)
+	if req.Name == "" || req.Channel == "" {
+		http.Error(w, "name and channel are required", http.StatusBadRequest)
 		return
 	}
 	p, err := h.service.Create(r.Context(), CreateInput{

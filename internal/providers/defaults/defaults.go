@@ -3,6 +3,7 @@ package defaults
 import (
 	"github.com/deveasyclick/iwifunni/internal/providers/brevo"
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
+	"github.com/deveasyclick/iwifunni/internal/providers/demo"
 	"github.com/deveasyclick/iwifunni/internal/providers/fcm"
 	"github.com/deveasyclick/iwifunni/internal/providers/sendgrid"
 	"github.com/deveasyclick/iwifunni/internal/providers/smtp"
@@ -20,6 +21,8 @@ func NewCatalog() *catalog.Catalog {
 		newTwilioDefinition(),
 		newFCMDefinition(),
 		newWebPushDefinition(),
+		newDemoEmailDefinition(),
+		newDemoSMSDefinition(),
 	)
 }
 
@@ -32,5 +35,7 @@ func NewRegistry() *catalog.Registry {
 		twilio.NewRuntimeProvider(),
 		fcm.NewRuntimeProvider(),
 		webpush.NewRuntimeProvider(),
+		demo.NewEmailRuntimeProvider(),
+		demo.NewSMSRuntimeProvider(),
 	)
 }

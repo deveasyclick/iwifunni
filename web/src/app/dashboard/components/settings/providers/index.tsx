@@ -260,6 +260,44 @@ const SUPPORTED_PROVIDERS: ProviderDefinition[] = [
     ],
     config: [],
   },
+  {
+    key: "demo-email",
+    label: "Demo Email",
+    channel: "email",
+    icon: "mdi:email-check-outline",
+    description: "Safe sandbox — redirects all emails to your own address for testing.",
+    credentials: [],
+    config: [
+      {
+        key: "sender_name",
+        label: "Your name",
+        placeholder: "Jane Doe",
+        location: "config",
+      },
+      {
+        key: "owner_email",
+        label: "Your email (test recipient)",
+        placeholder: "you@example.com",
+        location: "config",
+      },
+    ],
+  },
+  {
+    key: "demo-sms",
+    label: "Demo SMS",
+    channel: "sms",
+    icon: "mdi:message-check-outline",
+    description: "Safe sandbox — redirects all SMS messages to your own number for testing.",
+    credentials: [],
+    config: [
+      {
+        key: "owner_phone",
+        label: "Your phone (test recipient)",
+        placeholder: "+234800000000",
+        location: "config",
+      },
+    ],
+  },
 ];
 
 const CHANNEL_GROUPS: { channel: "email" | "sms" | "push"; label: string; icon: string }[] = [
@@ -477,6 +515,7 @@ const ProviderManagement = () => {
                         const isMutating = mutatingKey?.endsWith(item?.id ?? "");
 
                         if (!isConnected) {
+                          const isDemo = definition.key.startsWith("demo-");
                           return (
                             <button
                               key={definition.key}
@@ -488,7 +527,14 @@ const ProviderManagement = () => {
                                 <Icon icon={definition.icon} />
                               </div>
                               <div>
-                                <p className="text-sm font-medium">{definition.label}</p>
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <p className="text-sm font-medium">{definition.label}</p>
+                                  {isDemo ? (
+                                    <span className="rounded-full bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                      Demo
+                                    </span>
+                                  ) : null}
+                                </div>
                                 <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
                                   {definition.description}
                                 </p>
@@ -514,6 +560,11 @@ const ProviderManagement = () => {
                                 <div>
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-semibold">{definition.label}</span>
+                                    {definition.key.startsWith("demo-") ? (
+                                      <span className="rounded-full bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                        Demo
+                                      </span>
+                                    ) : null}
                                     {isPrimary ? (
                                       <Badge variant="lightPrimary" className="text-[10px] px-1.5 py-0">
                                         Primary
