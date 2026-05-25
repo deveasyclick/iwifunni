@@ -142,11 +142,6 @@ func (a *App) Router() http.Handler {
 		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
 		workflow.NewHandler(workflowSvc).RegisterAPIRoutes(r)
 
-		// Providers
-		providerRepo := provider.NewRepository(a.queries, a.dbPool)
-		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
-		provider.NewHandler(providerSvc).Register(r)
-
 		// Webhooks
 		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
 		webhooks.NewHandler(webhookSvc).Register(r)
