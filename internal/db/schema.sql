@@ -150,10 +150,16 @@ CREATE TABLE providers (
     credentials JSONB NOT NULL,
     config JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    is_primary BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (environment_id, name)
+    UNIQUE (environment_id, name),
+    CONSTRAINT providers_primary_requires_active CHECK (NOT is_primary OR is_active)
 );
+
+CREATE UNIQUE INDEX idx_providers_primary_per_channel
+ON providers(environment_id, channel)
+WHERE is_primary = true;
 
 CREATE TABLE webhooks (
     id UUID PRIMARY KEY,

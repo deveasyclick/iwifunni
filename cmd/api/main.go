@@ -115,16 +115,17 @@ func main() {
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 
 	application := app.New(app.Config{
-		Queries:       store.Queries,
-		RateLimiter:   rateLimiter,
-		AuthService:   authService,
-		JWTManager:    jwtManager,
+		Queries:         store.Queries,
+		DBPool:          store.Pool,
+		RateLimiter:     rateLimiter,
+		AuthService:     authService,
+		JWTManager:      jwtManager,
 		FrontendBaseURL: cfg.WebBaseURL,
 		SocialProviders: socialProviders,
-		CookieSecure: strings.HasPrefix(strings.ToLower(cfg.WebBaseURL), "https://"),
-		EncryptionKey: cfg.EncryptionKey,
-		Producer:      producer,
-		Dispatcher:    dispatcher,
+		CookieSecure:    strings.HasPrefix(strings.ToLower(cfg.WebBaseURL), "https://"),
+		EncryptionKey:   cfg.EncryptionKey,
+		Producer:        producer,
+		Dispatcher:      dispatcher,
 	})
 
 	httpServer := &http.Server{

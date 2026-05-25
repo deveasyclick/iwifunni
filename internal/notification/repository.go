@@ -164,8 +164,8 @@ func (r *Repository) InsertDeliveryAttempt(ctx context.Context, arg db.InsertDel
 	return r.q.InsertDeliveryAttempt(ctx, arg)
 }
 
-func (r *Repository) GetActiveProviderByChannel(ctx context.Context, projectID uuid.UUID, channel string) (db.Provider, error) {
-	return r.q.GetActiveEnvironmentProviderByChannel(ctx, db.GetActiveEnvironmentProviderByChannelParams{
+func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error) {
+	return r.q.GetActiveEnvironmentProvidersByChannel(ctx, db.GetActiveEnvironmentProvidersByChannelParams{
 		EnvironmentID: projectID,
 		Channel:       channel,
 	})

@@ -102,6 +102,7 @@ type Provider struct {
 	Credentials   []byte           `db:"credentials" json:"credentials"`
 	Config        []byte           `db:"config" json:"config"`
 	IsActive      bool             `db:"is_active" json:"is_active"`
+	IsPrimary     bool             `db:"is_primary" json:"is_primary"`
 	CreatedAt     pgtype.Timestamp `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `db:"updated_at" json:"updated_at"`
 }

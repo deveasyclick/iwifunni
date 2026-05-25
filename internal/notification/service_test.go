@@ -20,20 +20,21 @@ type fakeNotificationStore struct {
 	notificationCount int
 	statusUpdates     []string
 	attemptCount      int
-	provider          db.Provider
+	providers         []db.Provider
 }
 
 func newFakeNotificationStore() *fakeNotificationStore {
 	return &fakeNotificationStore{
 		notifications: make(map[string]db.Notification),
-		provider: db.Provider{
+		providers: []db.Provider{{
 			ID:            uuid.New(),
 			EnvironmentID: uuid.New(),
 			Name:          "test-email",
 			Channel:       "email",
 			Config:        []byte(`{"host":"smtp.example.com","port":587,"username":"user","password":"pass","from":"noreply@example.com"}`),
 			IsActive:      true,
-		},
+			IsPrimary:     true,
+		}},
 	}
 }
 
@@ -118,8 +119,8 @@ func (s *fakeNotificationStore) InsertDeliveryAttempt(_ context.Context, _ db.In
 	return nil
 }
 
-func (s *fakeNotificationStore) GetActiveProviderByChannel(_ context.Context, _ uuid.UUID, _ string) (db.Provider, error) {
-	return s.provider, nil
+func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Provider, error) {
+	return s.providers, nil
 }
 
 func (s *fakeNotificationStore) GetServiceChannelConfig(_ context.Context, _ db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error) {
@@ -221,7 +222,7 @@ func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
 	}
 
 	store := newFakeNotificationStore()
-	store.provider = db.Provider{
+	store.providers = []db.Provider{{
 		ID:            uuid.New(),
 		EnvironmentID: uuid.New(),
 		Name:          "sendgrid",
@@ -229,7 +230,8 @@ func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
 		Credentials:   []byte(`"` + encrypted + `"`),
 		Config:        []byte(`{"from_email":"no-reply@example.com"}`),
 		IsActive:      true,
-	}
+		IsPrimary:     true,
+	}}
 
 	provider := &fakeProvider{name: "sendgrid", channel: "email"}
 	service := NewService(store, encryptionKey)

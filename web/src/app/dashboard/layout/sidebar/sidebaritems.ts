@@ -89,8 +89,8 @@ const SidebarContent: MenuItem[] = [
           },
           {
             id: uniqueId(),
-            name: "Integrations",
-            url: "/dashboard/settings/integrations",
+            name: "Providers",
+            url: "/dashboard/settings/providers",
           },
         ],
       },

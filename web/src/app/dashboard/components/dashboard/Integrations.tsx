@@ -8,9 +8,9 @@ const IntegrationsCard = () => {
   return (
     <CardBox className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h5 className="card-title">Integrations</h5>
+        <h5 className="card-title">Providers</h5>
         <Link
-          href="/dashboard/settings/integrations"
+          href="/dashboard/settings/providers"
           className="text-sm text-primary hover:underline flex items-center gap-1"
         >
           Manage
@@ -23,9 +23,9 @@ const IntegrationsCard = () => {
           <Icon icon="simple-icons:sendgrid" className="h-6 w-6" />
         </div>
         <div>
-          <p className="font-medium">SendGrid</p>
+          <p className="font-medium">Notification providers</p>
           <p className="text-sm text-muted-foreground">
-            Email provider integration
+            Manage SendGrid, Brevo, Termii, Twilio, SMTP, FCM, and Web Push.
           </p>
         </div>
       </div>

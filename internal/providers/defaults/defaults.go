@@ -14,6 +14,12 @@ import (
 func NewCatalog() *catalog.Catalog {
 	return catalog.New(
 		sendgrid.NewDefinition(),
+		newBrevoDefinition(),
+		newSMTPDefinition(),
+		newTermiiDefinition(),
+		newTwilioDefinition(),
+		newFCMDefinition(),
+		newWebPushDefinition(),
 	)
 }
 

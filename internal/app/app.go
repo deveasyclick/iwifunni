@@ -17,6 +17,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/workflow"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // App wires all domain handlers and builds the HTTP router.
@@ -26,6 +27,7 @@ type App struct {
 	authService     authServiceFull
 	jwtManager      *auth.JWTManager
 	frontendBaseURL string
+	dbPool          *pgxpool.Pool
 	socialProviders map[string]bool
 	cookieSecure    bool
 	encryptionKey   string
@@ -35,6 +37,7 @@ type App struct {
 
 type Config struct {
 	Queries         *db.Queries
+	DBPool          *pgxpool.Pool
 	RateLimiter     *auth.RateLimiter
 	AuthService     authServiceFull
 	JWTManager      *auth.JWTManager
@@ -49,6 +52,7 @@ type Config struct {
 func New(cfg Config) *App {
 	return &App{
 		queries:         cfg.Queries,
+		dbPool:          cfg.DBPool,
 		rateLimiter:     cfg.RateLimiter,
 		authService:     cfg.AuthService,
 		jwtManager:      cfg.JWTManager,

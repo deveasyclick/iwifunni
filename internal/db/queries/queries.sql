@@ -19,11 +19,11 @@ SET title = EXCLUDED.title,
 	updated_at = EXCLUDED.updated_at
 RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at;
 
--- name: GetActiveEnvironmentProviderByChannel :one
-SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
+-- name: GetActiveEnvironmentProvidersByChannel :many
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
 FROM providers
 WHERE environment_id = $1 AND channel = $2 AND is_active = true
-LIMIT 1;
+ORDER BY is_primary DESC, created_at ASC;
 
 -- name: GetServiceChannelConfig :one
 SELECT id, service_id, channel, enabled, provider, config_json, created_at, updated_at
@@ -470,18 +470,24 @@ WHERE execution_id = $1 AND step_id = $2
 RETURNING *;
 
 -- name: CreateProvider :one
-INSERT INTO providers (id, environment_id, name, channel, credentials, config, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, true)
+INSERT INTO providers (id, environment_id, name, channel, credentials, config, is_active, is_primary)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: ListProviders :many
-SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
 FROM providers
-WHERE environment_id = $1 AND is_active = true
-ORDER BY name;
+WHERE environment_id = $1
+ORDER BY channel, is_primary DESC, name;
+
+-- name: ListProvidersByChannel :many
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+FROM providers
+WHERE environment_id = $1 AND channel = $2
+ORDER BY is_primary DESC, created_at ASC;
 
 -- name: GetProviderByID :one
-SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
 FROM providers
 WHERE id = $1 AND environment_id = $2;
 
@@ -491,9 +497,19 @@ SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
 WHERE id = $1 AND environment_id = $2
 RETURNING *;
 
--- name: DeleteProvider :exec
+-- name: UpdateProviderState :one
 UPDATE providers
-SET is_active = false, updated_at = now()
+SET is_active = $3, is_primary = $4, updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING *;
+
+-- name: ClearProviderPrimaryByChannel :exec
+UPDATE providers
+SET is_primary = false, updated_at = now()
+WHERE environment_id = $1 AND channel = $2 AND is_primary = true;
+
+-- name: DeleteProvider :exec
+DELETE FROM providers
 WHERE id = $1 AND environment_id = $2;
 
 -- name: CreateWebhook :one

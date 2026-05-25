@@ -43,7 +43,7 @@ type notificationStore interface {
 	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
 	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
-	GetActiveProviderByChannel(ctx context.Context, projectID uuid.UUID, channel string) (db.Provider, error)
+	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error)
 	GetServiceChannelConfig(ctx context.Context, arg db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error)
 	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
 	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
@@ -513,27 +513,44 @@ func isTerminalNotificationStatus(status string) bool {
 }
 
 func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notificationID uuid.UUID, channel string, job *types.NotificationJob) error {
-	providerRecord, err := s.repo.GetActiveProviderByChannel(ctx, projectID, channel)
+	providerRecords, err := s.repo.GetActiveProvidersByChannel(ctx, projectID, channel)
 	if err != nil {
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s: %w", channel, err))
 	}
-	p, ok := s.registry.Get(providerRecord.Name)
-	if !ok || p.Channel() != channel {
-		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("provider %s not registered for channel %s", providerRecord.Name, channel))
+	if len(providerRecords) == 0 {
+		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s", channel))
 	}
-	providerConfig, err := s.buildProjectProviderConfig(providerRecord)
-	if err != nil {
-		return s.recordFailed(ctx, notificationID, channel, "", err)
-	}
-	attempts, providerErr := p.Send(ctx, job, providerConfig)
-	for _, a := range attempts {
-		if a.Err != nil {
-			_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
+
+	var lastErr error
+	for _, providerRecord := range providerRecords {
+		p, ok := s.registry.Get(providerRecord.Name)
+		if !ok || p.Channel() != channel {
+			lastErr = fmt.Errorf("provider %s not registered for channel %s", providerRecord.Name, channel)
 			continue
 		}
-		_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
+		providerConfig, cfgErr := s.buildProjectProviderConfig(providerRecord)
+		if cfgErr != nil {
+			lastErr = cfgErr
+			continue
+		}
+
+		attempts, providerErr := p.Send(ctx, job, providerConfig)
+		for _, a := range attempts {
+			if a.Err != nil {
+				_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
+				continue
+			}
+			_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
+		}
+		if providerErr == nil {
+			return nil
+		}
+		lastErr = providerErr
 	}
-	return providerErr
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no active provider for channel %s", channel)
+	}
+	return s.recordFailed(ctx, notificationID, channel, "", lastErr)
 }
 
 func (s *Service) buildProjectProviderConfig(providerRecord db.Provider) ([]byte, error) {

@@ -25,6 +25,7 @@ func (h *Handler) Register(r chi.Router) {
 	r.Get("/providers", h.list)
 	r.Get("/providers/{providerID}", h.get)
 	r.Put("/providers/{providerID}", h.update)
+	r.Patch("/providers/{providerID}", h.updateState)
 	r.Delete("/providers/{providerID}", h.delete)
 }
 
@@ -40,6 +41,10 @@ type updateRequest struct {
 	Channel     string         `json:"channel"`
 	Credentials map[string]any `json:"credentials"`
 	Config      map[string]any `json:"config,omitempty"`
+}
+
+type updateStateRequest struct {
+	Action string `json:"action"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +171,38 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) updateState(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerID"))
+	if err != nil {
+		http.Error(w, "invalid provider id", http.StatusBadRequest)
+		return
+	}
+
+	var req updateStateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	p, err := h.service.UpdateState(r.Context(), StateInput{
+		ID:            providerID,
+		EnvironmentID: environmentID,
+		Action:        StateAction(req.Action),
+	})
+	if err != nil {
+		writeProviderError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
+}
+
 type providerResponse struct {
 	ID             uuid.UUID      `json:"id"`
 	EnvironmentID  uuid.UUID      `json:"environment_id"`
@@ -174,6 +211,7 @@ type providerResponse struct {
 	Config         map[string]any `json:"config,omitempty"`
 	HasCredentials bool           `json:"has_credentials"`
 	IsActive       bool           `json:"is_active"`
+	IsPrimary      bool           `json:"is_primary"`
 	CreatedAt      any            `json:"created_at"`
 	UpdatedAt      any            `json:"updated_at,omitempty"`
 }
@@ -192,6 +230,7 @@ func providerResponseFromRecord(p db.Provider) providerResponse {
 		Config:         config,
 		HasCredentials: len(p.Credentials) > 0,
 		IsActive:       p.IsActive,
+		IsPrimary:      p.IsPrimary,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
 	}
@@ -201,7 +240,7 @@ func writeProviderError(w http.ResponseWriter, err error) {
 	var validationErr *catalog.ValidationError
 	switch {
 	case errors.Is(err, ErrUnsupportedProvider):
-		http.Error(w, "only the sendgrid email provider is supported", http.StatusBadRequest)
+		http.Error(w, "unsupported provider", http.StatusBadRequest)
 	case errors.As(err, &validationErr):
 		http.Error(w, validationErr.Error(), http.StatusBadRequest)
 	default:

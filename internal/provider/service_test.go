@@ -15,8 +15,8 @@ func TestPrepareProviderInputRejectsUnsupportedProvider(t *testing.T) {
 	service := &Service{catalog: defaults.NewCatalog()}
 
 	_, _, _, _, err := service.prepareProviderInput(
-		"twilio",
-		"sms",
+		"ses",
+		"email",
 		map[string]any{"api_key": "token"},
 		map[string]any{"from_email": "no-reply@example.com"},
 		nil,
@@ -94,5 +94,50 @@ func TestPrepareProviderInputReusesStoredCredentialsOnUpdate(t *testing.T) {
 	}
 	if config["from_email"] != "no-reply@example.com" {
 		t.Fatalf("config.from_email = %q, want no-reply@example.com", config["from_email"])
+	}
+}
+
+func TestPrepareProviderInputNormalizesBrevoValues(t *testing.T) {
+	t.Parallel()
+
+	service := &Service{catalog: defaults.NewCatalog()}
+
+	name, channel, credentialsJSON, configJSON, err := service.prepareProviderInput(
+		" Brevo ",
+		" EMAIL ",
+		map[string]any{"login": " user@example.com ", "api_key": " xkeysib-123 "},
+		map[string]any{"from_email": " notify@example.com "},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("prepareProviderInput() error = %v", err)
+	}
+	if name != "brevo" {
+		t.Fatalf("name = %q, want brevo", name)
+	}
+	if channel != "email" {
+		t.Fatalf("channel = %q, want email", channel)
+	}
+
+	var credentials map[string]string
+	if err := json.Unmarshal(credentialsJSON, &credentials); err != nil {
+		t.Fatalf("Unmarshal(credentialsJSON) error = %v", err)
+	}
+	if credentials["username"] != "user@example.com" {
+		t.Fatalf("credentials.username = %q, want user@example.com", credentials["username"])
+	}
+	if credentials["password"] != "xkeysib-123" {
+		t.Fatalf("credentials.password = %q, want xkeysib-123", credentials["password"])
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal(configJSON, &config); err != nil {
+		t.Fatalf("Unmarshal(configJSON) error = %v", err)
+	}
+	if config["host"] != "smtp-relay.brevo.com" {
+		t.Fatalf("config.host = %v, want smtp-relay.brevo.com", config["host"])
+	}
+	if config["from"] != "notify@example.com" {
+		t.Fatalf("config.from = %v, want notify@example.com", config["from"])
 	}
 }
