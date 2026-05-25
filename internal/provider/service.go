@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/crypto"
@@ -149,4 +150,108 @@ func (e *unsupportedProviderError) Error() string {
 
 func (e *unsupportedProviderError) Unwrap() error {
 	return ErrUnsupportedProvider
+}
+
+// StateAction represents the action to perform on a provider's state.
+type StateAction string
+
+const (
+	ActionEnable     StateAction = "enable"
+	ActionDisable    StateAction = "disable"
+	ActionSetPrimary StateAction = "set_primary"
+)
+
+// StateInput carries the parameters for a provider state transition.
+type StateInput struct {
+	ID            uuid.UUID
+	EnvironmentID uuid.UUID
+	Action        StateAction
+}
+
+// UpdateState performs enable, disable, or set_primary on a provider,
+// enforcing all primary-per-channel rules inside a single transaction.
+func (s *Service) UpdateState(ctx context.Context, in StateInput) (db.Provider, error) {
+	var result db.Provider
+	err := s.repo.WithinTx(ctx, func(repo *Repository) error {
+		p, err := repo.GetByID(ctx, in.ID, in.EnvironmentID)
+		if err != nil {
+			return err
+		}
+		switch in.Action {
+		case ActionEnable:
+			result, err = s.enable(ctx, repo, p)
+		case ActionDisable:
+			result, err = s.disable(ctx, repo, p)
+		case ActionSetPrimary:
+			result, err = s.setPrimary(ctx, repo, p)
+		default:
+			return fmt.Errorf("unknown action: %s", in.Action)
+		}
+		return err
+	})
+	return result, err
+}
+
+func (s *Service) enable(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
+	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+		ID:            p.ID,
+		EnvironmentID: p.EnvironmentID,
+		IsActive:      true,
+		IsPrimary:     p.IsPrimary,
+	})
+}
+
+func (s *Service) disable(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
+	if p.IsPrimary {
+		// Try to promote another active provider to primary before disabling.
+		promoted, err := s.promotePrimary(ctx, repo, p)
+		if err != nil {
+			return db.Provider{}, errors.New("cannot disable primary provider: no fallback active provider available")
+		}
+		_ = promoted
+	}
+	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+		ID:            p.ID,
+		EnvironmentID: p.EnvironmentID,
+		IsActive:      false,
+		IsPrimary:     false,
+	})
+}
+
+func (s *Service) setPrimary(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
+	// Clear existing primary for this channel.
+	if err := repo.ClearPrimaryByChannel(ctx, p.EnvironmentID, p.Channel); err != nil {
+		return db.Provider{}, err
+	}
+	// Enable and mark as primary.
+	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+		ID:            p.ID,
+		EnvironmentID: p.EnvironmentID,
+		IsActive:      true,
+		IsPrimary:     true,
+	})
+}
+
+// promotePrimary finds another active non-primary provider in the same channel and sets it as primary.
+func (s *Service) promotePrimary(ctx context.Context, repo *Repository, exclude db.Provider) (db.Provider, error) {
+	providers, err := repo.ListByChannel(ctx, exclude.EnvironmentID, exclude.Channel)
+	if err != nil {
+		return db.Provider{}, err
+	}
+	for _, candidate := range providers {
+		if candidate.ID == exclude.ID || !candidate.IsActive {
+			continue
+		}
+		// Clear existing primary first, then promote.
+		if err := repo.ClearPrimaryByChannel(ctx, exclude.EnvironmentID, exclude.Channel); err != nil {
+			return db.Provider{}, err
+		}
+		return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+			ID:            candidate.ID,
+			EnvironmentID: candidate.EnvironmentID,
+			IsActive:      true,
+			IsPrimary:     true,
+		})
+	}
+	return db.Provider{}, errors.New("no eligible fallback provider")
 }

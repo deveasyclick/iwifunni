@@ -95,7 +95,7 @@ func (a *App) Router() http.Handler {
 		notification.NewHandler(notifSvc, a.producer).RegisterReadRoutes(r)
 
 		// Provider management (dashboard)
-		providerRepo := provider.NewRepository(a.queries)
+		providerRepo := provider.NewRepository(a.queries, a.dbPool)
 		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
 		provider.NewHandler(providerSvc).Register(r)
 
@@ -143,7 +143,7 @@ func (a *App) Router() http.Handler {
 		workflow.NewHandler(workflowSvc).RegisterAPIRoutes(r)
 
 		// Providers
-		providerRepo := provider.NewRepository(a.queries)
+		providerRepo := provider.NewRepository(a.queries, a.dbPool)
 		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
 		provider.NewHandler(providerSvc).Register(r)
 
