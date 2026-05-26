@@ -18,12 +18,27 @@ type WorkflowChannelPageProps = {
 const firstValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] || "" : value || "";
 
+const channelStepLabel = (channel: string): string => {
+  switch (channel.toLowerCase()) {
+    case "email":
+      return "Email step";
+    case "sms":
+      return "SMS step";
+    case "push":
+      return "Push step";
+    default:
+      return "Configure Channel";
+  }
+};
+
 const WorkflowChannelPage = async ({
   searchParams,
 }: WorkflowChannelPageProps) => {
   const params = await searchParams;
   const workflowId = workflowIdFromRecord(params);
   const nodeId = firstValue(params.nodeId);
+  const channel = firstValue(params.channel);
+  const stepLabel = channelStepLabel(channel);
   const breadcrumbItems = [
     {
       to: "/dashboard/workflows",
@@ -34,14 +49,14 @@ const WorkflowChannelPage = async ({
       title: "Workflow Builder",
     },
     {
-      to: buildWorkflowChannelConfigureHref(workflowId, nodeId),
-      title: "Configure Channel",
+      to: buildWorkflowChannelConfigureHref(workflowId, nodeId, channel),
+      title: stepLabel,
     },
   ];
 
   return (
     <>
-      <BreadcrumbComp title="Configure Channel" items={breadcrumbItems} />
+      <BreadcrumbComp title={stepLabel} items={breadcrumbItems} />
       <ConfigureWorkflowChannel workflowId={workflowId} nodeId={nodeId} />
     </>
   );

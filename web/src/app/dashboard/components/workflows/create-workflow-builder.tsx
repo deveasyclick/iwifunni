@@ -231,8 +231,10 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
               : currentWorkflow,
           )
         }
-        onConfigureNotificationNode={(nodeId: string) =>
-          router.push(buildWorkflowChannelConfigureHref(workflow.id, nodeId))
+        onConfigureNotificationNode={(nodeId: string, channel?: string) =>
+          router.push(
+            buildWorkflowChannelConfigureHref(workflow.id, nodeId, channel),
+          )
         }
       />
     </CardBox>

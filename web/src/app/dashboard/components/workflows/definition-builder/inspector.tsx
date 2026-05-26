@@ -47,7 +47,7 @@ type WorkflowDefinitionInspectorProps = {
   removeEdge: (edgeId: string) => void;
   workflowSetup?: WorkflowSetupSummary;
   autosaveState?: WorkflowAutosaveState;
-  onConfigureNotificationNode?: (nodeId: string) => void;
+  onConfigureNotificationNode?: (nodeId: string, channel?: string) => void;
   onWorkflowSetupChange?: (
     values: Partial<Pick<WorkflowSetupSummary, "name" | "description">>,
   ) => void;
@@ -272,7 +272,10 @@ export const WorkflowDefinitionInspector = ({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        onConfigureNotificationNode?.(selectedNode.id)
+                        onConfigureNotificationNode?.(
+                          selectedNode.data.draft.id,
+                          selectedNotificationChannel,
+                        )
                       }
                     >
                       Configure

@@ -460,6 +460,13 @@ export const validateWorkflowDefinitionDraft = (
           message: "Notification template ID must be a valid UUID.",
         });
       }
+      if (!templateID || templateID === zeroUUID) {
+        issues.push({
+          path: `${nodePath}.template_id`,
+          message:
+            "This notification step has no configured template. Open the channel editor to set it up.",
+        });
+      }
       if (
         channels.length !== 1 ||
         !notificationChannels.includes(channels[0] as WorkflowChannel)

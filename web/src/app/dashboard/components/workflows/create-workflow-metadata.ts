@@ -88,10 +88,14 @@ export const buildWorkflowSetupHref = (
 export const buildWorkflowChannelConfigureHref = (
   workflowId: string,
   nodeId: string,
+  channel?: string,
 ) => {
   const params = new URLSearchParams();
   params.set("workflowId", workflowId);
   params.set("nodeId", nodeId);
+  if (channel) {
+    params.set("channel", channel);
+  }
 
   return `/dashboard/workflows/new/builder/channel?${params.toString()}`;
 };

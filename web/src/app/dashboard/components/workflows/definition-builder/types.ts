@@ -51,7 +51,7 @@ export type WorkflowDefinitionBuilderProps = {
   issues: WorkflowDefinitionIssue[];
   workflowSetup?: WorkflowSetupSummary;
   autosaveState?: WorkflowAutosaveState;
-  onConfigureNotificationNode?: (nodeId: string) => void;
+  onConfigureNotificationNode?: (nodeId: string, channel?: string) => void;
   onWorkflowSetupChange?: (
     values: Partial<Pick<WorkflowSetupSummary, "name" | "description">>,
   ) => void;

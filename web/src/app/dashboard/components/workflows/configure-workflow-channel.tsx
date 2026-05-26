@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CardBox from "@/app/components/shared/CardBox";
 import { workflowApi } from "@/app/dashboard/components/workflows/api";
-import {
-  buildWorkflowBuilderHref,
-} from "@/app/dashboard/components/workflows/create-workflow-metadata";
+import { buildWorkflowBuilderHref } from "@/app/dashboard/components/workflows/create-workflow-metadata";
 import { zeroUUID } from "@/app/dashboard/components/workflows/definition-builder/constants";
 import type { CreateTemplatePayload, TemplateItem } from "@/app/types/template";
-import type { WorkflowChannel, WorkflowDefinition, WorkflowNode } from "@/app/types/workflow";
+import type {
+  WorkflowChannel,
+  WorkflowDefinition,
+  WorkflowNode,
+} from "@/app/types/workflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,8 +92,15 @@ const ConfigureWorkflowChannel = ({
 }: ConfigureWorkflowChannelProps) => {
   const router = useRouter();
   const emailEditorRef = useRef<UnlayerEmailEditorHandle>(null);
+  const templateIdRef = useRef<string>("");
+  const workflowRef = useRef<Awaited<ReturnType<typeof workflowApi.getWorkflow>> | null>(null);
+  const nodeRef = useRef<WorkflowNode | null>(null);
+  const channelRef = useRef<WorkflowChannel>("email");
+  const subjectRef = useRef<string>("");
+  const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<Awaited<
     ReturnType<typeof workflowApi.getWorkflow>
@@ -123,14 +132,16 @@ const ConfigureWorkflowChannel = ({
         }
 
         const definition = nextWorkflow.definition;
-        const nextNode = definition?.nodes.find((item) => item.id === nodeId) || null;
+        const nextNode =
+          definition?.nodes.find((item) => item.id === nodeId) || null;
         if (!nextNode || nextNode.type !== "notification") {
           throw new Error("Notification node not found");
         }
 
         const config = (nextNode.config || {}) as Record<string, unknown>;
         const nextChannel =
-          Array.isArray(config.channels) && typeof config.channels[0] === "string"
+          Array.isArray(config.channels) &&
+          typeof config.channels[0] === "string"
             ? (config.channels[0] as WorkflowChannel)
             : "email";
         const nextTemplateId =
@@ -140,6 +151,10 @@ const ConfigureWorkflowChannel = ({
         setNode(nextNode);
         setChannel(nextChannel);
         setTemplateId(nextTemplateId);
+        workflowRef.current = nextWorkflow;
+        nodeRef.current = nextNode;
+        channelRef.current = nextChannel;
+        templateIdRef.current = nextTemplateId;
 
         if (nextTemplateId && nextTemplateId !== zeroUUID) {
           const response = await fetch(`/api/templates/${nextTemplateId}`, {
@@ -164,7 +179,9 @@ const ConfigureWorkflowChannel = ({
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load channel editor",
+            err instanceof Error
+              ? err.message
+              : "Failed to load channel editor",
           );
         }
       } finally {
@@ -180,6 +197,91 @@ const ConfigureWorkflowChannel = ({
       cancelled = true;
     };
   }, [nodeId, workflowId]);
+
+  // Keep subject ref in sync for autosave
+  useEffect(() => {
+    subjectRef.current = subject;
+  }, [subject]);
+
+  const performAutosave = useCallback(async (encodedBody: string) => {
+    const currentWorkflow = workflowRef.current;
+    const currentNode = nodeRef.current;
+    const currentChannel = channelRef.current;
+    const currentSubject = subjectRef.current;
+    const currentTemplateId = templateIdRef.current;
+
+    if (!currentWorkflow || !currentNode) return;
+
+    setAutosaveStatus("saving");
+    try {
+      const templatePayload: CreateTemplatePayload = {
+        name: `${currentWorkflow.name} ${getNodeName(currentNode, nodeId)} ${currentChannel}`,
+        channel: currentChannel,
+        body: encodedBody,
+        subject: currentChannel === "sms" ? undefined : currentSubject.trim() || undefined,
+      };
+
+      let savedTemplateId = currentTemplateId;
+      if (currentTemplateId && currentTemplateId !== zeroUUID) {
+        const response = await fetch(`/api/templates/${currentTemplateId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            body: templatePayload.body,
+            subject: templatePayload.subject,
+          } satisfies TemplateUpdatePayload),
+        });
+        if (!response.ok) throw new Error(await parseError(response));
+        const updated = (await response.json()) as TemplateItem;
+        savedTemplateId = updated.id;
+      } else {
+        const response = await fetch("/api/templates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(templatePayload),
+        });
+        if (!response.ok) throw new Error(await parseError(response));
+        const created = (await response.json()) as TemplateItem;
+        savedTemplateId = created.id;
+        setTemplateId(savedTemplateId);
+        templateIdRef.current = savedTemplateId;
+
+        const currentDefinition = currentWorkflow.definition as WorkflowDefinition;
+        const nextDefinition: WorkflowDefinition = {
+          ...currentDefinition,
+          nodes: currentDefinition.nodes.map((definitionNode) =>
+            definitionNode.id !== currentNode.id
+              ? definitionNode
+              : {
+                  ...definitionNode,
+                  config: {
+                    ...(definitionNode.config || {}),
+                    template_id: savedTemplateId,
+                    channels: [currentChannel],
+                  },
+                },
+          ),
+        };
+        await workflowApi.updateWorkflow(currentWorkflow.id, {
+          key: currentWorkflow.key,
+          name: currentWorkflow.name,
+          description: currentWorkflow.description || undefined,
+          definition: nextDefinition,
+        });
+      }
+
+      setAutosaveStatus("saved");
+    } catch {
+      setAutosaveStatus("error");
+    }
+  }, [nodeId]);
+
+  const handleEncodedBodyChange = useCallback((encodedBody: string) => {
+    if (autosaveDebounceRef.current) clearTimeout(autosaveDebounceRef.current);
+    autosaveDebounceRef.current = setTimeout(() => {
+      void performAutosave(encodedBody);
+    }, 1500);
+  }, [performAutosave]);
 
   const labels = useMemo(() => channelConfigLabels[channel], [channel]);
   const previewSubject = subject.trim() || labels.subject;
@@ -276,7 +378,9 @@ const ConfigureWorkflowChannel = ({
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to save channel configuration",
+        err instanceof Error
+          ? err.message
+          : "Failed to save channel configuration",
       );
     } finally {
       setSaving(false);
@@ -286,7 +390,9 @@ const ConfigureWorkflowChannel = ({
   return (
     <CardBox className="p-6">
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading channel editor...</p>
+        <p className="text-sm text-muted-foreground">
+          Loading channel editor...
+        </p>
       ) : (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -298,8 +404,15 @@ const ConfigureWorkflowChannel = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {channel === "email" && autosaveStatus !== "idle" && (
+                <span className={`text-xs ${autosaveStatus === "saved" ? "text-muted-foreground" : autosaveStatus === "saving" ? "text-muted-foreground" : "text-destructive"}`}>
+                  {autosaveStatus === "saving" ? "Autosaving…" : autosaveStatus === "saved" ? "Autosaved" : "Autosave failed"}
+                </span>
+              )}
               <Button asChild variant="outline">
-                <Link href={buildWorkflowBuilderHref({ workflowId })}>Back to builder</Link>
+                <Link href={buildWorkflowBuilderHref({ workflowId })}>
+                  Back to builder
+                </Link>
               </Button>
               <Button
                 type="button"
@@ -317,7 +430,8 @@ const ConfigureWorkflowChannel = ({
               {workflow?.name || "Workflow draft"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Step: {getNodeName(node, nodeId)} · ID: {node?.id || nodeId} · Channel: {channel}
+              Step: {getNodeName(node, nodeId)} · ID: {node?.id || nodeId} ·
+              Channel: {channel}
             </p>
           </div>
 
@@ -339,20 +453,30 @@ const ConfigureWorkflowChannel = ({
               <div className="space-y-4">
                 {channel !== "sms" ? (
                   <div>
-                    <label className="mb-2 block text-sm font-medium" htmlFor="channel-subject">
+                    <label
+                      className="mb-2 block text-sm font-medium"
+                      htmlFor="channel-subject"
+                    >
                       {labels.subject}
                     </label>
                     <Input
                       id="channel-subject"
                       value={subject}
                       onChange={(event) => setSubject(event.target.value)}
-                      placeholder={channel === "push" ? "Push title" : "Welcome to Iwifunni"}
+                      placeholder={
+                        channel === "push"
+                          ? "Push title"
+                          : "Welcome to Iwifunni"
+                      }
                     />
                   </div>
                 ) : null}
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium" htmlFor="channel-body">
+                  <label
+                    className="mb-2 block text-sm font-medium"
+                    htmlFor="channel-body"
+                  >
                     {labels.body}
                   </label>
                   {channel === "email" ? (
@@ -360,6 +484,7 @@ const ConfigureWorkflowChannel = ({
                       ref={emailEditorRef}
                       initialValue={body}
                       onHtmlChange={setEmailPreviewHtml}
+                      onEncodedBodyChange={handleEncodedBodyChange}
                     />
                   ) : (
                     <Textarea
@@ -367,7 +492,11 @@ const ConfigureWorkflowChannel = ({
                       value={body}
                       onChange={(event) => setBody(event.target.value)}
                       className="min-h-72 font-mono text-sm"
-                      placeholder={channel === "sms" ? "Hi {{.name}}, your update is ready." : "Hello {{.name}}"}
+                      placeholder={
+                        channel === "sms"
+                          ? "Hi {{.name}}, your update is ready."
+                          : "Hello {{.name}}"
+                      }
                     />
                   )}
                 </div>
@@ -378,15 +507,20 @@ const ConfigureWorkflowChannel = ({
               <div className="mb-4">
                 <h6 className="font-medium text-foreground">Preview</h6>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Live preview of the content that will be used for this notification.
+                  Live preview of the content that will be used for this
+                  notification.
                 </p>
               </div>
 
               {channel === "email" ? (
                 <div className="rounded-2xl border border-border/50 bg-white text-slate-900 shadow-sm">
                   <div className="border-b border-slate-200 px-4 py-3">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Subject</p>
-                    <p className="mt-2 text-sm font-semibold">{previewSubject}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                      Subject
+                    </p>
+                    <p className="mt-2 text-sm font-semibold">
+                      {previewSubject}
+                    </p>
                   </div>
                   <div className="px-1 py-1">
                     {emailPreviewHtml ? (
@@ -419,7 +553,9 @@ const ConfigureWorkflowChannel = ({
                     <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                       Iwifunni notification
                     </p>
-                    <p className="mt-2 text-sm font-semibold text-foreground">{previewSubject}</p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {previewSubject}
+                    </p>
                     <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                       {previewBody}
                     </div>

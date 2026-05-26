@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Plus } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 // ─── Body encoding/decoding ────────────────────────────────────────────────
 
@@ -40,7 +41,9 @@ export const decodeEmailBody = (
   const html = body.slice(endIdx + DESIGN_SUFFIX.length).replace(/^\n/, "");
 
   try {
-    const design = JSON.parse(Buffer.from(b64, "base64").toString("utf-8")) as object;
+    const design = JSON.parse(
+      Buffer.from(b64, "base64").toString("utf-8"),
+    ) as object;
     return { design, html };
   } catch {
     return null;
@@ -77,7 +80,10 @@ const makeTextContent = (text: string) => ({
   values: {
     containerPadding: "10px",
     text: `<p>${text}</p>`,
-    _meta: { htmlID: `u_content_text_${uid()}`, htmlClassNames: "u_content_text" },
+    _meta: {
+      htmlID: `u_content_text_${uid()}`,
+      htmlClassNames: "u_content_text",
+    },
   },
 });
 
@@ -89,7 +95,10 @@ const makeHeadingContent = (text: string, tag: "h1" | "h2" | "h3" = "h2") => ({
     text,
     tag,
     fontSize: tag === "h1" ? "28px" : tag === "h2" ? "22px" : "18px",
-    _meta: { htmlID: `u_content_heading_${uid()}`, htmlClassNames: "u_content_heading" },
+    _meta: {
+      htmlID: `u_content_heading_${uid()}`,
+      htmlClassNames: "u_content_heading",
+    },
   },
 });
 
@@ -102,7 +111,10 @@ const makeImageContent = () => ({
     textAlign: "center",
     altText: "Image",
     fullWidth: false,
-    _meta: { htmlID: `u_content_image_${uid()}`, htmlClassNames: "u_content_image" },
+    _meta: {
+      htmlID: `u_content_image_${uid()}`,
+      htmlClassNames: "u_content_image",
+    },
   },
 });
 
@@ -116,7 +128,10 @@ const makeButtonContent = (label: string) => ({
     textAlign: "center",
     backgroundColor: "#3b82f6",
     buttonColors: { color: "#FFFFFF", backgroundColor: "#3b82f6" },
-    _meta: { htmlID: `u_content_button_${uid()}`, htmlClassNames: "u_content_button" },
+    _meta: {
+      htmlID: `u_content_button_${uid()}`,
+      htmlClassNames: "u_content_button",
+    },
   },
 });
 
@@ -126,8 +141,15 @@ const makeDividerContent = () => ({
   values: {
     containerPadding: "10px",
     width: "100%",
-    border: { borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "#e2e8f0" },
-    _meta: { htmlID: `u_content_divider_${uid()}`, htmlClassNames: "u_content_divider" },
+    border: {
+      borderTopWidth: "1px",
+      borderTopStyle: "solid",
+      borderTopColor: "#e2e8f0",
+    },
+    _meta: {
+      htmlID: `u_content_divider_${uid()}`,
+      htmlClassNames: "u_content_divider",
+    },
   },
 });
 
@@ -171,7 +193,10 @@ const BLOCK_DEFINITIONS: BlockDef[] = [
           values: {
             containerPadding: "0px 0px 0px 16px",
             text: '<p style="border-left:4px solid #e2e8f0;padding-left:12px;color:#64748b;font-style:italic;">Your quote text here.</p>',
-            _meta: { htmlID: `u_content_text_${uid()}`, htmlClassNames: "u_content_text" },
+            _meta: {
+              htmlID: `u_content_text_${uid()}`,
+              htmlClassNames: "u_content_text",
+            },
           },
         },
       ]),
@@ -197,7 +222,9 @@ const BLOCK_DEFINITIONS: BlockDef[] = [
     build: () =>
       makeRow([
         makeHeadingContent("Welcome!", "h1"),
-        makeTextContent("Thank you for joining us. Here&apos;s what&apos;s new."),
+        makeTextContent(
+          "Thank you for joining us. Here&apos;s what&apos;s new.",
+        ),
       ]),
   },
   {
@@ -231,19 +258,26 @@ export type UnlayerEmailEditorHandle = {
 type Props = {
   initialValue?: string;
   onHtmlChange?: (html: string) => void;
+  onEncodedBodyChange?: (encodedBody: string) => void;
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
 const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
-  ({ initialValue, onHtmlChange }, ref) => {
+  ({ initialValue, onHtmlChange, onEncodedBodyChange }, ref) => {
+    const { resolvedTheme } = useTheme();
     const editorRef = useRef<EditorRef>(null);
     const onHtmlChangeRef = useRef(onHtmlChange);
+    const onEncodedBodyChangeRef = useRef(onEncodedBodyChange);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
       onHtmlChangeRef.current = onHtmlChange;
     }, [onHtmlChange]);
+
+    useEffect(() => {
+      onEncodedBodyChangeRef.current = onEncodedBodyChange;
+    }, [onEncodedBodyChange]);
 
     useImperativeHandle(ref, () => ({
       getEncodedBody: () =>
@@ -266,15 +300,24 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
       if (initialValue) {
         const decoded = decodeEmailBody(initialValue);
         if (decoded) {
-          editor.loadDesign(decoded.design as Parameters<typeof editor.loadDesign>[0]);
+          editor.loadDesign(
+            decoded.design as Parameters<typeof editor.loadDesign>[0],
+          );
         }
+      } else {
+        editor.loadDesign({
+          body: {
+            rows: [makeRow([makeTextContent("Start typing your message here.")])],
+          },
+        } as Parameters<typeof editor.loadDesign>[0]);
       }
 
       editor.addEventListener("design:updated", () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          editor.exportHtml(({ html }) => {
+          editor.exportHtml(({ design, html }) => {
             onHtmlChangeRef.current?.(html);
+            onEncodedBodyChangeRef.current?.(encodeEmailBody(design as object, html));
           });
         }, 800);
       });
@@ -288,7 +331,10 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
         const d = design as { body?: { rows?: object[] } };
         const rows: object[] = d.body?.rows ?? [];
         const newRow = def.build();
-        const updated = { ...d, body: { ...(d.body ?? {}), rows: [...rows, newRow] } };
+        const updated = {
+          ...d,
+          body: { ...(d.body ?? {}), rows: [...rows, newRow] },
+        };
         editor.loadDesign(updated as Parameters<typeof editor.loadDesign>[0]);
       });
     }, []);
@@ -314,15 +360,19 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
               {groups.map((group, gi) => (
                 <div key={group}>
                   {gi > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuLabel className="text-xs">{group}</DropdownMenuLabel>
-                  {BLOCK_DEFINITIONS.filter((b) => b.group === group).map((def) => (
-                    <DropdownMenuItem
-                      key={def.label}
-                      onSelect={() => insertBlock(def)}
-                    >
-                      {def.label}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuLabel className="text-xs">
+                    {group}
+                  </DropdownMenuLabel>
+                  {BLOCK_DEFINITIONS.filter((b) => b.group === group).map(
+                    (def) => (
+                      <DropdownMenuItem
+                        key={def.label}
+                        onSelect={() => insertBlock(def)}
+                      >
+                        {def.label}
+                      </DropdownMenuItem>
+                    ),
+                  )}
                 </div>
               ))}
             </DropdownMenuContent>
@@ -338,6 +388,27 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
             options={{
               displayMode: "email",
               features: { stockImages: false },
+              appearance: {
+                theme: resolvedTheme === "dark" ? "dark" : "light",
+              },
+              mergeTags: {
+                subscriber: {
+                  name: "Subscriber",
+                  mergeTags: {
+                    firstName: { name: "First Name", value: "{{subscriber.firstName}}" },
+                    lastName: { name: "Last Name", value: "{{subscriber.lastName}}" },
+                    email: { name: "Email", value: "{{subscriber.email}}" },
+                    id: { name: "Subscriber ID", value: "{{subscriber.id}}" },
+                  },
+                },
+                workflow: {
+                  name: "Workflow",
+                  mergeTags: {
+                    name: { name: "Workflow Name", value: "{{workflow.name}}" },
+                    eventData: { name: "Event Data", value: "{{workflow.eventData}}" },
+                  },
+                },
+              },
             }}
           />
         </div>
