@@ -441,38 +441,16 @@ func newDemoEmailDefinition() catalog.Definition {
 }
 
 // newDemoSMSDefinition returns a catalog definition for the demo SMS provider.
-// No credentials are required — only the owner's phone number is stored in config.
+// No credentials or config are required — sends are logged and no real message
+// is delivered. The recipient's own phone number is used at runtime.
 func newDemoSMSDefinition() catalog.Definition {
 	return definition{
 		name:    "demo-sms",
 		channel: "sms",
-		normalize: func(credentials, config map[string]any, current *catalog.StoredInput) (catalog.NormalizedInput, error) {
-			ownerPhone, err := requiredString(config, "owner_phone")
-			if err != nil {
-				if current != nil && len(current.Config) > 0 {
-					return catalog.NormalizedInput{
-						Name:       "demo-sms",
-						Channel:    "sms",
-						ConfigJSON: current.Config,
-					}, nil
-				}
-				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-sms: owner_phone is required")
-			}
-			ownerPhone = strings.TrimSpace(ownerPhone)
-			if ownerPhone == "" {
-				return catalog.NormalizedInput{}, catalog.NewValidationError("demo-sms: owner_phone is required")
-			}
-
-			configJSON, err := json.Marshal(map[string]string{
-				"owner_phone": ownerPhone,
-			})
-			if err != nil {
-				return catalog.NormalizedInput{}, err
-			}
+		normalize: func(_, _ map[string]any, _ *catalog.StoredInput) (catalog.NormalizedInput, error) {
 			return catalog.NormalizedInput{
-				Name:       "demo-sms",
-				Channel:    "sms",
-				ConfigJSON: configJSON,
+				Name:    "demo-sms",
+				Channel: "sms",
 			}, nil
 		},
 	}

@@ -97,7 +97,7 @@ func (a *App) Router() http.Handler {
 		// Provider management (dashboard)
 		providerRepo := provider.NewRepository(a.queries, a.dbPool)
 		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
-		provider.NewHandler(providerSvc).Register(r)
+		provider.NewHandler(providerSvc, a.queries).Register(r)
 
 		// Template management (dashboard)
 		tplRepo := templates.NewRepository(a.queries)

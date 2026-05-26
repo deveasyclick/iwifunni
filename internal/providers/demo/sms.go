@@ -2,8 +2,6 @@ package demo
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
 	"github.com/deveasyclick/iwifunni/internal/types"
@@ -15,12 +13,9 @@ const (
 	SMSChannel = "sms"
 )
 
-type smsConfig struct {
-	OwnerPhone string `json:"owner_phone"`
-}
-
-// SMSRuntimeProvider intercepts SMS sends and redirects them to the
-// owner's phone number stored in the provider config.
+// SMSRuntimeProvider is a no-op SMS provider for demo/testing. It logs the
+// SMS that would be sent to the subscriber's own phone number and returns
+// success without making any real network calls.
 type SMSRuntimeProvider struct{}
 
 func NewSMSRuntimeProvider() SMSRuntimeProvider { return SMSRuntimeProvider{} }
@@ -28,27 +23,14 @@ func NewSMSRuntimeProvider() SMSRuntimeProvider { return SMSRuntimeProvider{} }
 func (SMSRuntimeProvider) Name() string    { return SMSName }
 func (SMSRuntimeProvider) Channel() string { return SMSChannel }
 
-func (SMSRuntimeProvider) Send(_ context.Context, job *types.NotificationJob, configJSON []byte) ([]catalog.DeliveryAttempt, error) {
-	var cfg smsConfig
-	if err := json.Unmarshal(configJSON, &cfg); err != nil {
-		err = fmt.Errorf("demo-sms: invalid config: %w", err)
-		return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber, Err: err}}, err
-	}
-
-	if cfg.OwnerPhone == "" {
-		err := fmt.Errorf("demo-sms: owner_phone is not configured")
-		return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber, Err: err}}, err
-	}
-
+func (SMSRuntimeProvider) Send(_ context.Context, job *types.NotificationJob, _ []byte) ([]catalog.DeliveryAttempt, error) {
 	content := job.ContentForChannel(SMSChannel)
-	originalRecipient := job.Recipient.PhoneNumber
 
 	logger.Get().Info().
 		Str("provider", SMSName).
-		Str("original_recipient", originalRecipient).
-		Str("redirected_to", cfg.OwnerPhone).
+		Str("recipient", job.Recipient.PhoneNumber).
 		Str("title", content.Title).
-		Msg("[DEMO] SMS notification captured — redirected to owner number")
+		Msg("[DEMO] SMS notification captured — no real message sent")
 
-	return []catalog.DeliveryAttempt{{Destination: cfg.OwnerPhone}}, nil
+	return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber}}, nil
 }

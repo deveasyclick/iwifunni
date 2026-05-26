@@ -40,6 +40,7 @@ func TestEmailRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
 	if len(attempts) != 1 {
 		t.Fatalf("len(attempts) = %d, want 1", len(attempts))
 	}
+	// Demo email always delivers to the owner's address, not the subscriber.
 	if attempts[0].Destination != "owner@example.com" {
 		t.Errorf("Destination = %q, want %q", attempts[0].Destination, "owner@example.com")
 	}
@@ -63,7 +64,7 @@ func TestEmailRuntimeProvider_Send_MissingOwnerEmail(t *testing.T) {
 	}
 }
 
-func TestSMSRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
+func TestSMSRuntimeProvider_Send_UsesSubscriberPhone(t *testing.T) {
 	p := demo.NewSMSRuntimeProvider()
 
 	if p.Name() != "demo-sms" {
@@ -72,10 +73,6 @@ func TestSMSRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
 	if p.Channel() != "sms" {
 		t.Fatalf("Channel() = %q, want %q", p.Channel(), "sms")
 	}
-
-	cfg, _ := json.Marshal(map[string]string{
-		"owner_phone": "+2348000000000",
-	})
 
 	job := &types.NotificationJob{
 		JobID:   "test-sms",
@@ -86,29 +83,37 @@ func TestSMSRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
 		},
 	}
 
-	attempts, err := p.Send(context.Background(), job, cfg)
+	// No config is required for demo-sms — pass nil.
+	attempts, err := p.Send(context.Background(), job, nil)
 	if err != nil {
 		t.Fatalf("Send() error = %v", err)
 	}
 	if len(attempts) != 1 {
 		t.Fatalf("len(attempts) = %d, want 1", len(attempts))
 	}
-	if attempts[0].Destination != "+2348000000000" {
-		t.Errorf("Destination = %q, want %q", attempts[0].Destination, "+2348000000000")
+	// Demo SMS logs and returns the subscriber's own phone number.
+	if attempts[0].Destination != "+2341111111111" {
+		t.Errorf("Destination = %q, want %q", attempts[0].Destination, "+2341111111111")
+	}
+	if attempts[0].Err != nil {
+		t.Errorf("attempt.Err = %v, want nil", attempts[0].Err)
 	}
 }
 
-func TestSMSRuntimeProvider_Send_MissingOwnerPhone(t *testing.T) {
+func TestSMSRuntimeProvider_Send_NoConfigRequired(t *testing.T) {
 	p := demo.NewSMSRuntimeProvider()
-	cfg, _ := json.Marshal(map[string]string{})
 
 	job := &types.NotificationJob{
 		JobID:     "test-sms",
 		Recipient: types.Recipient{PhoneNumber: "+2341111111111"},
 	}
 
-	_, err := p.Send(context.Background(), job, cfg)
-	if err == nil {
-		t.Fatal("expected error when owner_phone is empty, got nil")
+	// Passing empty config should still succeed.
+	attempts, err := p.Send(context.Background(), job, []byte(`{}`))
+	if err != nil {
+		t.Fatalf("Send() with empty config should not fail, got: %v", err)
+	}
+	if len(attempts) != 1 || attempts[0].Destination != "+2341111111111" {
+		t.Errorf("expected subscriber phone as destination")
 	}
 }

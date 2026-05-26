@@ -265,38 +265,18 @@ const SUPPORTED_PROVIDERS: ProviderDefinition[] = [
     label: "Demo Email",
     channel: "email",
     icon: "mdi:email-check-outline",
-    description: "Safe sandbox — redirects all emails to your own address for testing.",
+    description: "Safe sandbox — delivers emails to your own account address automatically.",
     credentials: [],
-    config: [
-      {
-        key: "sender_name",
-        label: "Your name",
-        placeholder: "Jane Doe",
-        location: "config",
-      },
-      {
-        key: "owner_email",
-        label: "Your email (test recipient)",
-        placeholder: "you@example.com",
-        location: "config",
-      },
-    ],
+    config: [],
   },
   {
     key: "demo-sms",
     label: "Demo SMS",
     channel: "sms",
     icon: "mdi:message-check-outline",
-    description: "Safe sandbox — redirects all SMS messages to your own number for testing.",
+    description: "Safe sandbox — logs SMS to the subscriber's own number without sending.",
     credentials: [],
-    config: [
-      {
-        key: "owner_phone",
-        label: "Your phone (test recipient)",
-        placeholder: "+234800000000",
-        location: "config",
-      },
-    ],
+    config: [],
   },
 ];
 

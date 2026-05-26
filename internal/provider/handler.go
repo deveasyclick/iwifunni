@@ -1,9 +1,11 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/db"
@@ -12,12 +14,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type Handler struct {
-	service *Service
+type userStore interface {
+	GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error)
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+type Handler struct {
+	service   *Service
+	userStore userStore
+}
+
+func NewHandler(service *Service, us userStore) *Handler {
+	return &Handler{service: service, userStore: us}
 }
 
 func (h *Handler) Register(r chi.Router) {
@@ -62,6 +69,31 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name and channel are required", http.StatusBadRequest)
 		return
 	}
+
+	// For the demo email provider, automatically inject the logged-in user's email
+	// address so no manual configuration is required.
+	if strings.EqualFold(req.Name, "demo-email") {
+		claims := auth.GetJWTClaims(r.Context())
+		if claims == nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		userID, parseErr := uuid.Parse(claims.UserID)
+		if parseErr != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		user, fetchErr := h.userStore.GetUserByID(r.Context(), userID)
+		if fetchErr != nil {
+			http.Error(w, "failed to resolve user email", http.StatusInternalServerError)
+			return
+		}
+		if req.Config == nil {
+			req.Config = make(map[string]any)
+		}
+		req.Config["owner_email"] = user.Email
+	}
+
 	p, err := h.service.Create(r.Context(), CreateInput{
 		EnvironmentID: environmentID,
 		Name:          req.Name,
