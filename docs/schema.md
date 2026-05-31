@@ -145,28 +145,79 @@ CREATE TABLE provider_health (
 
 ---
 
+# 👥 5. SUBSCRIBER MANAGEMENT (MULTI-CHANNEL SUBSCRIBERS)
+
+---
+
+## subscribers
+
+Manages subscribers with multi-channel subscription preferences for receiving notifications.
+
+```sql id="sub1"
+CREATE TABLE subscribers (
+    id UUID PRIMARY KEY,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+
+    name TEXT NOT NULL,
+
+    email TEXT,
+    phone TEXT,
+    push_token TEXT,
+
+    channels JSONB NOT NULL DEFAULT '[]',
+    -- Array of enabled channels: ["email", "sms", "push"]
+
+    status JSONB NOT NULL DEFAULT '{"email": "subscribed"}',
+    -- Per-channel status: { email, sms, push } = subscribed | unsubscribed | bounced
+
+    tags JSONB NOT NULL DEFAULT '[]',
+    -- Array of tags for segmentation: ["vip", "newsletter", "alerts"]
+
+    subscription_date TIMESTAMP NOT NULL DEFAULT now(),
+
+    last_notification_date TIMESTAMP,
+
+    metadata JSONB,
+
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+```
+
+---
+
+## indexes
+
+```sql id="sub2"
+CREATE INDEX idx_subscribers_project ON subscribers(project_id);
+CREATE INDEX idx_subscribers_email ON subscribers(project_id, email);
+CREATE INDEX idx_subscribers_phone ON subscribers(project_id, phone);
+CREATE INDEX idx_subscribers_channels ON subscribers USING GIN(channels);
+CREATE INDEX idx_subscribers_tags ON subscribers USING GIN(tags);
+```
+
+---
+
 # 🧠 5. NOTIFICATION CORE SYSTEM
 
 ---
 
 ## notifications
 
-This is your central table.
+This is your central table. One notification record per subscriber.
 
 ```sql id="notif1"
 CREATE TABLE notifications (
     id UUID PRIMARY KEY,
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 
-    channel TEXT NOT NULL, 
-    -- email | sms | push
+    subscriber_id UUID NOT NULL REFERENCES subscribers(id) ON DELETE CASCADE,
+
+    workflow_id UUID NOT NULL,
 
     template_id UUID,
 
-    recipient JSONB NOT NULL, 
-    -- { email, phone, device_token }
-
-    payload JSONB, -- variables used in template
+    data JSONB, -- runtime data used in template rendering
 
     status TEXT NOT NULL DEFAULT 'queued',
     -- queued | processing | sent | failed | delivered
@@ -174,8 +225,6 @@ CREATE TABLE notifications (
     provider_used TEXT,
 
     idempotency_key TEXT,
-
-    metadata JSONB,
 
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
@@ -308,7 +357,7 @@ CREATE TABLE webhook_deliveries (
 
 ---
 
-# 🚦 8. RATE LIMITING (OPTIONAL DB FALLBACK)
+# 🚦 9. RATE LIMITING (OPTIONAL DB FALLBACK)
 
 (You’ll likely use Redis, but DB fallback is useful)
 
@@ -324,29 +373,36 @@ CREATE TABLE rate_limits (
 
 ---
 
-# 🔁 9. IDENTITY FLOW (HOW EVERYTHING CONNECTS)
+# 🔁 10. IDENTITY FLOW (HOW EVERYTHING CONNECTS)
 
 ```text id="flow1"
 Organization
    ↓
 Project
-   ↓
-API Key → Auth layer
-   ↓
-Provider config (SendGrid / Twilio)
-   ↓
-Notification table
-   ↓
-Worker processing
-   ↓
-Provider registry execution
-   ↓
-Events + Webhooks
+    ├─ Subscribers (multi-channel targets)
+   │   ├─ Email, Phone, Push Token
+   │   ├─ Per-channel status (subscribed | unsubscribed | bounced)
+   │   └─ Tags (segmentation)
+   │
+   ├─ API Key → Auth layer
+   │   ↓
+   │   Provider config (SendGrid / Twilio / etc)
+   │   ↓
+   │   Notification table (references subscriber)
+   │   ↓
+   │   Worker processing
+   │   ↓
+   │   Provider registry execution (respects subscriber preferences)
+   │   ↓
+   │   Events + Webhooks
+   │
+   ├─ Templates (per channel)
+   └─ Webhooks
 ```
 
 ---
 
-# 🧠 10. DESIGN RULES (VERY IMPORTANT)
+# 🧠 11. DESIGN RULES (VERY IMPORTANT)
 
 ## 1. EVERYTHING is project-scoped
 
@@ -384,4 +440,15 @@ DB → registry → execution
 
 ```text id="rule5"
 never store raw key after creation
+```
+
+---
+
+## 6. Subscribers have multi-channel preferences
+
+```text id="rule6"
+Every subscriber has per-channel subscription status
+- Must check subscriber.status.{channel} before sending
+- Tags enable segmentation and targeting
+- Bounced/unsubscribed status must be respected
 ```

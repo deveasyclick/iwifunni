@@ -19,10 +19,9 @@
 Client → POST /notifications
 Headers: API_KEY
 Body:
-  - template_id OR notification_type
-  - recipient (email/phone/device_id)
-  - data (variables)
-  - channel (optional)
+  - workflow_id
+  - to (single subscriber target object with subscriber_id and optional contact fields)
+  - data
   - idempotency_key (optional but recommended)
 ```
 
@@ -34,8 +33,9 @@ Body:
 1. Authenticate API key
 2. Apply rate limiting (per API key)
 3. Validate request:
-   - template exists
-   - required variables present
+   - workflow exists
+   - target has subscriber_id
+   - required data fields present
 4. Check idempotency:
    - if key exists → return previous response
 5. Create notification record:
@@ -47,13 +47,12 @@ Body:
 ## 4. Channel Resolution Logic
 
 ```text
-IF channel is provided:
-    use that channel
-ELSE:
-    resolve using:
-        - user preferences (opt-in/out)
-        - notification type rules
-        - fallback order (push → email → SMS)
+Resolve channels from workflow configuration.
+
+For each resolved channel and subscriber target:
+  - check subscriber status (subscribed | unsubscribed | bounced)
+  - if unsubscribed or bounced: skip channel and log as SKIPPED
+  - if subscribed: continue delivery
 ```
 
 ---
@@ -62,12 +61,12 @@ ELSE:
 
 ```text
 1. Fetch template (latest or specified version)
-2. Inject variables:
+2. Inject data:
    "Hello {{name}}" → "Hello John"
 3. Validate rendered output
-4. Attach metadata:
-   - template_version
-   - channel
+4. Attach execution context:
+  - template_version
+  - resolved_channel
 ```
 
 ---
@@ -78,9 +77,10 @@ ELSE:
 Push message to queue:
 {
   notification_id,
-  channel,
+  subscriber_id,
+  workflow_id,
+  resolved_channel,
   rendered_content,
-  recipient,
   provider,
   retry_count = 0
 }
@@ -191,7 +191,7 @@ Track each attempt separately
 
 ```text
 Before sending:
-    check recipient preferences
+  check subscriber preferences
 
 IF opted out:
     skip channel

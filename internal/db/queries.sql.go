@@ -12,10 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearDefaultEnvironmentByOrganization = `-- name: ClearDefaultEnvironmentByOrganization :exec
+UPDATE environments
+SET is_default = false, updated_at = $2
+WHERE organization_id = $1 AND is_default = true
+`
+
+type ClearDefaultEnvironmentByOrganizationParams struct {
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ClearDefaultEnvironmentByOrganization(ctx context.Context, arg ClearDefaultEnvironmentByOrganizationParams) error {
+	_, err := q.db.Exec(ctx, clearDefaultEnvironmentByOrganization, arg.OrganizationID, arg.UpdatedAt)
+	return err
+}
+
 const createAPIKey = `-- name: CreateAPIKey :exec
 INSERT INTO api_keys (
 	id,
-	project_id,
+	environment_id,
 	name,
 	key_prefix,
 	key_hash,
@@ -29,23 +45,23 @@ INSERT INTO api_keys (
 `
 
 type CreateAPIKeyParams struct {
-	ID          uuid.UUID          `db:"id" json:"id"`
-	ProjectID   uuid.UUID          `db:"project_id" json:"project_id"`
-	Name        string             `db:"name" json:"name"`
-	KeyPrefix   string             `db:"key_prefix" json:"key_prefix"`
-	KeyHash     string             `db:"key_hash" json:"key_hash"`
-	Scopes      []byte             `db:"scopes" json:"scopes"`
-	Status      string             `db:"status" json:"status"`
-	ExpiresAt   pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
-	RotatedFrom pgtype.UUID        `db:"rotated_from" json:"rotated_from"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID            uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
+	Name          string             `db:"name" json:"name"`
+	KeyPrefix     string             `db:"key_prefix" json:"key_prefix"`
+	KeyHash       string             `db:"key_hash" json:"key_hash"`
+	Scopes        []byte             `db:"scopes" json:"scopes"`
+	Status        string             `db:"status" json:"status"`
+	ExpiresAt     pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	RotatedFrom   pgtype.UUID        `db:"rotated_from" json:"rotated_from"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error {
 	_, err := q.db.Exec(ctx, createAPIKey,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Name,
 		arg.KeyPrefix,
 		arg.KeyHash,
@@ -57,6 +73,113 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) erro
 		arg.UpdatedAt,
 	)
 	return err
+}
+
+const createAuthIdentity = `-- name: CreateAuthIdentity :exec
+INSERT INTO auth_identities (
+	id,
+	user_id,
+	provider,
+	provider_user_id,
+	email,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type CreateAuthIdentityParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	UserID         uuid.UUID          `db:"user_id" json:"user_id"`
+	Provider       string             `db:"provider" json:"provider"`
+	ProviderUserID string             `db:"provider_user_id" json:"provider_user_id"`
+	Email          string             `db:"email" json:"email"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateAuthIdentity(ctx context.Context, arg CreateAuthIdentityParams) error {
+	_, err := q.db.Exec(ctx, createAuthIdentity,
+		arg.ID,
+		arg.UserID,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.Email,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const createEnvironment = `-- name: CreateEnvironment :one
+INSERT INTO environments (id, organization_id, name, is_default, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, organization_id, created_at, updated_at, is_default
+`
+
+type CreateEnvironmentParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
+	row := q.db.QueryRow(ctx, createEnvironment,
+		arg.ID,
+		arg.OrganizationID,
+		arg.Name,
+		arg.IsDefault,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OrganizationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDefault,
+	)
+	return i, err
+}
+
+const createEnvironmentWithOrg = `-- name: CreateEnvironmentWithOrg :one
+INSERT INTO environments (id, organization_id, name, is_default, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, organization_id, created_at, updated_at, is_default
+`
+
+type CreateEnvironmentWithOrgParams struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) CreateEnvironmentWithOrg(ctx context.Context, arg CreateEnvironmentWithOrgParams) (Environment, error) {
+	row := q.db.QueryRow(ctx, createEnvironmentWithOrg,
+		arg.ID,
+		arg.OrganizationID,
+		arg.Name,
+		arg.IsDefault,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OrganizationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDefault,
+	)
+	return i, err
 }
 
 const createOrganization = `-- name: CreateOrganization :one
@@ -113,106 +236,25 @@ func (q *Queries) CreateOrganizationMember(ctx context.Context, arg CreateOrgani
 	return err
 }
 
-const createProject = `-- name: CreateProject :exec
-INSERT INTO projects (id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4)
-`
-
-type CreateProjectParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	Name      string             `db:"name" json:"name"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) error {
-	_, err := q.db.Exec(ctx, createProject,
-		arg.ID,
-		arg.Name,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const createProjectMembership = `-- name: CreateProjectMembership :exec
-INSERT INTO project_memberships (id, project_id, user_id, role, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
-`
-
-type CreateProjectMembershipParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
-	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
-	Role      string             `db:"role" json:"role"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) CreateProjectMembership(ctx context.Context, arg CreateProjectMembershipParams) error {
-	_, err := q.db.Exec(ctx, createProjectMembership,
-		arg.ID,
-		arg.ProjectID,
-		arg.UserID,
-		arg.Role,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const createProjectWithOrg = `-- name: CreateProjectWithOrg :one
-INSERT INTO projects (id, organization_id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, created_at, updated_at, organization_id
-`
-
-type CreateProjectWithOrgParams struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) CreateProjectWithOrg(ctx context.Context, arg CreateProjectWithOrgParams) (Project, error) {
-	row := q.db.QueryRow(ctx, createProjectWithOrg,
-		arg.ID,
-		arg.OrganizationID,
-		arg.Name,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	var i Project
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OrganizationID,
-	)
-	return i, err
-}
-
 const createProvider = `-- name: CreateProvider :one
-INSERT INTO providers (id, project_id, name, channel, credentials, config, is_active)
+INSERT INTO providers (id, environment_id, name, channel, credentials, config, is_active)
 VALUES ($1, $2, $3, $4, $5, $6, true)
-RETURNING id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+RETURNING id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
 `
 
 type CreateProviderParams struct {
-	ID          uuid.UUID `db:"id" json:"id"`
-	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
-	Name        string    `db:"name" json:"name"`
-	Channel     string    `db:"channel" json:"channel"`
-	Credentials []byte    `db:"credentials" json:"credentials"`
-	Config      []byte    `db:"config" json:"config"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Credentials   []byte    `db:"credentials" json:"credentials"`
+	Config        []byte    `db:"config" json:"config"`
 }
 
 func (q *Queries) CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error) {
 	row := q.db.QueryRow(ctx, createProvider,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Name,
 		arg.Channel,
 		arg.Credentials,
@@ -221,7 +263,7 @@ func (q *Queries) CreateProvider(ctx context.Context, arg CreateProviderParams) 
 	var i Provider
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Credentials,
@@ -259,25 +301,89 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return err
 }
 
+const createSubscriber = `-- name: CreateSubscriber :one
+INSERT INTO subscribers (
+	id,
+	environment_id,
+	name,
+	email,
+	phone,
+	push_token,
+	channels,
+	status,
+	tags,
+	metadata
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+`
+
+type CreateSubscriberParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Email         *string   `db:"email" json:"email"`
+	Phone         *string   `db:"phone" json:"phone"`
+	PushToken     *string   `db:"push_token" json:"push_token"`
+	Channels      []string  `db:"channels" json:"channels"`
+	Status        []byte    `db:"status" json:"status"`
+	Tags          []string  `db:"tags" json:"tags"`
+	Metadata      []byte    `db:"metadata" json:"metadata"`
+}
+
+func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, createSubscriber,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.PushToken,
+		arg.Channels,
+		arg.Status,
+		arg.Tags,
+		arg.Metadata,
+	)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createTemplate = `-- name: CreateTemplate :one
-INSERT INTO templates (id, project_id, name, channel, subject, body)
+INSERT INTO templates (id, environment_id, name, channel, subject, body)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at
+RETURNING id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at
 `
 
 type CreateTemplateParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	Name      string    `db:"name" json:"name"`
-	Channel   string    `db:"channel" json:"channel"`
-	Subject   *string   `db:"subject" json:"subject"`
-	Body      string    `db:"body" json:"body"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Subject       *string   `db:"subject" json:"subject"`
+	Body          string    `db:"body" json:"body"`
 }
 
 func (q *Queries) CreateTemplate(ctx context.Context, arg CreateTemplateParams) (Template, error) {
 	row := q.db.QueryRow(ctx, createTemplate,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Name,
 		arg.Channel,
 		arg.Subject,
@@ -286,7 +392,7 @@ func (q *Queries) CreateTemplate(ctx context.Context, arg CreateTemplateParams) 
 	var i Template
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Subject,
@@ -300,16 +406,29 @@ func (q *Queries) CreateTemplate(ctx context.Context, arg CreateTemplateParams) 
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (id, email, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users (
+	id,
+	email,
+	password_hash,
+	first_name,
+	last_name,
+	email_verified_at,
+	onboarding_completed_at,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID          `db:"id" json:"id"`
-	Email        string             `db:"email" json:"email"`
-	PasswordHash string             `db:"password_hash" json:"password_hash"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -317,6 +436,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.ID,
 		arg.Email,
 		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.EmailVerifiedAt,
+		arg.OnboardingCompletedAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -324,25 +447,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const createWebhook = `-- name: CreateWebhook :one
-INSERT INTO webhooks (id, project_id, url, secret, events, is_active, created_at, updated_at)
+INSERT INTO webhooks (id, environment_id, url, secret, events, is_active, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, true, $6, $7)
-RETURNING id, project_id, url, secret, events, is_active, created_at, updated_at
+RETURNING id, environment_id, url, secret, events, is_active, created_at, updated_at
 `
 
 type CreateWebhookParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ProjectID uuid.UUID          `db:"project_id" json:"project_id"`
-	Url       string             `db:"url" json:"url"`
-	Secret    string             `db:"secret" json:"secret"`
-	Events    []string           `db:"events" json:"events"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ID            uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
+	Url           string             `db:"url" json:"url"`
+	Secret        string             `db:"secret" json:"secret"`
+	Events        []string           `db:"events" json:"events"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error) {
 	row := q.db.QueryRow(ctx, createWebhook,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Url,
 		arg.Secret,
 		arg.Events,
@@ -352,7 +475,7 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 	var i Webhook
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Url,
 		&i.Secret,
 		&i.Events,
@@ -363,19 +486,277 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 	return i, err
 }
 
+const createWorkflow = `-- name: CreateWorkflow :one
+INSERT INTO workflows (
+	id,
+	environment_id,
+	key,
+	name,
+	description,
+	channels,
+	template_ids,
+	is_active
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type CreateWorkflowParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key           string    `db:"key" json:"key"`
+	Name          string    `db:"name" json:"name"`
+	Description   *string   `db:"description" json:"description"`
+	Channels      []string  `db:"channels" json:"channels"`
+	TemplateIds   []byte    `db:"template_ids" json:"template_ids"`
+}
+
+func (q *Queries) CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, createWorkflow,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowDefinition = `-- name: CreateWorkflowDefinition :one
+INSERT INTO workflows (
+	id,
+	environment_id,
+	key,
+	name,
+	description,
+	status,
+	version,
+	trigger_event,
+	definition_json,
+	is_active
+)
+VALUES (
+	$1,
+	$2,
+	$3,
+	$4,
+	$5,
+	$6,
+	$7,
+	$8,
+	$9,
+	CASE WHEN $6 = 'active' THEN true ELSE false END
+)
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type CreateWorkflowDefinitionParams struct {
+	ID             uuid.UUID `db:"id" json:"id"`
+	EnvironmentID  uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key            string    `db:"key" json:"key"`
+	Name           string    `db:"name" json:"name"`
+	Description    *string   `db:"description" json:"description"`
+	Status         string    `db:"status" json:"status"`
+	Version        int32     `db:"version" json:"version"`
+	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
+	DefinitionJson []byte    `db:"definition_json" json:"definition_json"`
+}
+
+func (q *Queries) CreateWorkflowDefinition(ctx context.Context, arg CreateWorkflowDefinitionParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, createWorkflowDefinition,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Status,
+		arg.Version,
+		arg.TriggerEvent,
+		arg.DefinitionJson,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowExecution = `-- name: CreateWorkflowExecution :one
+INSERT INTO workflow_executions (
+	id,
+	workflow_id,
+	environment_id,
+	subscriber_id,
+	status,
+	current_step_id,
+	trigger_payload
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type CreateWorkflowExecutionParams struct {
+	ID             uuid.UUID   `db:"id" json:"id"`
+	WorkflowID     uuid.UUID   `db:"workflow_id" json:"workflow_id"`
+	EnvironmentID  uuid.UUID   `db:"environment_id" json:"environment_id"`
+	SubscriberID   pgtype.UUID `db:"subscriber_id" json:"subscriber_id"`
+	Status         string      `db:"status" json:"status"`
+	CurrentStepID  *string     `db:"current_step_id" json:"current_step_id"`
+	TriggerPayload []byte      `db:"trigger_payload" json:"trigger_payload"`
+}
+
+func (q *Queries) CreateWorkflowExecution(ctx context.Context, arg CreateWorkflowExecutionParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, createWorkflowExecution,
+		arg.ID,
+		arg.WorkflowID,
+		arg.EnvironmentID,
+		arg.SubscriberID,
+		arg.Status,
+		arg.CurrentStepID,
+		arg.TriggerPayload,
+	)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWorkflowStepExecution = `-- name: CreateWorkflowStepExecution :one
+INSERT INTO workflow_step_executions (
+	id,
+	execution_id,
+	step_id,
+	step_type,
+	status,
+	attempts,
+	input_json,
+	output_json,
+	error_json,
+	started_at,
+	completed_at,
+	failed_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type CreateWorkflowStepExecutionParams struct {
+	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID uuid.UUID          `db:"execution_id" json:"execution_id"`
+	StepID      string             `db:"step_id" json:"step_id"`
+	StepType    string             `db:"step_type" json:"step_type"`
+	Status      string             `db:"status" json:"status"`
+	Attempts    int32              `db:"attempts" json:"attempts"`
+	InputJson   []byte             `db:"input_json" json:"input_json"`
+	OutputJson  []byte             `db:"output_json" json:"output_json"`
+	ErrorJson   []byte             `db:"error_json" json:"error_json"`
+	StartedAt   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt    pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) CreateWorkflowStepExecution(ctx context.Context, arg CreateWorkflowStepExecutionParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, createWorkflowStepExecution,
+		arg.ID,
+		arg.ExecutionID,
+		arg.StepID,
+		arg.StepType,
+		arg.Status,
+		arg.Attempts,
+		arg.InputJson,
+		arg.OutputJson,
+		arg.ErrorJson,
+		arg.StartedAt,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteEmailVerificationByUserID = `-- name: DeleteEmailVerificationByUserID :exec
+DELETE FROM email_verifications
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteEmailVerificationByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEmailVerificationByUserID, userID)
+	return err
+}
+
 const deleteProvider = `-- name: DeleteProvider :exec
 UPDATE providers
 SET is_active = false, updated_at = now()
-WHERE id = $1 AND project_id = $2
+WHERE id = $1 AND environment_id = $2
 `
 
 type DeleteProviderParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) DeleteProvider(ctx context.Context, arg DeleteProviderParams) error {
-	_, err := q.db.Exec(ctx, deleteProvider, arg.ID, arg.ProjectID)
+	_, err := q.db.Exec(ctx, deleteProvider, arg.ID, arg.EnvironmentID)
 	return err
 }
 
@@ -389,40 +770,74 @@ func (q *Queries) DeleteRefreshTokenByHash(ctx context.Context, tokenHash string
 	return err
 }
 
+const deleteSubscriber = `-- name: DeleteSubscriber :exec
+UPDATE subscribers
+SET deleted_at = now(), updated_at = now()
+WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
+`
+
+type DeleteSubscriberParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) DeleteSubscriber(ctx context.Context, arg DeleteSubscriberParams) error {
+	_, err := q.db.Exec(ctx, deleteSubscriber, arg.ID, arg.EnvironmentID)
+	return err
+}
+
 const deleteTemplate = `-- name: DeleteTemplate :exec
 UPDATE templates
 SET is_active = false, updated_at = now()
-WHERE id = $1 AND project_id = $2
+WHERE id = $1 AND environment_id = $2
 `
 
 type DeleteTemplateParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) DeleteTemplate(ctx context.Context, arg DeleteTemplateParams) error {
-	_, err := q.db.Exec(ctx, deleteTemplate, arg.ID, arg.ProjectID)
+	_, err := q.db.Exec(ctx, deleteTemplate, arg.ID, arg.EnvironmentID)
 	return err
 }
 
 const deleteWebhook = `-- name: DeleteWebhook :exec
 UPDATE webhooks
 SET is_active = false, updated_at = now()
-WHERE id = $1 AND project_id = $2
+WHERE id = $1 AND environment_id = $2
 `
 
 type DeleteWebhookParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) DeleteWebhook(ctx context.Context, arg DeleteWebhookParams) error {
-	_, err := q.db.Exec(ctx, deleteWebhook, arg.ID, arg.ProjectID)
+	_, err := q.db.Exec(ctx, deleteWebhook, arg.ID, arg.EnvironmentID)
+	return err
+}
+
+const deleteWorkflow = `-- name: DeleteWorkflow :exec
+UPDATE workflows
+SET is_active = false,
+	status = 'archived',
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+`
+
+type DeleteWorkflowParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) DeleteWorkflow(ctx context.Context, arg DeleteWorkflowParams) error {
+	_, err := q.db.Exec(ctx, deleteWorkflow, arg.ID, arg.EnvironmentID)
 	return err
 }
 
 const getAPIKeyByPrefix = `-- name: GetAPIKeyByPrefix :one
-SELECT id, project_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
+SELECT id, environment_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
 FROM api_keys
 WHERE key_prefix = $1
 `
@@ -432,7 +847,7 @@ func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (ApiK
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.KeyPrefix,
 		&i.KeyHash,
@@ -448,24 +863,24 @@ func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (ApiK
 	return i, err
 }
 
-const getActiveProjectProviderByChannel = `-- name: GetActiveProjectProviderByChannel :one
-SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+const getActiveEnvironmentProviderByChannel = `-- name: GetActiveEnvironmentProviderByChannel :one
+SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
 FROM providers
-WHERE project_id = $1 AND channel = $2 AND is_active = true
+WHERE environment_id = $1 AND channel = $2 AND is_active = true
 LIMIT 1
 `
 
-type GetActiveProjectProviderByChannelParams struct {
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	Channel   string    `db:"channel" json:"channel"`
+type GetActiveEnvironmentProviderByChannelParams struct {
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Channel       string    `db:"channel" json:"channel"`
 }
 
-func (q *Queries) GetActiveProjectProviderByChannel(ctx context.Context, arg GetActiveProjectProviderByChannelParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, getActiveProjectProviderByChannel, arg.ProjectID, arg.Channel)
+func (q *Queries) GetActiveEnvironmentProviderByChannel(ctx context.Context, arg GetActiveEnvironmentProviderByChannelParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, getActiveEnvironmentProviderByChannel, arg.EnvironmentID, arg.Channel)
 	var i Provider
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Credentials,
@@ -477,22 +892,311 @@ func (q *Queries) GetActiveProjectProviderByChannel(ctx context.Context, arg Get
 	return i, err
 }
 
-const getFirstProjectMembershipByUser = `-- name: GetFirstProjectMembershipByUser :one
-SELECT id, project_id, user_id, role, created_at, updated_at
-FROM project_memberships
+const getActiveWorkflowsByTriggerEvent = `-- name: GetActiveWorkflowsByTriggerEvent :many
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE environment_id = $1
+	AND trigger_event = $2
+	AND status = 'active'
+ORDER BY updated_at DESC
+`
+
+type GetActiveWorkflowsByTriggerEventParams struct {
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	TriggerEvent  *string   `db:"trigger_event" json:"trigger_event"`
+}
+
+func (q *Queries) GetActiveWorkflowsByTriggerEvent(ctx context.Context, arg GetActiveWorkflowsByTriggerEventParams) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, getActiveWorkflowsByTriggerEvent, arg.EnvironmentID, arg.TriggerEvent)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
+			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuthIdentityByProviderUserID = `-- name: GetAuthIdentityByProviderUserID :one
+SELECT id, user_id, provider, provider_user_id, email, created_at, updated_at
+FROM auth_identities
+WHERE provider = $1 AND provider_user_id = $2
+`
+
+type GetAuthIdentityByProviderUserIDParams struct {
+	Provider       string `db:"provider" json:"provider"`
+	ProviderUserID string `db:"provider_user_id" json:"provider_user_id"`
+}
+
+func (q *Queries) GetAuthIdentityByProviderUserID(ctx context.Context, arg GetAuthIdentityByProviderUserIDParams) (AuthIdentity, error) {
+	row := q.db.QueryRow(ctx, getAuthIdentityByProviderUserID, arg.Provider, arg.ProviderUserID)
+	var i AuthIdentity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getDefaultEnvironmentByOrganization = `-- name: GetDefaultEnvironmentByOrganization :one
+SELECT id, organization_id, name, is_default, created_at, updated_at
+FROM environments
+WHERE organization_id = $1 AND is_default = true
+LIMIT 1
+`
+
+type GetDefaultEnvironmentByOrganizationRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetDefaultEnvironmentByOrganization(ctx context.Context, organizationID uuid.UUID) (GetDefaultEnvironmentByOrganizationRow, error) {
+	row := q.db.QueryRow(ctx, getDefaultEnvironmentByOrganization, organizationID)
+	var i GetDefaultEnvironmentByOrganizationRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.IsDefault,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEmailVerificationByUserID = `-- name: GetEmailVerificationByUserID :one
+SELECT user_id, code_hash, expires_at, consumed_at, created_at, updated_at
+FROM email_verifications
+WHERE user_id = $1
+`
+
+func (q *Queries) GetEmailVerificationByUserID(ctx context.Context, userID uuid.UUID) (EmailVerification, error) {
+	row := q.db.QueryRow(ctx, getEmailVerificationByUserID, userID)
+	var i EmailVerification
+	err := row.Scan(
+		&i.UserID,
+		&i.CodeHash,
+		&i.ExpiresAt,
+		&i.ConsumedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEnvironment = `-- name: GetEnvironment :one
+SELECT id, organization_id, name, is_default, created_at, updated_at
+FROM environments
+WHERE id = $1
+`
+
+type GetEnvironmentRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetEnvironment(ctx context.Context, id uuid.UUID) (GetEnvironmentRow, error) {
+	row := q.db.QueryRow(ctx, getEnvironment, id)
+	var i GetEnvironmentRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.IsDefault,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEnvironmentByID = `-- name: GetEnvironmentByID :one
+SELECT id, organization_id, name, is_default, created_at, updated_at
+FROM environments
+WHERE id = $1
+`
+
+type GetEnvironmentByIDRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetEnvironmentByID(ctx context.Context, id uuid.UUID) (GetEnvironmentByIDRow, error) {
+	row := q.db.QueryRow(ctx, getEnvironmentByID, id)
+	var i GetEnvironmentByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.IsDefault,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEnvironmentNotificationByID = `-- name: GetEnvironmentNotificationByID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+FROM notifications
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetEnvironmentNotificationByIDParams struct {
+	ID            uuid.UUID   `db:"id" json:"id"`
+	EnvironmentID pgtype.UUID `db:"environment_id" json:"environment_id"`
+}
+
+type GetEnvironmentNotificationByIDRow struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetEnvironmentNotificationByID(ctx context.Context, arg GetEnvironmentNotificationByIDParams) (GetEnvironmentNotificationByIDRow, error) {
+	row := q.db.QueryRow(ctx, getEnvironmentNotificationByID, arg.ID, arg.EnvironmentID)
+	var i GetEnvironmentNotificationByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.EnvironmentID,
+		&i.JobID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFirstOrganizationByUser = `-- name: GetFirstOrganizationByUser :one
+SELECT o.id, o.name, o.created_at, o.updated_at
+FROM organizations o
+JOIN organization_members om ON om.organization_id = o.id
+WHERE om.user_id = $1
+ORDER BY o.created_at ASC
+LIMIT 1
+`
+
+func (q *Queries) GetFirstOrganizationByUser(ctx context.Context, userID uuid.UUID) (Organization, error) {
+	row := q.db.QueryRow(ctx, getFirstOrganizationByUser, userID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFirstOrganizationMembershipByUser = `-- name: GetFirstOrganizationMembershipByUser :one
+SELECT id, organization_id, user_id, role, created_at
+FROM organization_members
 WHERE user_id = $1
 ORDER BY created_at ASC
 LIMIT 1
 `
 
-func (q *Queries) GetFirstProjectMembershipByUser(ctx context.Context, userID uuid.UUID) (ProjectMembership, error) {
-	row := q.db.QueryRow(ctx, getFirstProjectMembershipByUser, userID)
-	var i ProjectMembership
+func (q *Queries) GetFirstOrganizationMembershipByUser(ctx context.Context, userID uuid.UUID) (OrganizationMember, error) {
+	row := q.db.QueryRow(ctx, getFirstOrganizationMembershipByUser, userID)
+	var i OrganizationMember
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.OrganizationID,
 		&i.UserID,
 		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getNotificationByJobID = `-- name: GetNotificationByJobID :one
+SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+FROM notifications
+WHERE job_id = $1
+`
+
+type GetNotificationByJobIDRow struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetNotificationByJobID(ctx context.Context, jobID *string) (GetNotificationByJobIDRow, error) {
+	row := q.db.QueryRow(ctx, getNotificationByJobID, jobID)
+	var i GetNotificationByJobIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.EnvironmentID,
+		&i.JobID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -541,100 +1245,47 @@ func (q *Queries) GetOrganizationMember(ctx context.Context, arg GetOrganization
 	return i, err
 }
 
-const getProject = `-- name: GetProject :one
-SELECT id, name, created_at, updated_at
-FROM projects
-WHERE id = $1
+const getOrganizationMembershipByUser = `-- name: GetOrganizationMembershipByUser :one
+SELECT id, organization_id, user_id, role, created_at
+FROM organization_members
+WHERE organization_id = $1 AND user_id = $2
 `
 
-type GetProjectRow struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	Name      string             `db:"name" json:"name"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+type GetOrganizationMembershipByUserParams struct {
+	OrganizationID uuid.UUID `db:"organization_id" json:"organization_id"`
+	UserID         uuid.UUID `db:"user_id" json:"user_id"`
 }
 
-func (q *Queries) GetProject(ctx context.Context, id uuid.UUID) (GetProjectRow, error) {
-	row := q.db.QueryRow(ctx, getProject, id)
-	var i GetProjectRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, organization_id, name, created_at, updated_at
-FROM projects
-WHERE id = $1
-`
-
-type GetProjectByIDRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error) {
-	row := q.db.QueryRow(ctx, getProjectByID, id)
-	var i GetProjectByIDRow
+func (q *Queries) GetOrganizationMembershipByUser(ctx context.Context, arg GetOrganizationMembershipByUserParams) (OrganizationMember, error) {
+	row := q.db.QueryRow(ctx, getOrganizationMembershipByUser, arg.OrganizationID, arg.UserID)
+	var i OrganizationMember
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getProjectMembershipByUser = `-- name: GetProjectMembershipByUser :one
-SELECT id, project_id, user_id, role, created_at, updated_at
-FROM project_memberships
-WHERE project_id = $1 AND user_id = $2
-`
-
-type GetProjectMembershipByUserParams struct {
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	UserID    uuid.UUID `db:"user_id" json:"user_id"`
-}
-
-func (q *Queries) GetProjectMembershipByUser(ctx context.Context, arg GetProjectMembershipByUserParams) (ProjectMembership, error) {
-	row := q.db.QueryRow(ctx, getProjectMembershipByUser, arg.ProjectID, arg.UserID)
-	var i ProjectMembership
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getProviderByID = `-- name: GetProviderByID :one
-SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
 FROM providers
-WHERE id = $1 AND project_id = $2
+WHERE id = $1 AND environment_id = $2
 `
 
 type GetProviderByIDParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) GetProviderByID(ctx context.Context, arg GetProviderByIDParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, getProviderByID, arg.ID, arg.ProjectID)
+	row := q.db.QueryRow(ctx, getProviderByID, arg.ID, arg.EnvironmentID)
 	var i Provider
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Credentials,
@@ -712,22 +1363,55 @@ func (q *Queries) GetServiceChannelConfig(ctx context.Context, arg GetServiceCha
 	return i, err
 }
 
+const getSubscriberByID = `-- name: GetSubscriberByID :one
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
+`
+
+type GetSubscriberByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, getSubscriberByID, arg.ID, arg.EnvironmentID)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTemplateByID = `-- name: GetTemplateByID :one
-SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
-WHERE id = $1 AND project_id = $2
+SELECT id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE id = $1 AND environment_id = $2
 `
 
 type GetTemplateByIDParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) GetTemplateByID(ctx context.Context, arg GetTemplateByIDParams) (Template, error) {
-	row := q.db.QueryRow(ctx, getTemplateByID, arg.ID, arg.ProjectID)
+	row := q.db.QueryRow(ctx, getTemplateByID, arg.ID, arg.EnvironmentID)
 	var i Template
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Subject,
@@ -741,24 +1425,24 @@ func (q *Queries) GetTemplateByID(ctx context.Context, arg GetTemplateByIDParams
 }
 
 const getTemplateByName = `-- name: GetTemplateByName :one
-SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
-WHERE project_id = $1 AND name = $2 AND channel = $3 AND is_active = true
+SELECT id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE environment_id = $1 AND name = $2 AND channel = $3 AND is_active = true
 ORDER BY version DESC
 LIMIT 1
 `
 
 type GetTemplateByNameParams struct {
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	Name      string    `db:"name" json:"name"`
-	Channel   string    `db:"channel" json:"channel"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
 }
 
 func (q *Queries) GetTemplateByName(ctx context.Context, arg GetTemplateByNameParams) (Template, error) {
-	row := q.db.QueryRow(ctx, getTemplateByName, arg.ProjectID, arg.Name, arg.Channel)
+	row := q.db.QueryRow(ctx, getTemplateByName, arg.EnvironmentID, arg.Name, arg.Channel)
 	var i Template
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Subject,
@@ -772,18 +1456,69 @@ func (q *Queries) GetTemplateByName(ctx context.Context, arg GetTemplateByNamePa
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, created_at, updated_at
+SELECT id, email, password_hash, first_name, last_name, email_verified_at, onboarding_completed_at, created_at, updated_at
 FROM users
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.EmailVerifiedAt,
+		&i.OnboardingCompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, password_hash, first_name, last_name, email_verified_at, onboarding_completed_at, created_at, updated_at
+FROM users
+WHERE id = $1
+`
+
+type GetUserByIDRow struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	Email                 string             `db:"email" json:"email"`
+	PasswordHash          string             `db:"password_hash" json:"password_hash"`
+	FirstName             string             `db:"first_name" json:"first_name"`
+	LastName              string             `db:"last_name" json:"last_name"`
+	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i GetUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.EmailVerifiedAt,
+		&i.OnboardingCompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -791,26 +1526,152 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getWebhookByID = `-- name: GetWebhookByID :one
-SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+SELECT id, environment_id, url, secret, events, is_active, created_at, updated_at
 FROM webhooks
-WHERE id = $1 AND project_id = $2
+WHERE id = $1 AND environment_id = $2
 `
 
 type GetWebhookByIDParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
 func (q *Queries) GetWebhookByID(ctx context.Context, arg GetWebhookByIDParams) (Webhook, error) {
-	row := q.db.QueryRow(ctx, getWebhookByID, arg.ID, arg.ProjectID)
+	row := q.db.QueryRow(ctx, getWebhookByID, arg.ID, arg.EnvironmentID)
 	var i Webhook
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Url,
 		&i.Secret,
 		&i.Events,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowByID = `-- name: GetWorkflowByID :one
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetWorkflowByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetWorkflowByID(ctx context.Context, arg GetWorkflowByIDParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, getWorkflowByID, arg.ID, arg.EnvironmentID)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowDefinitionByID = `-- name: GetWorkflowDefinitionByID :one
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetWorkflowDefinitionByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetWorkflowDefinitionByID(ctx context.Context, arg GetWorkflowDefinitionByIDParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, getWorkflowDefinitionByID, arg.ID, arg.EnvironmentID)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowExecutionByID = `-- name: GetWorkflowExecutionByID :one
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetWorkflowExecutionByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetWorkflowExecutionByID(ctx context.Context, arg GetWorkflowExecutionByIDParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, getWorkflowExecutionByID, arg.ID, arg.EnvironmentID)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWorkflowStepExecution = `-- name: GetWorkflowStepExecution :one
+SELECT id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_step_executions
+WHERE execution_id = $1 AND step_id = $2
+`
+
+type GetWorkflowStepExecutionParams struct {
+	ExecutionID uuid.UUID `db:"execution_id" json:"execution_id"`
+	StepID      string    `db:"step_id" json:"step_id"`
+}
+
+func (q *Queries) GetWorkflowStepExecution(ctx context.Context, arg GetWorkflowStepExecutionParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, getWorkflowStepExecution, arg.ExecutionID, arg.StepID)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -843,74 +1704,6 @@ func (q *Queries) InsertDeliveryAttempt(ctx context.Context, arg InsertDeliveryA
 		arg.ErrorMessage,
 		arg.ProviderMessageID,
 		arg.AttemptedAt,
-	)
-	return err
-}
-
-const insertNotification = `-- name: InsertNotification :exec
-INSERT INTO notifications (id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-`
-
-type InsertNotificationParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Channels  []string           `db:"channels" json:"channels"`
-	Recipient []byte             `db:"recipient" json:"recipient"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	Status    string             `db:"status" json:"status"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
-	_, err := q.db.Exec(ctx, insertNotification,
-		arg.ID,
-		arg.ServiceID,
-		arg.Title,
-		arg.Message,
-		arg.Channels,
-		arg.Recipient,
-		arg.Metadata,
-		arg.Status,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const insertNotificationByProject = `-- name: InsertNotificationByProject :exec
-INSERT INTO notifications (id, project_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-`
-
-type InsertNotificationByProjectParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	ProjectID pgtype.UUID        `db:"project_id" json:"project_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Channels  []string           `db:"channels" json:"channels"`
-	Recipient []byte             `db:"recipient" json:"recipient"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	Status    string             `db:"status" json:"status"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) InsertNotificationByProject(ctx context.Context, arg InsertNotificationByProjectParams) error {
-	_, err := q.db.Exec(ctx, insertNotificationByProject,
-		arg.ID,
-		arg.ProjectID,
-		arg.Title,
-		arg.Message,
-		arg.Channels,
-		arg.Recipient,
-		arg.Metadata,
-		arg.Status,
-		arg.CreatedAt,
-		arg.UpdatedAt,
 	)
 	return err
 }
@@ -967,15 +1760,15 @@ func (q *Queries) InsertWebhookDelivery(ctx context.Context, arg InsertWebhookDe
 	return err
 }
 
-const listAPIKeysByProject = `-- name: ListAPIKeysByProject :many
-SELECT id, project_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
+const listAPIKeysByEnvironment = `-- name: ListAPIKeysByEnvironment :many
+SELECT id, environment_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
 FROM api_keys
-WHERE project_id = $1
+WHERE environment_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListAPIKeysByProject(ctx context.Context, projectID uuid.UUID) ([]ApiKey, error) {
-	rows, err := q.db.Query(ctx, listAPIKeysByProject, projectID)
+func (q *Queries) ListAPIKeysByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]ApiKey, error) {
+	rows, err := q.db.Query(ctx, listAPIKeysByEnvironment, environmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -985,7 +1778,7 @@ func (q *Queries) ListAPIKeysByProject(ctx context.Context, projectID uuid.UUID)
 		var i ApiKey
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
+			&i.EnvironmentID,
 			&i.Name,
 			&i.KeyPrefix,
 			&i.KeyHash,
@@ -1009,18 +1802,18 @@ func (q *Queries) ListAPIKeysByProject(ctx context.Context, projectID uuid.UUID)
 }
 
 const listActiveWebhooksForEvent = `-- name: ListActiveWebhooksForEvent :many
-SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+SELECT id, environment_id, url, secret, events, is_active, created_at, updated_at
 FROM webhooks
-WHERE project_id = $1 AND is_active = true AND $2 = ANY(events)
+WHERE environment_id = $1 AND is_active = true AND $2 = ANY(events)
 `
 
 type ListActiveWebhooksForEventParams struct {
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	Events    []string  `db:"events" json:"events"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Events        []string  `db:"events" json:"events"`
 }
 
 func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActiveWebhooksForEventParams) ([]Webhook, error) {
-	rows, err := q.db.Query(ctx, listActiveWebhooksForEvent, arg.ProjectID, arg.Events)
+	rows, err := q.db.Query(ctx, listActiveWebhooksForEvent, arg.EnvironmentID, arg.Events)
 	if err != nil {
 		return nil, err
 	}
@@ -1030,11 +1823,109 @@ func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActive
 		var i Webhook
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
+			&i.EnvironmentID,
 			&i.Url,
 			&i.Secret,
 			&i.Events,
 			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEnvironmentNotifications = `-- name: ListEnvironmentNotifications :many
+SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+FROM notifications
+WHERE environment_id = $1
+ORDER BY created_at DESC
+`
+
+type ListEnvironmentNotificationsRow struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ListEnvironmentNotifications(ctx context.Context, environmentID pgtype.UUID) ([]ListEnvironmentNotificationsRow, error) {
+	rows, err := q.db.Query(ctx, listEnvironmentNotifications, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListEnvironmentNotificationsRow{}
+	for rows.Next() {
+		var i ListEnvironmentNotificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ServiceID,
+			&i.Title,
+			&i.Message,
+			&i.Channels,
+			&i.Recipient,
+			&i.Metadata,
+			&i.Status,
+			&i.EnvironmentID,
+			&i.JobID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEnvironmentsByOrganization = `-- name: ListEnvironmentsByOrganization :many
+SELECT id, organization_id, name, is_default, created_at, updated_at
+FROM environments
+WHERE organization_id = $1
+ORDER BY created_at ASC
+`
+
+type ListEnvironmentsByOrganizationRow struct {
+	ID             uuid.UUID          `db:"id" json:"id"`
+	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ListEnvironmentsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]ListEnvironmentsByOrganizationRow, error) {
+	rows, err := q.db.Query(ctx, listEnvironmentsByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListEnvironmentsByOrganizationRow{}
+	for rows.Next() {
+		var i ListEnvironmentsByOrganizationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.IsDefault,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1081,56 +1972,15 @@ func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID)
 	return items, nil
 }
 
-const listProjectsByOrganization = `-- name: ListProjectsByOrganization :many
-SELECT id, organization_id, name, created_at, updated_at
-FROM projects
-WHERE organization_id = $1
-ORDER BY created_at ASC
-`
-
-type ListProjectsByOrganizationRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID pgtype.UUID        `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) ListProjectsByOrganization(ctx context.Context, organizationID pgtype.UUID) ([]ListProjectsByOrganizationRow, error) {
-	rows, err := q.db.Query(ctx, listProjectsByOrganization, organizationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProjectsByOrganizationRow{}
-	for rows.Next() {
-		var i ListProjectsByOrganizationRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.Name,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listProviders = `-- name: ListProviders :many
-SELECT id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+SELECT id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
 FROM providers
-WHERE project_id = $1 AND is_active = true
+WHERE environment_id = $1 AND is_active = true
 ORDER BY name
 `
 
-func (q *Queries) ListProviders(ctx context.Context, projectID uuid.UUID) ([]Provider, error) {
-	rows, err := q.db.Query(ctx, listProviders, projectID)
+func (q *Queries) ListProviders(ctx context.Context, environmentID uuid.UUID) ([]Provider, error) {
+	rows, err := q.db.Query(ctx, listProviders, environmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -1140,7 +1990,7 @@ func (q *Queries) ListProviders(ctx context.Context, projectID uuid.UUID) ([]Pro
 		var i Provider
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
+			&i.EnvironmentID,
 			&i.Name,
 			&i.Channel,
 			&i.Credentials,
@@ -1159,14 +2009,56 @@ func (q *Queries) ListProviders(ctx context.Context, projectID uuid.UUID) ([]Pro
 	return items, nil
 }
 
+const listSubscribersByEnvironment = `-- name: ListSubscribersByEnvironment :many
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+WHERE environment_id = $1 AND deleted_at IS NULL
+ORDER BY subscription_date DESC
+`
+
+func (q *Queries) ListSubscribersByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Subscriber, error) {
+	rows, err := q.db.Query(ctx, listSubscribersByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscriber{}
+	for rows.Next() {
+		var i Subscriber
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.PushToken,
+			&i.Channels,
+			&i.Status,
+			&i.Tags,
+			&i.SubscriptionDate,
+			&i.LastNotificationDate,
+			&i.Metadata,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTemplates = `-- name: ListTemplates :many
-SELECT id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
-WHERE project_id = $1
+SELECT id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at FROM templates
+WHERE environment_id = $1
 ORDER BY name, channel
 `
 
-func (q *Queries) ListTemplates(ctx context.Context, projectID uuid.UUID) ([]Template, error) {
-	rows, err := q.db.Query(ctx, listTemplates, projectID)
+func (q *Queries) ListTemplates(ctx context.Context, environmentID uuid.UUID) ([]Template, error) {
+	rows, err := q.db.Query(ctx, listTemplates, environmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -1176,7 +2068,7 @@ func (q *Queries) ListTemplates(ctx context.Context, projectID uuid.UUID) ([]Tem
 		var i Template
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
+			&i.EnvironmentID,
 			&i.Name,
 			&i.Channel,
 			&i.Subject,
@@ -1196,15 +2088,15 @@ func (q *Queries) ListTemplates(ctx context.Context, projectID uuid.UUID) ([]Tem
 	return items, nil
 }
 
-const listWebhooksByProject = `-- name: ListWebhooksByProject :many
-SELECT id, project_id, url, secret, events, is_active, created_at, updated_at
+const listWebhooksByEnvironment = `-- name: ListWebhooksByEnvironment :many
+SELECT id, environment_id, url, secret, events, is_active, created_at, updated_at
 FROM webhooks
-WHERE project_id = $1 AND is_active = true
+WHERE environment_id = $1 AND is_active = true
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListWebhooksByProject(ctx context.Context, projectID uuid.UUID) ([]Webhook, error) {
-	rows, err := q.db.Query(ctx, listWebhooksByProject, projectID)
+func (q *Queries) ListWebhooksByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Webhook, error) {
+	rows, err := q.db.Query(ctx, listWebhooksByEnvironment, environmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -1214,7 +2106,7 @@ func (q *Queries) ListWebhooksByProject(ctx context.Context, projectID uuid.UUID
 		var i Webhook
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
+			&i.EnvironmentID,
 			&i.Url,
 			&i.Secret,
 			&i.Events,
@@ -1230,6 +2122,230 @@ func (q *Queries) ListWebhooksByProject(ctx context.Context, projectID uuid.UUID
 		return nil, err
 	}
 	return items, nil
+}
+
+const listWorkflowDefinitionsByEnvironment = `-- name: ListWorkflowDefinitionsByEnvironment :many
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE environment_id = $1
+ORDER BY updated_at DESC
+`
+
+func (q *Queries) ListWorkflowDefinitionsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, listWorkflowDefinitionsByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
+			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowExecutionsByEnvironment = `-- name: ListWorkflowExecutionsByEnvironment :many
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE environment_id = $1
+ORDER BY started_at DESC
+`
+
+func (q *Queries) ListWorkflowExecutionsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]WorkflowExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowExecutionsByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowExecution{}
+	for rows.Next() {
+		var i WorkflowExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkflowID,
+			&i.EnvironmentID,
+			&i.SubscriberID,
+			&i.Status,
+			&i.CurrentStepID,
+			&i.TriggerPayload,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowExecutionsByWorkflow = `-- name: ListWorkflowExecutionsByWorkflow :many
+SELECT id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_executions
+WHERE workflow_id = $1 AND environment_id = $2
+ORDER BY started_at DESC
+`
+
+type ListWorkflowExecutionsByWorkflowParams struct {
+	WorkflowID    uuid.UUID `db:"workflow_id" json:"workflow_id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) ListWorkflowExecutionsByWorkflow(ctx context.Context, arg ListWorkflowExecutionsByWorkflowParams) ([]WorkflowExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowExecutionsByWorkflow, arg.WorkflowID, arg.EnvironmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowExecution{}
+	for rows.Next() {
+		var i WorkflowExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkflowID,
+			&i.EnvironmentID,
+			&i.SubscriberID,
+			&i.Status,
+			&i.CurrentStepID,
+			&i.TriggerPayload,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowStepExecutionsByExecution = `-- name: ListWorkflowStepExecutionsByExecution :many
+SELECT id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at FROM workflow_step_executions
+WHERE execution_id = $1
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListWorkflowStepExecutionsByExecution(ctx context.Context, executionID uuid.UUID) ([]WorkflowStepExecution, error) {
+	rows, err := q.db.Query(ctx, listWorkflowStepExecutionsByExecution, executionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkflowStepExecution{}
+	for rows.Next() {
+		var i WorkflowStepExecution
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExecutionID,
+			&i.StepID,
+			&i.StepType,
+			&i.Status,
+			&i.Attempts,
+			&i.InputJson,
+			&i.OutputJson,
+			&i.ErrorJson,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.FailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowsByEnvironment = `-- name: ListWorkflowsByEnvironment :many
+SELECT id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at FROM workflows
+WHERE environment_id = $1
+	AND status <> 'archived'
+ORDER BY updated_at DESC
+`
+
+func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Workflow, error) {
+	rows, err := q.db.Query(ctx, listWorkflowsByEnvironment, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workflow{}
+	for rows.Next() {
+		var i Workflow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Key,
+			&i.Name,
+			&i.Description,
+			&i.Channels,
+			&i.TemplateIds,
+			&i.IsActive,
+			&i.Status,
+			&i.Version,
+			&i.TriggerEvent,
+			&i.DefinitionJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setEnvironmentDefault = `-- name: SetEnvironmentDefault :exec
+UPDATE environments
+SET is_default = $2, updated_at = $3
+WHERE id = $1
+`
+
+type SetEnvironmentDefaultParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	IsDefault bool               `db:"is_default" json:"is_default"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) SetEnvironmentDefault(ctx context.Context, arg SetEnvironmentDefaultParams) error {
+	_, err := q.db.Exec(ctx, setEnvironmentDefault, arg.ID, arg.IsDefault, arg.UpdatedAt)
+	return err
 }
 
 const touchAPIKeyLastUsed = `-- name: TouchAPIKeyLastUsed :exec
@@ -1272,6 +2388,23 @@ func (q *Queries) UpdateAPIKeyStatus(ctx context.Context, arg UpdateAPIKeyStatus
 	return err
 }
 
+const updateEnvironmentName = `-- name: UpdateEnvironmentName :exec
+UPDATE environments
+SET name = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateEnvironmentNameParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateEnvironmentName(ctx context.Context, arg UpdateEnvironmentNameParams) error {
+	_, err := q.db.Exec(ctx, updateEnvironmentName, arg.ID, arg.Name, arg.UpdatedAt)
+	return err
+}
+
 const updateNotificationStatus = `-- name: UpdateNotificationStatus :exec
 UPDATE notifications
 SET status = $1, updated_at = $2
@@ -1289,26 +2422,43 @@ func (q *Queries) UpdateNotificationStatus(ctx context.Context, arg UpdateNotifi
 	return err
 }
 
+const updateOrganizationName = `-- name: UpdateOrganizationName :exec
+UPDATE organizations
+SET name = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateOrganizationNameParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateOrganizationName(ctx context.Context, arg UpdateOrganizationNameParams) error {
+	_, err := q.db.Exec(ctx, updateOrganizationName, arg.ID, arg.Name, arg.UpdatedAt)
+	return err
+}
+
 const updateProvider = `-- name: UpdateProvider :one
 UPDATE providers
 SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
-WHERE id = $1 AND project_id = $2
-RETURNING id, project_id, name, channel, credentials, config, is_active, created_at, updated_at
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, name, channel, credentials, config, is_active, created_at, updated_at
 `
 
 type UpdateProviderParams struct {
-	ID          uuid.UUID `db:"id" json:"id"`
-	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
-	Name        string    `db:"name" json:"name"`
-	Channel     string    `db:"channel" json:"channel"`
-	Credentials []byte    `db:"credentials" json:"credentials"`
-	Config      []byte    `db:"config" json:"config"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Credentials   []byte    `db:"credentials" json:"credentials"`
+	Config        []byte    `db:"config" json:"config"`
 }
 
 func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) (Provider, error) {
 	row := q.db.QueryRow(ctx, updateProvider,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Name,
 		arg.Channel,
 		arg.Credentials,
@@ -1317,7 +2467,7 @@ func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) 
 	var i Provider
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Credentials,
@@ -1329,37 +2479,540 @@ func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) 
 	return i, err
 }
 
+const updateSubscriber = `-- name: UpdateSubscriber :one
+UPDATE subscribers
+SET name = $3,
+	email = $4,
+	phone = $5,
+	push_token = $6,
+	channels = $7,
+	status = $8,
+	tags = $9,
+	metadata = $10,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+`
+
+type UpdateSubscriberParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Email         *string   `db:"email" json:"email"`
+	Phone         *string   `db:"phone" json:"phone"`
+	PushToken     *string   `db:"push_token" json:"push_token"`
+	Channels      []string  `db:"channels" json:"channels"`
+	Status        []byte    `db:"status" json:"status"`
+	Tags          []string  `db:"tags" json:"tags"`
+	Metadata      []byte    `db:"metadata" json:"metadata"`
+}
+
+func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberParams) (Subscriber, error) {
+	row := q.db.QueryRow(ctx, updateSubscriber,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.PushToken,
+		arg.Channels,
+		arg.Status,
+		arg.Tags,
+		arg.Metadata,
+	)
+	var i Subscriber
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.PushToken,
+		&i.Channels,
+		&i.Status,
+		&i.Tags,
+		&i.SubscriptionDate,
+		&i.LastNotificationDate,
+		&i.Metadata,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateTemplate = `-- name: UpdateTemplate :one
 UPDATE templates
 SET subject = $3, body = $4, version = version + 1, updated_at = now()
-WHERE id = $1 AND project_id = $2
-RETURNING id, project_id, name, channel, subject, body, version, is_active, created_at, updated_at
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at
 `
 
 type UpdateTemplateParams struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	ProjectID uuid.UUID `db:"project_id" json:"project_id"`
-	Subject   *string   `db:"subject" json:"subject"`
-	Body      string    `db:"body" json:"body"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Subject       *string   `db:"subject" json:"subject"`
+	Body          string    `db:"body" json:"body"`
 }
 
 func (q *Queries) UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) (Template, error) {
 	row := q.db.QueryRow(ctx, updateTemplate,
 		arg.ID,
-		arg.ProjectID,
+		arg.EnvironmentID,
 		arg.Subject,
 		arg.Body,
 	)
 	var i Template
 	err := row.Scan(
 		&i.ID,
-		&i.ProjectID,
+		&i.EnvironmentID,
 		&i.Name,
 		&i.Channel,
 		&i.Subject,
 		&i.Body,
 		&i.Version,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserEmailVerifiedAt = `-- name: UpdateUserEmailVerifiedAt :exec
+UPDATE users
+SET email_verified_at = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateUserEmailVerifiedAtParams struct {
+	ID              uuid.UUID          `db:"id" json:"id"`
+	EmailVerifiedAt pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
+	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserEmailVerifiedAt(ctx context.Context, arg UpdateUserEmailVerifiedAtParams) error {
+	_, err := q.db.Exec(ctx, updateUserEmailVerifiedAt, arg.ID, arg.EmailVerifiedAt, arg.UpdatedAt)
+	return err
+}
+
+const updateUserOnboardingCompletedAt = `-- name: UpdateUserOnboardingCompletedAt :exec
+UPDATE users
+SET onboarding_completed_at = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateUserOnboardingCompletedAtParams struct {
+	ID                    uuid.UUID          `db:"id" json:"id"`
+	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserOnboardingCompletedAt(ctx context.Context, arg UpdateUserOnboardingCompletedAtParams) error {
+	_, err := q.db.Exec(ctx, updateUserOnboardingCompletedAt, arg.ID, arg.OnboardingCompletedAt, arg.UpdatedAt)
+	return err
+}
+
+const updateWorkflow = `-- name: UpdateWorkflow :one
+UPDATE workflows
+SET key = $3,
+	name = $4,
+	description = $5,
+	channels = $6,
+	template_ids = $7,
+	is_active = $8,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type UpdateWorkflowParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key           string    `db:"key" json:"key"`
+	Name          string    `db:"name" json:"name"`
+	Description   *string   `db:"description" json:"description"`
+	Channels      []string  `db:"channels" json:"channels"`
+	TemplateIds   []byte    `db:"template_ids" json:"template_ids"`
+	IsActive      bool      `db:"is_active" json:"is_active"`
+}
+
+func (q *Queries) UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, updateWorkflow,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
+		arg.IsActive,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowDefinition = `-- name: UpdateWorkflowDefinition :one
+UPDATE workflows
+SET key = $3,
+	name = $4,
+	description = $5,
+	status = $6,
+	version = $7,
+	trigger_event = $8,
+	definition_json = $9,
+	is_active = CASE WHEN $6 = 'active' THEN true ELSE false END,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type UpdateWorkflowDefinitionParams struct {
+	ID             uuid.UUID `db:"id" json:"id"`
+	EnvironmentID  uuid.UUID `db:"environment_id" json:"environment_id"`
+	Key            string    `db:"key" json:"key"`
+	Name           string    `db:"name" json:"name"`
+	Description    *string   `db:"description" json:"description"`
+	Status         string    `db:"status" json:"status"`
+	Version        int32     `db:"version" json:"version"`
+	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
+	DefinitionJson []byte    `db:"definition_json" json:"definition_json"`
+}
+
+func (q *Queries) UpdateWorkflowDefinition(ctx context.Context, arg UpdateWorkflowDefinitionParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowDefinition,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Key,
+		arg.Name,
+		arg.Description,
+		arg.Status,
+		arg.Version,
+		arg.TriggerEvent,
+		arg.DefinitionJson,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowExecutionState = `-- name: UpdateWorkflowExecutionState :one
+UPDATE workflow_executions
+SET status = $3,
+	current_step_id = $4,
+	completed_at = $5,
+	failed_at = $6,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, workflow_id, environment_id, subscriber_id, status, current_step_id, trigger_payload, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type UpdateWorkflowExecutionStateParams struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
+	Status        string             `db:"status" json:"status"`
+	CurrentStepID *string            `db:"current_step_id" json:"current_step_id"`
+	CompletedAt   pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt      pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) UpdateWorkflowExecutionState(ctx context.Context, arg UpdateWorkflowExecutionStateParams) (WorkflowExecution, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowExecutionState,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Status,
+		arg.CurrentStepID,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowExecution
+	err := row.Scan(
+		&i.ID,
+		&i.WorkflowID,
+		&i.EnvironmentID,
+		&i.SubscriberID,
+		&i.Status,
+		&i.CurrentStepID,
+		&i.TriggerPayload,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWorkflowStepExecutionState = `-- name: UpdateWorkflowStepExecutionState :one
+UPDATE workflow_step_executions
+SET status = $3,
+	attempts = $4,
+	input_json = $5,
+	output_json = $6,
+	error_json = $7,
+	started_at = $8,
+	completed_at = $9,
+	failed_at = $10,
+	updated_at = now()
+WHERE execution_id = $1 AND step_id = $2
+RETURNING id, execution_id, step_id, step_type, status, attempts, input_json, output_json, error_json, started_at, completed_at, failed_at, created_at, updated_at
+`
+
+type UpdateWorkflowStepExecutionStateParams struct {
+	ExecutionID uuid.UUID          `db:"execution_id" json:"execution_id"`
+	StepID      string             `db:"step_id" json:"step_id"`
+	Status      string             `db:"status" json:"status"`
+	Attempts    int32              `db:"attempts" json:"attempts"`
+	InputJson   []byte             `db:"input_json" json:"input_json"`
+	OutputJson  []byte             `db:"output_json" json:"output_json"`
+	ErrorJson   []byte             `db:"error_json" json:"error_json"`
+	StartedAt   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	CompletedAt pgtype.Timestamptz `db:"completed_at" json:"completed_at"`
+	FailedAt    pgtype.Timestamptz `db:"failed_at" json:"failed_at"`
+}
+
+func (q *Queries) UpdateWorkflowStepExecutionState(ctx context.Context, arg UpdateWorkflowStepExecutionStateParams) (WorkflowStepExecution, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowStepExecutionState,
+		arg.ExecutionID,
+		arg.StepID,
+		arg.Status,
+		arg.Attempts,
+		arg.InputJson,
+		arg.OutputJson,
+		arg.ErrorJson,
+		arg.StartedAt,
+		arg.CompletedAt,
+		arg.FailedAt,
+	)
+	var i WorkflowStepExecution
+	err := row.Scan(
+		&i.ID,
+		&i.ExecutionID,
+		&i.StepID,
+		&i.StepType,
+		&i.Status,
+		&i.Attempts,
+		&i.InputJson,
+		&i.OutputJson,
+		&i.ErrorJson,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertEmailVerification = `-- name: UpsertEmailVerification :exec
+INSERT INTO email_verifications (
+	user_id,
+	code_hash,
+	expires_at,
+	consumed_at,
+	created_at,
+	updated_at
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE
+SET code_hash = EXCLUDED.code_hash,
+	expires_at = EXCLUDED.expires_at,
+	consumed_at = EXCLUDED.consumed_at,
+	updated_at = EXCLUDED.updated_at
+`
+
+type UpsertEmailVerificationParams struct {
+	UserID     uuid.UUID          `db:"user_id" json:"user_id"`
+	CodeHash   string             `db:"code_hash" json:"code_hash"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
+	ConsumedAt pgtype.Timestamptz `db:"consumed_at" json:"consumed_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertEmailVerification(ctx context.Context, arg UpsertEmailVerificationParams) error {
+	_, err := q.db.Exec(ctx, upsertEmailVerification,
+		arg.UserID,
+		arg.CodeHash,
+		arg.ExpiresAt,
+		arg.ConsumedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const upsertNotificationByEnvironmentJob = `-- name: UpsertNotificationByEnvironmentJob :one
+INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+`
+
+type UpsertNotificationByEnvironmentJobParams struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type UpsertNotificationByEnvironmentJobRow struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertNotificationByEnvironmentJob(ctx context.Context, arg UpsertNotificationByEnvironmentJobParams) (UpsertNotificationByEnvironmentJobRow, error) {
+	row := q.db.QueryRow(ctx, upsertNotificationByEnvironmentJob,
+		arg.ID,
+		arg.JobID,
+		arg.EnvironmentID,
+		arg.Title,
+		arg.Message,
+		arg.Channels,
+		arg.Recipient,
+		arg.Metadata,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i UpsertNotificationByEnvironmentJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.EnvironmentID,
+		&i.JobID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertNotificationByServiceJob = `-- name: UpsertNotificationByServiceJob :one
+INSERT INTO notifications (id, job_id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
+SET title = EXCLUDED.title,
+	message = EXCLUDED.message,
+	channels = EXCLUDED.channels,
+	recipient = EXCLUDED.recipient,
+	metadata = EXCLUDED.metadata,
+	updated_at = EXCLUDED.updated_at
+RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+`
+
+type UpsertNotificationByServiceJobParams struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	JobID     *string            `db:"job_id" json:"job_id"`
+	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Recipient []byte             `db:"recipient" json:"recipient"`
+	Metadata  []byte             `db:"metadata" json:"metadata"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type UpsertNotificationByServiceJobRow struct {
+	ID            uuid.UUID          `db:"id" json:"id"`
+	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
+	Title         string             `db:"title" json:"title"`
+	Message       string             `db:"message" json:"message"`
+	Channels      []string           `db:"channels" json:"channels"`
+	Recipient     []byte             `db:"recipient" json:"recipient"`
+	Metadata      []byte             `db:"metadata" json:"metadata"`
+	Status        string             `db:"status" json:"status"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpsertNotificationByServiceJob(ctx context.Context, arg UpsertNotificationByServiceJobParams) (UpsertNotificationByServiceJobRow, error) {
+	row := q.db.QueryRow(ctx, upsertNotificationByServiceJob,
+		arg.ID,
+		arg.JobID,
+		arg.ServiceID,
+		arg.Title,
+		arg.Message,
+		arg.Channels,
+		arg.Recipient,
+		arg.Metadata,
+		arg.Status,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i UpsertNotificationByServiceJobRow
+	err := row.Scan(
+		&i.ID,
+		&i.ServiceID,
+		&i.Title,
+		&i.Message,
+		&i.Channels,
+		&i.Recipient,
+		&i.Metadata,
+		&i.Status,
+		&i.EnvironmentID,
+		&i.JobID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -13,7 +13,7 @@ func TestJWTManagerGenerateAndParseAccessToken(t *testing.T) {
 		return time.Date(2026, time.April, 26, 12, 0, 0, 0, time.UTC)
 	}
 
-	token, err := manager.GenerateAccessToken("user-123", "project-456", "owner")
+	token, err := manager.GenerateAccessToken("user-123", "org-456", "owner")
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
@@ -26,8 +26,8 @@ func TestJWTManagerGenerateAndParseAccessToken(t *testing.T) {
 	if claims.UserID != "user-123" {
 		t.Fatalf("UserID = %q, want %q", claims.UserID, "user-123")
 	}
-	if claims.ProjectID != "project-456" {
-		t.Fatalf("ProjectID = %q, want %q", claims.ProjectID, "project-456")
+	if claims.OrganizationID != "org-456" {
+		t.Fatalf("OrganizationID = %q, want %q", claims.OrganizationID, "org-456")
 	}
 	if claims.Role != "owner" {
 		t.Fatalf("Role = %q, want %q", claims.Role, "owner")
@@ -42,7 +42,7 @@ func TestJWTManagerRejectsMissingClaims(t *testing.T) {
 
 	manager := NewJWTManager("test-secret", "iwifunni-test", 15*time.Minute)
 
-	if _, err := manager.GenerateAccessToken("", "project-456", "owner"); err != ErrInvalidJWTClaims {
+	if _, err := manager.GenerateAccessToken("", "org-456", "owner"); err != ErrInvalidJWTClaims {
 		t.Fatalf("GenerateAccessToken() error = %v, want %v", err, ErrInvalidJWTClaims)
 	}
 }

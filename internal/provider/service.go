@@ -2,42 +2,48 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
+	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/crypto"
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
+	"github.com/deveasyclick/iwifunni/internal/providers/defaults"
 	"github.com/google/uuid"
 )
+
+var ErrUnsupportedProvider = errors.New("unsupported provider")
 
 // Service handles provider business logic including credential encryption.
 type Service struct {
 	repo          *Repository
 	encryptionKey string
+	catalog       *catalog.Catalog
 }
 
 func NewService(repo *Repository, encryptionKey string) *Service {
-	return &Service{repo: repo, encryptionKey: encryptionKey}
+	return &Service{repo: repo, encryptionKey: encryptionKey, catalog: defaults.NewCatalog()}
 }
 
 type CreateInput struct {
-	ProjectID   uuid.UUID
-	Name        string
-	Channel     string
-	Credentials map[string]any
-	Config      map[string]any
+	EnvironmentID uuid.UUID
+	Name          string
+	Channel       string
+	Credentials   map[string]any
+	Config        map[string]any
 }
 
 type UpdateInput struct {
-	ID          uuid.UUID
-	ProjectID   uuid.UUID
-	Name        string
-	Channel     string
-	Credentials map[string]any
-	Config      map[string]any
+	ID            uuid.UUID
+	EnvironmentID uuid.UUID
+	Name          string
+	Channel       string
+	Credentials   map[string]any
+	Config        map[string]any
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, error) {
-	credJSON, err := json.Marshal(in.Credentials)
+	name, channel, credJSON, configJSON, err := s.prepareProviderInput(in.Name, in.Channel, in.Credentials, in.Config, nil)
 	if err != nil {
 		return db.Provider{}, err
 	}
@@ -45,57 +51,102 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 	if err != nil {
 		return db.Provider{}, err
 	}
-	var configJSON []byte
-	if in.Config != nil {
-		configJSON, err = json.Marshal(in.Config)
-		if err != nil {
-			return db.Provider{}, err
-		}
-	}
 	return s.repo.Create(ctx, db.CreateProviderParams{
-		ID:          uuid.New(),
-		ProjectID:   in.ProjectID,
-		Name:        in.Name,
-		Channel:     in.Channel,
-		Credentials: []byte(`"` + encCreds + `"`),
-		Config:      configJSON,
+		ID:            uuid.New(),
+		EnvironmentID: in.EnvironmentID,
+		Name:          name,
+		Channel:       channel,
+		Credentials:   []byte(`"` + encCreds + `"`),
+		Config:        configJSON,
 	})
 }
 
-func (s *Service) GetByID(ctx context.Context, id, projectID uuid.UUID) (db.Provider, error) {
-	return s.repo.GetByID(ctx, id, projectID)
+func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Provider, error) {
+	return s.repo.GetByID(ctx, id, environmentID)
 }
 
-func (s *Service) List(ctx context.Context, projectID uuid.UUID) ([]db.Provider, error) {
-	return s.repo.List(ctx, projectID)
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Provider, error) {
+	return s.repo.List(ctx, environmentID)
 }
 
 func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Provider, error) {
-	credJSON, err := json.Marshal(in.Credentials)
+	current, err := s.repo.GetByID(ctx, in.ID, in.EnvironmentID)
 	if err != nil {
 		return db.Provider{}, err
 	}
-	encCreds, err := crypto.Encrypt(credJSON, s.encryptionKey)
+	name, channel, credJSON, configJSON, err := s.prepareProviderInput(in.Name, in.Channel, in.Credentials, in.Config, &current)
 	if err != nil {
 		return db.Provider{}, err
 	}
-	var configJSON []byte
-	if in.Config != nil {
-		configJSON, err = json.Marshal(in.Config)
-		if err != nil {
-			return db.Provider{}, err
+	credentials := current.Credentials
+	if credJSON != nil {
+		encCreds, encErr := crypto.Encrypt(credJSON, s.encryptionKey)
+		if encErr != nil {
+			return db.Provider{}, encErr
 		}
+		credentials = []byte(`"` + encCreds + `"`)
 	}
 	return s.repo.Update(ctx, db.UpdateProviderParams{
-		ID:          in.ID,
-		ProjectID:   in.ProjectID,
-		Name:        in.Name,
-		Channel:     in.Channel,
-		Credentials: []byte(`"` + encCreds + `"`),
-		Config:      configJSON,
+		ID:            in.ID,
+		EnvironmentID: in.EnvironmentID,
+		Name:          name,
+		Channel:       channel,
+		Credentials:   credentials,
+		Config:        configJSON,
 	})
 }
 
-func (s *Service) Delete(ctx context.Context, id, projectID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, projectID)
+func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, environmentID)
+}
+
+func (s *Service) prepareProviderInput(name, channel string, credentials, config map[string]any, current *db.Provider) (string, string, []byte, []byte, error) {
+	if s.catalog == nil {
+		s.catalog = defaults.NewCatalog()
+	}
+
+	normalizedName := strings.ToLower(strings.TrimSpace(name))
+	definition, ok := s.catalog.Get(normalizedName)
+	if !ok {
+		return "", "", nil, nil, errUnsupportedProvider(normalizedName)
+	}
+
+	normalizedChannel := strings.ToLower(strings.TrimSpace(channel))
+	if definition.Channel() != normalizedChannel {
+		return "", "", nil, nil, errUnsupportedProvider(normalizedName)
+	}
+
+	var stored *catalog.StoredInput
+	if current != nil {
+		stored = &catalog.StoredInput{
+			Credentials: current.Credentials,
+			Config:      current.Config,
+		}
+	}
+
+	normalized, err := definition.Normalize(credentials, config, stored)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+
+	return normalized.Name, normalized.Channel, normalized.CredentialsJSON, normalized.ConfigJSON, nil
+}
+
+func errUnsupportedProvider(name string) error {
+	return &unsupportedProviderError{name: name}
+}
+
+type unsupportedProviderError struct {
+	name string
+}
+
+func (e *unsupportedProviderError) Error() string {
+	if e.name == "" {
+		return "unsupported provider"
+	}
+	return "unsupported provider: " + e.name
+}
+
+func (e *unsupportedProviderError) Unwrap() error {
+	return ErrUnsupportedProvider
 }

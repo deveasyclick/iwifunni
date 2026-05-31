@@ -3,7 +3,7 @@ version: "3"
 vars:
   MIGRATIONS_DIR: ./migrations
   FRONTEND_DIR: ./web
-  DB_URL: postgres://yusuf:123456@localhost:5434/iwifunni?sslmode=disable
+  DB_URL: postgres://yusuf:123456@localhost:5435/iwifunni?sslmode=disable
 
 tasks:
   # ----------------------------------
@@ -11,12 +11,18 @@ tasks:
   # ----------------------------------
 
   dev:
-    desc: Start dev server
+    desc: Start backend dev server with Dockerized dependencies
     cmds:
       - task: db
       - air
-      - echo "✅ All services running."
+      - echo "✅ Backend dev server running. Start the frontend separately with 'task web'."
 
+  server:
+    desc: Start backend dev server
+    cmds:
+      - task: db
+      - air
+      - echo "✅ Backend dev server running."
   web:
     desc: Start frontend
     dir: "{{.FRONTEND_DIR}}"
@@ -24,11 +30,18 @@ tasks:
       - pnpm dev
       - echo "✅ All services running."
 
+  worker:
+    desc: Start workers
+    cmds:
+      - task: db
+      - go run ./cmd/worker
+      - echo "✅ Worker running."
+
   build:
     desc: Build app
     cmds:
-      - go build -o ./iwifunni ./cmd/iwifunni/main.go
-      - echo "✅ All services running."
+      - go build -o ./iwifunni ./cmd/api
+      - echo "✅ Build completed."
 
   db:
     desc: Start Dockerized DB + Redis
@@ -43,11 +56,9 @@ tasks:
       - echo "✅ Go linting completed."
 
   swagger:
-    desc: Generate Swagger docs
-    dir: "{{.BACKEND_DIR}}"
+    desc: Swagger task is stale
     cmds:
-      - swag init --output docs --generalInfo cmd/zendo/main.go
-      - echo "✅ Swagger docs generated."
+      - echo "Swagger generation is not configured for the current repo entrypoints."
 
   sqlc:
     desc: Generate sqlc queries

@@ -6,12 +6,14 @@ This project is a multi-tenant, API-driven notification system that supports:
 
 - Email notifications
 - SMS notifications
-- Push notifications (future)
+- Push notifications
 - Multi-provider routing (e.g. SendGrid, Twilio)
 - Template-based messaging
 - Delivery tracking and webhooks
 
 The system is designed for high scalability, extensibility, and strong tenant isolation.
+
+Current implementation note: the live v1 contract is narrower than some of the target architecture described below. For the active behavior, use [current-v1-contract.md](./current-v1-contract.md) and the current code as the source of truth. In particular, richer preference models and broader workflow orchestration remain planned work.
 
 ---
 
@@ -33,12 +35,17 @@ We use two authentication systems:
 
 - Used by SDKs and backend services
 - Scoped to a project
-- Used for sending notifications
+- Used for sending notifications and project-scoped management routes
 
 #### JWT (User Authentication)
 - Used for dashboard access
 - Represents human users
-- Used for managing settings, providers, templates
+- Used for dashboard auth and API key management
+
+#### Legacy Service Keys (Compatibility Path)
+- Used by older service-scoped send flows
+- Still active in code through the auth middleware
+- Should be treated as a compatibility surface until explicitly removed or deprecated
 
 ---
 
@@ -121,8 +128,6 @@ Select provider (SendGrid / Twilio)
 ↓
 Submit credentials
 ↓
-Validate credentials with provider API
-↓
 Encrypt credentials
 ↓
 Store in DB under project_id
@@ -203,13 +208,23 @@ The registry is responsible for:
 
 * Notifications are immutable once created
 * Delivery is asynchronous
+* Current v1 sends accept direct `title`, `message`, `channels`, and `recipient` payload fields
+* Notifications are currently stored under either a project-based path or a legacy service-based path
+* Providers are resolved by channel through the registry at send time
 * Each notification has a lifecycle:
 
   * queued
-  * processing
   * sent
-  * delivered
   * failed
+  * partial_failed
+
+### Current V1 Send Model
+
+* `POST /notifications` accepts either direct `title`, `message`, `channels`, `recipient`, and optional `metadata`, or workflow-targeted `workflow_id`, `subscriber_id`, `title`, `message`, and optional `metadata`
+* `recipient` may include `email`, `phone_number`, `push_tokens`, and `reference`
+* Workflow-targeted sends resolve channels from workflow configuration, recipient contact data from the subscriber record, and linked template content per channel
+* Channels marked unsubscribed or bounced, or channels missing linked templates or required contact targets, are skipped rather than failing the whole send
+* Richer preference models and broader workflow orchestration remain planned work
 
 ---
 
@@ -219,9 +234,8 @@ Events emitted:
 
 * notification.sent
 * notification.failed
-* notification.delivered
-* notification.opened (email)
-* notification.clicked (optional)
+
+Additional delivery lifecycle events such as delivered, opened, or clicked should be treated as planned until they exist in the active code path.
 
 Webhooks are signed using HMAC for verification.
 
@@ -229,10 +243,9 @@ Webhooks are signed using HMAC for verification.
 
 ## Rate Limiting
 
-Rate limits are enforced per API key:
+Rate limits are enforced by the auth middleware for project API keys and legacy service keys.
 
-* Requests per second
-* Requests per day
+Current implementation uses a per-minute limit.
 
 Implementation uses Redis-based counters.
 

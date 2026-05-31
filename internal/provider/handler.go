@@ -2,9 +2,12 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -40,8 +43,8 @@ type updateRequest struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -55,53 +58,43 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, err := h.service.Create(r.Context(), CreateInput{
-		ProjectID:   proj.ProjectID,
-		Name:        req.Name,
-		Channel:     req.Channel,
-		Credentials: req.Credentials,
-		Config:      req.Config,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Credentials:   req.Credentials,
+		Config:        req.Config,
 	})
 	if err != nil {
-		http.Error(w, "failed to create provider", http.StatusInternalServerError)
+		writeProviderError(w, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
-		"channel": p.Channel, "is_active": p.IsActive, "created_at": p.CreatedAt,
-	})
+	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	providers, err := h.service.List(r.Context(), proj.ProjectID)
+	providers, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list providers", http.StatusInternalServerError)
 		return
 	}
-	type item struct {
-		ID        uuid.UUID `json:"id"`
-		Name      string    `json:"name"`
-		Channel   string    `json:"channel"`
-		IsActive  bool      `json:"is_active"`
-		CreatedAt any       `json:"created_at"`
-	}
-	result := make([]item, 0, len(providers))
+	result := make([]providerResponse, 0, len(providers))
 	for _, p := range providers {
-		result = append(result, item{ID: p.ID, Name: p.Name, Channel: p.Channel, IsActive: p.IsActive, CreatedAt: p.CreatedAt})
+		result = append(result, providerResponseFromRecord(p))
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -110,21 +103,18 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	p, err := h.service.GetByID(r.Context(), providerID, proj.ProjectID)
+	p, err := h.service.GetByID(r.Context(), providerID, environmentID)
 	if err != nil {
 		http.Error(w, "provider not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
-		"channel": p.Channel, "is_active": p.IsActive, "created_at": p.CreatedAt, "updated_at": p.UpdatedAt,
-	})
+	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -143,27 +133,24 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, err := h.service.Update(r.Context(), UpdateInput{
-		ID:          providerID,
-		ProjectID:   proj.ProjectID,
-		Name:        req.Name,
-		Channel:     req.Channel,
-		Credentials: req.Credentials,
-		Config:      req.Config,
+		ID:            providerID,
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Credentials:   req.Credentials,
+		Config:        req.Config,
 	})
 	if err != nil {
-		http.Error(w, "failed to update provider", http.StatusInternalServerError)
+		writeProviderError(w, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"id": p.ID, "project_id": p.ProjectID, "name": p.Name,
-		"channel": p.Channel, "is_active": p.IsActive, "updated_at": p.UpdatedAt,
-	})
+	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -172,9 +159,52 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Delete(r.Context(), providerID, proj.ProjectID); err != nil {
+	if err := h.service.Delete(r.Context(), providerID, environmentID); err != nil {
 		http.Error(w, "failed to delete provider", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type providerResponse struct {
+	ID             uuid.UUID      `json:"id"`
+	EnvironmentID  uuid.UUID      `json:"environment_id"`
+	Name           string         `json:"name"`
+	Channel        string         `json:"channel"`
+	Config         map[string]any `json:"config,omitempty"`
+	HasCredentials bool           `json:"has_credentials"`
+	IsActive       bool           `json:"is_active"`
+	CreatedAt      any            `json:"created_at"`
+	UpdatedAt      any            `json:"updated_at,omitempty"`
+}
+
+func providerResponseFromRecord(p db.Provider) providerResponse {
+	var config map[string]any
+	if len(p.Config) > 0 {
+		_ = json.Unmarshal(p.Config, &config)
+	}
+
+	return providerResponse{
+		ID:             p.ID,
+		EnvironmentID:  p.EnvironmentID,
+		Name:           p.Name,
+		Channel:        p.Channel,
+		Config:         config,
+		HasCredentials: len(p.Credentials) > 0,
+		IsActive:       p.IsActive,
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
+	}
+}
+
+func writeProviderError(w http.ResponseWriter, err error) {
+	var validationErr *catalog.ValidationError
+	switch {
+	case errors.Is(err, ErrUnsupportedProvider):
+		http.Error(w, "only the sendgrid email provider is supported", http.StatusBadRequest)
+	case errors.As(err, &validationErr):
+		http.Error(w, validationErr.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, "failed to save provider", http.StatusInternalServerError)
+	}
 }

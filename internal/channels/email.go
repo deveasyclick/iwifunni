@@ -17,6 +17,11 @@ type EmailConfig struct {
 	From     string `json:"from"`
 }
 
+type SendGridConfig struct {
+	APIKey    string `json:"api_key"`
+	FromEmail string `json:"from_email"`
+}
+
 func SendEmail(ctx context.Context, emailConfig EmailConfig, recipient, title, message string, metadata map[string]string) error {
 	_ = ctx
 	logger.Get().Info().Str("recipient", recipient).Str("title", title).Msg("sending email")
@@ -43,4 +48,21 @@ func SendEmail(ctx context.Context, emailConfig EmailConfig, recipient, title, m
 
 	emailMailer := mailer.NewMailer(emailConfig.Host, emailConfig.Port, emailConfig.Username, emailConfig.Password, emailConfig.From)
 	return emailMailer.Send(recipient, title, body)
+}
+
+func SendSendGridEmail(ctx context.Context, cfg SendGridConfig, recipient, title, message string, metadata map[string]string) error {
+	if strings.TrimSpace(cfg.APIKey) == "" {
+		return fmt.Errorf("missing sendgrid api key")
+	}
+	if strings.TrimSpace(cfg.FromEmail) == "" {
+		return fmt.Errorf("missing sendgrid from email")
+	}
+
+	return SendEmail(ctx, EmailConfig{
+		Host:     "smtp.sendgrid.net",
+		Port:     587,
+		Username: "apikey",
+		Password: strings.TrimSpace(cfg.APIKey),
+		From:     strings.TrimSpace(cfg.FromEmail),
+	}, recipient, title, message, metadata)
 }

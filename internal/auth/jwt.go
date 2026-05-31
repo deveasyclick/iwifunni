@@ -11,9 +11,9 @@ import (
 var ErrInvalidJWTClaims = errors.New("invalid jwt claims")
 
 type Claims struct {
-	UserID    string `json:"user_id"`
-	ProjectID string `json:"project_id"`
-	Role      string `json:"role"`
+	UserID         string `json:"user_id"`
+	OrganizationID string `json:"organization_id"`
+	Role           string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -33,16 +33,16 @@ func NewJWTManager(secret, issuer string, accessTTL time.Duration) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateAccessToken(userID, projectID, role string) (string, error) {
-	if userID == "" || projectID == "" || role == "" {
+func (m *JWTManager) GenerateAccessToken(userID, organizationID, role string) (string, error) {
+	if userID == "" || organizationID == "" || role == "" {
 		return "", ErrInvalidJWTClaims
 	}
 
 	now := m.now().UTC()
 	claims := Claims{
-		UserID:    userID,
-		ProjectID: projectID,
-		Role:      role,
+		UserID:         userID,
+		OrganizationID: organizationID,
+		Role:           role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.issuer,
 			Subject:   userID,
@@ -71,7 +71,7 @@ func (m *JWTManager) ParseAccessToken(tokenString string) (*Claims, error) {
 	if !ok || !token.Valid {
 		return nil, ErrInvalidJWTClaims
 	}
-	if claims.UserID == "" || claims.ProjectID == "" || claims.Role == "" {
+	if claims.UserID == "" || claims.OrganizationID == "" || claims.Role == "" {
 		return nil, ErrInvalidJWTClaims
 	}
 

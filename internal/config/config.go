@@ -31,8 +31,19 @@ type Config struct {
 	JWTIssuer          string
 	JWTAccessTokenTTL  time.Duration
 	JWTRefreshTokenTTL time.Duration
+	AuthVerificationTTL time.Duration
+	WebBaseURL         string
+	APIPublicBaseURL   string
+	GothSessionSecret  string
+	GoogleClientID     string
+	GoogleClientSecret string
+	GitHubClientID     string
+	GitHubClientSecret string
 	Environment        string
 	EncryptionKey      string
+	QueueMaxRetry      int
+	QueueTaskTimeout   time.Duration
+	QueueUniqueTTL     time.Duration
 }
 
 func Load() (*Config, error) {
@@ -53,9 +64,29 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TOKEN_TTL: %w", err)
 	}
 
+	authVerificationTTL, err := time.ParseDuration(getenvDefault("AUTH_VERIFICATION_TTL", "15m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid AUTH_VERIFICATION_TTL: %w", err)
+	}
+
 	mailerPort, err := strconv.Atoi(getenvDefault("MAILER_PORT", "587"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILER_PORT: %w", err)
+	}
+
+	queueMaxRetry, err := strconv.Atoi(getenvDefault("QUEUE_MAX_RETRY", "5"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_MAX_RETRY: %w", err)
+	}
+
+	queueTaskTimeout, err := time.ParseDuration(getenvDefault("QUEUE_TASK_TIMEOUT", "2m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_TASK_TIMEOUT: %w", err)
+	}
+
+	queueUniqueTTL, err := time.ParseDuration(getenvDefault("QUEUE_UNIQUE_TTL", "5m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid QUEUE_UNIQUE_TTL: %w", err)
 	}
 
 	mailerPassword := os.Getenv("MAILER_PASSWORD")
@@ -85,8 +116,19 @@ func Load() (*Config, error) {
 		JWTIssuer:          getenvDefault("JWT_ISSUER", "iwifunni"),
 		JWTAccessTokenTTL:  jwtAccessTokenTTL,
 		JWTRefreshTokenTTL: jwtRefreshTokenTTL,
+		AuthVerificationTTL: authVerificationTTL,
+		WebBaseURL:         getenvDefault("WEB_BASE_URL", "http://localhost:3000"),
+		APIPublicBaseURL:   getenvDefault("API_PUBLIC_BASE_URL", getenvDefault("API_BASE_URL", "http://localhost:8080")),
+		GothSessionSecret:  getenvDefault("GOTH_SESSION_SECRET", "development-goth-session-secret-change-me"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		Environment:        getenvDefault("ENVIRONMENT", "development"),
 		EncryptionKey:      getenvDefault("ENCRYPTION_KEY", "dev-encryption-key-32bytes-padded"),
+		QueueMaxRetry:      queueMaxRetry,
+		QueueTaskTimeout:   queueTaskTimeout,
+		QueueUniqueTTL:     queueUniqueTTL,
 	}, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -48,6 +49,28 @@ func GenerateRefreshToken() (string, string, error) {
 
 func HashRefreshToken(token string) string {
 	return hashToken(token)
+}
+
+func GenerateVerificationCode() (string, string, error) {
+	value, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", "", fmt.Errorf("generate verification code: %w", err)
+	}
+
+	rawCode := fmt.Sprintf("%06d", value.Int64())
+	return rawCode, HashVerificationCode(rawCode), nil
+}
+
+func HashVerificationCode(code string) string {
+	return hashToken(code)
+}
+
+func CompareVerificationCode(code, hash string) bool {
+	if code == "" || hash == "" {
+		return false
+	}
+
+	return hashToken(code) == hash
 }
 
 func hashToken(value string) string {

@@ -70,13 +70,13 @@ func TestAuthMiddlewareAuthenticatesProjectAPIKey(t *testing.T) {
 	}
 
 	queries := &fakeAuthQueries{apiKey: db.ApiKey{
-		ID:        uuid.New(),
-		ProjectID: uuid.New(),
-		Name:      "Primary",
-		KeyPrefix: prefix,
-		KeyHash:   hash,
-		Scopes:    scopes,
-		Status:    "active",
+		ID:            uuid.New(),
+		EnvironmentID: uuid.New(),
+		Name:          "Primary",
+		KeyPrefix:     prefix,
+		KeyHash:       hash,
+		Scopes:        scopes,
+		Status:        "active",
 	}}
 	limiter := &fakeLimiter{allowed: true}
 	middleware := newAuthMiddleware(queries, limiter, func() time.Time {
@@ -84,12 +84,12 @@ func TestAuthMiddlewareAuthenticatesProjectAPIKey(t *testing.T) {
 	})
 
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		project := GetAuthenticatedProject(r.Context())
-		if project == nil {
-			t.Fatal("GetAuthenticatedProject() returned nil")
+		environment := GetAuthenticatedEnvironment(r.Context())
+		if environment == nil {
+			t.Fatal("GetAuthenticatedEnvironment() returned nil")
 		}
-		if project.ProjectID != queries.apiKey.ProjectID {
-			t.Fatalf("ProjectID = %s, want %s", project.ProjectID, queries.apiKey.ProjectID)
+		if environment.EnvironmentID != queries.apiKey.EnvironmentID {
+			t.Fatalf("EnvironmentID = %s, want %s", environment.EnvironmentID, queries.apiKey.EnvironmentID)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -132,13 +132,13 @@ func TestAuthMiddlewareRejectsProjectAPIKeyWithoutScope(t *testing.T) {
 	}
 
 	queries := &fakeAuthQueries{apiKey: db.ApiKey{
-		ID:        uuid.New(),
-		ProjectID: uuid.New(),
-		Name:      "Primary",
-		KeyPrefix: prefix,
-		KeyHash:   hash,
-		Scopes:    scopes,
-		Status:    "active",
+		ID:            uuid.New(),
+		EnvironmentID: uuid.New(),
+		Name:          "Primary",
+		KeyPrefix:     prefix,
+		KeyHash:       hash,
+		Scopes:        scopes,
+		Status:        "active",
 	}}
 	limiter := &fakeLimiter{allowed: true}
 	middleware := newAuthMiddleware(queries, limiter, func() time.Time { return time.Now().UTC() })
@@ -216,14 +216,14 @@ func TestAuthMiddlewareRejectsExpiredProjectAPIKey(t *testing.T) {
 	}
 
 	queries := &fakeAuthQueries{apiKey: db.ApiKey{
-		ID:        uuid.New(),
-		ProjectID: uuid.New(),
-		Name:      "Primary",
-		KeyPrefix: prefix,
-		KeyHash:   hash,
-		Scopes:    scopes,
-		Status:    "active",
-		ExpiresAt: pgtype.Timestamptz{Time: time.Date(2026, time.April, 25, 12, 0, 0, 0, time.UTC), Valid: true},
+		ID:            uuid.New(),
+		EnvironmentID: uuid.New(),
+		Name:          "Primary",
+		KeyPrefix:     prefix,
+		KeyHash:       hash,
+		Scopes:        scopes,
+		Status:        "active",
+		ExpiresAt:     pgtype.Timestamptz{Time: time.Date(2026, time.April, 25, 12, 0, 0, 0, time.UTC), Valid: true},
 	}}
 	limiter := &fakeLimiter{allowed: true}
 	middleware := newAuthMiddleware(queries, limiter, func() time.Time {

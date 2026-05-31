@@ -23,6 +23,7 @@ func (h *Handler) Register(r chi.Router) {
 	r.Post("/api-keys", h.create)
 	r.Post("/api-keys/{keyID}/rotate", h.rotate)
 	r.Delete("/api-keys/{keyID}", h.revoke)
+	r.Patch("/api-keys/{keyID}", h.update)
 }
 
 type createRequest struct {
@@ -45,12 +46,12 @@ type createResponse struct {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := environmentIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	keys, err := h.service.List(r.Context(), proj.ProjectID)
+	keys, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
 		http.Error(w, "failed to list api keys", http.StatusInternalServerError)
 		return
@@ -64,8 +65,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := environmentIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -78,7 +79,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Create(r.Context(), proj.ProjectID, req.Name, req.Scopes)
+	k, err := h.service.Create(r.Context(), environmentID, req.Name, req.Scopes)
 	if err != nil {
 		http.Error(w, "failed to create api key", http.StatusInternalServerError)
 		return
@@ -92,8 +93,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := environmentIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -102,7 +103,7 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	k, err := h.service.Rotate(r.Context(), proj.ProjectID, keyID)
+	k, err := h.service.Rotate(r.Context(), environmentID, keyID)
 	if err != nil {
 		http.Error(w, "failed to rotate api key", http.StatusInternalServerError)
 		return
@@ -115,8 +116,8 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
-	proj := auth.GetAuthenticatedProject(r.Context())
-	if proj == nil {
+	environmentID, ok := environmentIDFromContext(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -125,9 +126,46 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid key id", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.Revoke(r.Context(), keyID); err != nil {
+	if err := h.service.Revoke(r.Context(), environmentID, keyID); err != nil {
 		http.Error(w, "failed to revoke api key", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type updateRequest struct {
+	Status string `json:"status"`
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := environmentIDFromContext(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyID"))
+	if err != nil {
+		http.Error(w, "invalid key id", http.StatusBadRequest)
+		return
+	}
+	var req updateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	if req.Status != "active" && req.Status != "disabled" {
+		http.Error(w, "invalid status", http.StatusBadRequest)
+		return
+	}
+	if err := h.service.UpdateStatus(r.Context(), environmentID, keyID, req.Status); err != nil {
+		http.Error(w, "failed to update api key", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": req.Status})
+}
+
+func environmentIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	return auth.GetEnvironmentID(r.Context())
 }

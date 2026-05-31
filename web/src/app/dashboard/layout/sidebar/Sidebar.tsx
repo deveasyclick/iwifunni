@@ -1,5 +1,6 @@
+"use client";
+
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import SidebarContent from "./sidebaritems";
 import SimpleBar from "simplebar-react";
@@ -14,6 +15,7 @@ import {
 import "tailwind-sidebar/styles.css";
 import { Button } from "@/components/ui/button";
 import FullLogo from "@/app/components/shared/FullLogo";
+import { useTheme } from "@/components/theme-provider";
 
 interface SidebarItemType {
   heading?: string;
@@ -107,10 +109,10 @@ const renderSidebarItems = (
 
 const SidebarLayout = ({ onClose }: { onClose?: () => void }) => {
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   // Only allow "light" or "dark" for AMSidebar
-  const sidebarMode = theme === "light" || theme === "dark" ? theme : undefined;
+  const sidebarMode = resolvedTheme;
 
   return (
     <AMSidebar
