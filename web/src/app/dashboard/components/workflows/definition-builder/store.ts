@@ -3,12 +3,12 @@ import { createStore } from 'zustand/vanilla';
 import type { WorkflowBuilderDraft, WorkflowBuilderStoreState } from './types';
 import {
   buildCanvasEdge,
-  buildCanvasGraphFromDraft,
   buildCanvasNode,
   createNodeDraft,
   layoutCanvasGraph,
   normalizeNodeDraftForType,
 } from './utils';
+import { buildCanvasGraphFromDraft } from '../utils';
 
 export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
   const graph = buildCanvasGraphFromDraft(draft);
