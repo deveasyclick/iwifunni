@@ -1,10 +1,10 @@
-import dagre from "@dagrejs/dagre";
+import dagre from '@dagrejs/dagre';
 import type {
   WorkflowChannel,
   WorkflowDefinition,
   WorkflowEdge,
   WorkflowNode,
-} from "@/app/types/workflow";
+} from '@/app/types/workflow';
 import {
   durationPattern,
   nodeHeight,
@@ -12,7 +12,8 @@ import {
   notificationChannels,
   uuidPattern,
   zeroUUID,
-} from "./constants";
+} from './constants';
+import { buildDefaultNodeName } from '../utils/buildDefaultNodeName';
 import type {
   BuilderNodeDraft,
   DelayUnit,
@@ -21,7 +22,16 @@ import type {
   WorkflowCanvasNode,
   WorkflowDefinitionIssue,
   WorkflowNodeType,
-} from "./types";
+} from './types';
+import {
+  createDefaultWorkflowBuilderDraft,
+  createNodeDraft,
+} from '../utils/createDefaultWorkflowBuilderDraft';
+
+export {
+  createDefaultWorkflowBuilderDraft,
+  createNodeDraft,
+} from '../utils/createDefaultWorkflowBuilderDraft';
 
 const createCanvasNodeId = () =>
   `canvas_${Math.random().toString(36).slice(2, 10)}`;
@@ -36,46 +46,21 @@ const formatDurationAmount = (value: number) => {
   return String(Number(value.toFixed(2)));
 };
 
-export const buildDefaultNodeName = (
-  type: WorkflowNodeType,
-  channel?: WorkflowChannel | "",
-) => {
-  switch (type) {
-    case "trigger":
-      return "Test trigger";
-    case "delay":
-      return "Delay step";
-    case "condition":
-      return "Condition step";
-    case "notification":
-      switch (channel) {
-        case "sms":
-          return "SMS notification";
-        case "push":
-          return "Push notification";
-        default:
-          return "Email notification";
-      }
-    default:
-      return "Workflow step";
-  }
-};
-
 export const getNodeDisplayName = (draft: BuilderNodeDraft) =>
   draft.name.trim() || buildDefaultNodeName(draft.type, draft.channel);
 
 export const buildNodeDescription = (draft: BuilderNodeDraft) => {
   switch (draft.type) {
-    case "trigger":
-      return "Starts the workflow when you test or receive the trigger event.";
-    case "delay":
-      return "Waits for a fixed amount of time before the next step runs.";
-    case "notification":
-      return "Sends a channel message using the content configured for this step.";
-    case "condition":
-      return "Legacy branching step retained for compatibility.";
+    case 'trigger':
+      return 'Starts the workflow when you test or receive the trigger event.';
+    case 'delay':
+      return 'Waits for a fixed amount of time before the next step runs.';
+    case 'notification':
+      return 'Sends a channel message using the content configured for this step.';
+    case 'condition':
+      return 'Legacy branching step retained for compatibility.';
     default:
-      return "Configure the behavior for this workflow step.";
+      return 'Configure the behavior for this workflow step.';
   }
 };
 
@@ -83,7 +68,7 @@ export const hasConfiguredTemplateId = (templateId: string) => {
   const normalizedTemplateId = templateId.trim();
 
   return (
-    normalizedTemplateId !== "" &&
+    normalizedTemplateId !== '' &&
     normalizedTemplateId !== zeroUUID &&
     uuidPattern.test(normalizedTemplateId)
   );
@@ -97,34 +82,34 @@ export const parseDelayDuration = (
 
   if (!match) {
     return {
-      amount: normalizedDuration ? normalizedDuration : "",
-      unit: "minutes",
+      amount: normalizedDuration ? normalizedDuration : '',
+      unit: 'minutes',
     };
   }
 
   const amount = Number(match[1]);
   const token = match[2];
 
-  if (token === "h") {
+  if (token === 'h') {
     if (amount >= 168 && amount % 168 === 0) {
-      return { amount: formatDurationAmount(amount / 168), unit: "weeks" };
+      return { amount: formatDurationAmount(amount / 168), unit: 'weeks' };
     }
     if (amount >= 24 && amount % 24 === 0) {
-      return { amount: formatDurationAmount(amount / 24), unit: "days" };
+      return { amount: formatDurationAmount(amount / 24), unit: 'days' };
     }
-    return { amount: formatDurationAmount(amount), unit: "hours" };
+    return { amount: formatDurationAmount(amount), unit: 'hours' };
   }
 
   return {
     amount: formatDurationAmount(amount),
-    unit: token === "s" ? "seconds" : "minutes",
+    unit: token === 's' ? 'seconds' : 'minutes',
   };
 };
 
 export const formatDelayDuration = (amount: string, unit: DelayUnit) => {
   const normalizedAmount = amount.trim();
   if (!normalizedAmount) {
-    return "";
+    return '';
   }
 
   const numericAmount = Number(normalizedAmount);
@@ -133,15 +118,15 @@ export const formatDelayDuration = (amount: string, unit: DelayUnit) => {
   }
 
   switch (unit) {
-    case "seconds":
+    case 'seconds':
       return `${formatDurationAmount(numericAmount)}s`;
-    case "minutes":
+    case 'minutes':
       return `${formatDurationAmount(numericAmount)}m`;
-    case "hours":
+    case 'hours':
       return `${formatDurationAmount(numericAmount)}h`;
-    case "days":
+    case 'days':
       return `${formatDurationAmount(numericAmount * 24)}h`;
-    case "weeks":
+    case 'weeks':
       return `${formatDurationAmount(numericAmount * 168)}h`;
     default:
       return `${formatDurationAmount(numericAmount)}m`;
@@ -149,7 +134,7 @@ export const formatDelayDuration = (amount: string, unit: DelayUnit) => {
 };
 
 const normalizeImportedTemplateId = (value: unknown) => {
-  const templateId = typeof value === "string" ? value.trim() : "";
+  const templateId = typeof value === 'string' ? value.trim() : '';
 
   if (!templateId) {
     return zeroUUID;
@@ -158,55 +143,21 @@ const normalizeImportedTemplateId = (value: unknown) => {
   return uuidPattern.test(templateId) ? templateId : zeroUUID;
 };
 
-export const createNodeDraft = (
-  type: WorkflowNodeType,
-  channel?: WorkflowChannel,
-): BuilderNodeDraft => {
-  if (type === "trigger") {
-    return {
-      id: "trigger_1",
-      name: buildDefaultNodeName(type),
-      type,
-      duration: "5m",
-      templateId: "",
-      channel: "",
-      field: "data.plan",
-      operator: "equals",
-      value: "pro",
-    };
-  }
-
-  return {
-    id:
-      type === "notification"
-        ? `${channel || "email"}_${Math.random().toString(36).slice(2, 6)}`
-        : `${type}_${Math.random().toString(36).slice(2, 6)}`,
-    name: buildDefaultNodeName(type, channel),
-    type,
-    duration: "5m",
-    templateId: type === "notification" ? zeroUUID : "",
-    channel: type === "notification" ? channel || "email" : "",
-    field: "data.plan",
-    operator: "equals",
-    value: "pro",
-  };
-};
-
 export const normalizeNodeDraftForType = (
   draft: BuilderNodeDraft,
   type: WorkflowNodeType = draft.type,
 ): BuilderNodeDraft => {
-  if (type === "trigger") {
+  if (type === 'trigger') {
     return {
       ...draft,
       name: draft.name,
       type,
-      duration: "5m",
-      templateId: "",
-      channel: "",
-      field: "data.plan",
-      operator: "equals",
-      value: "pro",
+      duration: '5m',
+      templateId: '',
+      channel: '',
+      field: 'data.plan',
+      operator: 'equals',
+      value: 'pro',
     };
   }
 
@@ -214,42 +165,14 @@ export const normalizeNodeDraftForType = (
     id: draft.id,
     name: draft.name,
     type,
-    duration: type === "delay" ? draft.duration : "5m",
-    templateId: type === "notification" ? draft.templateId || zeroUUID : "",
-    channel: type === "notification" ? draft.channel || "email" : "",
-    field: type === "condition" ? draft.field || "data.plan" : "data.plan",
-    operator: type === "condition" ? draft.operator || "equals" : "equals",
-    value: type === "condition" ? draft.value : "pro",
+    duration: type === 'delay' ? draft.duration : '5m',
+    templateId: type === 'notification' ? draft.templateId || zeroUUID : '',
+    channel: type === 'notification' ? draft.channel || 'email' : '',
+    field: type === 'condition' ? draft.field || 'data.plan' : 'data.plan',
+    operator: type === 'condition' ? draft.operator || 'equals' : 'equals',
+    value: type === 'condition' ? draft.value : 'pro',
   };
 };
-
-export const createDefaultWorkflowBuilderDraft = (): WorkflowBuilderDraft => ({
-  triggerEvent: "user.signup",
-  nodes: [
-    {
-      ...createNodeDraft("trigger"),
-      id: "trigger_1",
-      name: "Test trigger",
-    },
-    {
-      ...createNodeDraft("delay"),
-      id: "delay_1",
-      name: "Wait 5 minutes",
-      duration: "5m",
-    },
-    {
-      ...createNodeDraft("notification", "email"),
-      id: "email_1",
-      name: "Send welcome email",
-      templateId: zeroUUID,
-      channel: "email",
-    },
-  ],
-  edges: [
-    { source: "trigger_1", target: "delay_1", branch: "" },
-    { source: "delay_1", target: "email_1", branch: "" },
-  ],
-});
 
 export const builderDraftFromDefinition = (
   definition?: WorkflowDefinition,
@@ -259,30 +182,30 @@ export const builderDraftFromDefinition = (
   }
 
   const draft: WorkflowBuilderDraft = {
-    triggerEvent: definition.trigger?.event || "",
+    triggerEvent: definition.trigger?.event || '',
     nodes: definition.nodes.map((node) => {
-      const config = (node.config || {}) as Record<string, unknown>;
+      const config = node.config || {};
       const channel =
-        Array.isArray(config.channels) && typeof config.channels[0] === "string"
+        Array.isArray(config.channels) && typeof config.channels[0] === 'string'
           ? (config.channels[0] as WorkflowChannel)
-          : "";
+          : '';
 
       return normalizeNodeDraftForType(
         {
           id: node.id,
           name:
-            typeof config.name === "string" && config.name.trim()
+            typeof config.name === 'string' && config.name.trim()
               ? config.name.trim()
               : buildDefaultNodeName(node.type, channel),
           type: node.type,
           duration:
-            typeof config.duration === "string" ? config.duration : "5m",
+            typeof config.duration === 'string' ? config.duration : '5m',
           templateId: normalizeImportedTemplateId(config.template_id),
           channel,
-          field: typeof config.field === "string" ? config.field : "data.plan",
+          field: typeof config.field === 'string' ? config.field : 'data.plan',
           operator:
-            typeof config.operator === "string" ? config.operator : "equals",
-          value: config.value == null ? "" : String(config.value),
+            typeof config.operator === 'string' ? config.operator : 'equals',
+          value: config.value == null ? '' : String(config.value),
         },
         node.type,
       );
@@ -290,19 +213,19 @@ export const builderDraftFromDefinition = (
     edges: definition.edges.map((edge) => ({
       source: edge.source,
       target: edge.target,
-      branch: edge.branch || "",
+      branch: edge.branch || '',
     })),
   };
 
-  const hasTriggerNode = draft.nodes.some((node) => node.type === "trigger");
+  const hasTriggerNode = draft.nodes.some((node) => node.type === 'trigger');
   if (!hasTriggerNode) {
-    draft.nodes.unshift({ ...createNodeDraft("trigger"), id: "trigger_1" });
-    const firstNonTrigger = draft.nodes.find((node) => node.type !== "trigger");
+    draft.nodes.unshift({ ...createNodeDraft('trigger'), id: 'trigger_1' });
+    const firstNonTrigger = draft.nodes.find((node) => node.type !== 'trigger');
     if (firstNonTrigger) {
       draft.edges.unshift({
-        source: "trigger_1",
+        source: 'trigger_1',
         target: firstNonTrigger.id,
-        branch: "",
+        branch: '',
       });
     }
   }
@@ -322,12 +245,12 @@ export const workflowDefinitionFromBuilderDraft = (
     } as WorkflowNode;
 
     switch (node.type) {
-      case "trigger":
+      case 'trigger':
         return {
           ...base,
           config: Object.keys(namedConfig).length > 0 ? namedConfig : undefined,
         };
-      case "delay":
+      case 'delay':
         return {
           ...base,
           config: {
@@ -335,7 +258,7 @@ export const workflowDefinitionFromBuilderDraft = (
             duration: node.duration.trim(),
           },
         };
-      case "notification":
+      case 'notification':
         return {
           ...base,
           config: {
@@ -344,7 +267,7 @@ export const workflowDefinitionFromBuilderDraft = (
             channels: node.channel ? [node.channel] : [],
           },
         };
-      case "condition":
+      case 'condition':
         return {
           ...base,
           config: {
@@ -380,7 +303,7 @@ export const validateWorkflowDefinitionDraft = (
 ): WorkflowDefinitionIssue[] => {
   if (!definition) {
     return [
-      { path: "definition", message: "Workflow definition is required." },
+      { path: 'definition', message: 'Workflow definition is required.' },
     ];
   }
 
@@ -394,16 +317,16 @@ export const validateWorkflowDefinitionDraft = (
 
   if (!definition.trigger?.event?.trim()) {
     issues.push({
-      path: "trigger.event",
+      path: 'trigger.event',
       message:
-        "A trigger event is still required by the current backend event API.",
+        'A trigger event is still required by the current backend event API.',
     });
   }
 
   if (definition.nodes.length === 0) {
     issues.push({
-      path: "nodes",
-      message: "At least one workflow node is required.",
+      path: 'nodes',
+      message: 'At least one workflow node is required.',
     });
   }
 
@@ -411,7 +334,7 @@ export const validateWorkflowDefinitionDraft = (
     const nodePath = `nodes.${index}`;
     const nodeID = node.id.trim();
     if (!nodeID) {
-      issues.push({ path: `${nodePath}.id`, message: "Node ID is required." });
+      issues.push({ path: `${nodePath}.id`, message: 'Node ID is required.' });
       return;
     }
     if (seenNodeIDs.has(nodeID)) {
@@ -426,28 +349,28 @@ export const validateWorkflowDefinitionDraft = (
     incomingEdges.set(nodeID, 0);
     outgoingEdges.set(nodeID, 0);
 
-    if (node.type === "trigger") {
+    if (node.type === 'trigger') {
       triggerNodeIDs.add(nodeID);
     }
 
-    const config = (node.config || {}) as Record<string, unknown>;
-    if (node.type === "delay") {
+    const config = node.config || {};
+    if (node.type === 'delay') {
       const duration =
-        typeof config.duration === "string" ? config.duration.trim() : "";
+        typeof config.duration === 'string' ? config.duration.trim() : '';
       if (!durationPattern.test(duration)) {
         issues.push({
           path: `${nodePath}.duration`,
           message:
-            "Delay duration must use Go duration syntax like 5m or 1h30m.",
+            'Delay duration must use Go duration syntax like 5m or 1h30m.',
         });
       }
     }
-    if (node.type === "notification") {
+    if (node.type === 'notification') {
       const templateID =
-        typeof config.template_id === "string" ? config.template_id.trim() : "";
+        typeof config.template_id === 'string' ? config.template_id.trim() : '';
       const channels = Array.isArray(config.channels)
         ? config.channels.filter(
-            (channel): channel is string => typeof channel === "string",
+            (channel): channel is string => typeof channel === 'string',
           )
         : [];
       if (
@@ -457,14 +380,14 @@ export const validateWorkflowDefinitionDraft = (
       ) {
         issues.push({
           path: `${nodePath}.template_id`,
-          message: "Notification template ID must be a valid UUID.",
+          message: 'Notification template ID must be a valid UUID.',
         });
       }
       if (!templateID || templateID === zeroUUID) {
         issues.push({
           path: `${nodePath}.template_id`,
           message:
-            "This notification step has no configured template. Open the channel editor to set it up.",
+            'This notification step has no configured template. Open the channel editor to set it up.',
         });
       }
       if (
@@ -474,30 +397,30 @@ export const validateWorkflowDefinitionDraft = (
         issues.push({
           path: `${nodePath}.channels`,
           message:
-            "Notification steps currently require exactly one supported channel.",
+            'Notification steps currently require exactly one supported channel.',
         });
       }
     }
-    if (node.type === "condition") {
+    if (node.type === 'condition') {
       issues.push({
         path: `${nodePath}.type`,
         message:
-          "Condition steps are not supported in the linear workflow builder.",
+          'Condition steps are not supported in the linear workflow builder.',
       });
     }
   });
 
   if (triggerNodeIDs.size === 0) {
     issues.push({
-      path: "nodes",
+      path: 'nodes',
       message:
-        "A workflow should start with a trigger node for testing and flow entry.",
+        'A workflow should start with a trigger node for testing and flow entry.',
     });
   }
   if (triggerNodeIDs.size > 1) {
     issues.push({
-      path: "nodes",
-      message: "Linear workflows support exactly one trigger node.",
+      path: 'nodes',
+      message: 'Linear workflows support exactly one trigger node.',
     });
   }
 
@@ -505,25 +428,25 @@ export const validateWorkflowDefinitionDraft = (
     const edgePath = `edges.${index}`;
     const source = edge.source.trim();
     const target = edge.target.trim();
-    const branch = edge.branch?.trim() || "";
+    const branch = edge.branch?.trim() || '';
     if (!source || !target) {
       issues.push({
         path: edgePath,
-        message: "Each edge must include both a source and target node.",
+        message: 'Each edge must include both a source and target node.',
       });
       return;
     }
     if (!seenNodeIDs.has(source) || !seenNodeIDs.has(target)) {
       issues.push({
         path: edgePath,
-        message: "Edges must point to nodes that exist in the builder.",
+        message: 'Edges must point to nodes that exist in the builder.',
       });
       return;
     }
     if (branch) {
       issues.push({
         path: `${edgePath}.branch`,
-        message: "Branching is not supported in the linear workflow builder.",
+        message: 'Branching is not supported in the linear workflow builder.',
       });
     }
     adjacency.set(source, [...(adjacency.get(source) || []), target]);
@@ -537,17 +460,17 @@ export const validateWorkflowDefinitionDraft = (
 
   if (seenNodeIDs.size > 0 && startNodes.length === 0) {
     issues.push({
-      path: "edges",
+      path: 'edges',
       message:
-        "Workflow graph must have one start node with no incoming edges.",
+        'Workflow graph must have one start node with no incoming edges.',
     });
   }
 
   if (startNodes.length > 1) {
     issues.push({
-      path: "edges",
+      path: 'edges',
       message:
-        "Linear workflows must form a single path with exactly one start node.",
+        'Linear workflows must form a single path with exactly one start node.',
     });
   }
 
@@ -555,14 +478,14 @@ export const validateWorkflowDefinitionDraft = (
     const triggerNodeID = Array.from(triggerNodeIDs)[0];
     if ((incomingEdges.get(triggerNodeID) || 0) > 0) {
       issues.push({
-        path: `${nodePathByID.get(triggerNodeID) || "nodes"}.edges`,
-        message: "The trigger node must be the first step in the workflow.",
+        path: `${nodePathByID.get(triggerNodeID) || 'nodes'}.edges`,
+        message: 'The trigger node must be the first step in the workflow.',
       });
     }
   }
 
   for (const nodeID of seenNodeIDs) {
-    const nodePath = nodePathByID.get(nodeID) || "nodes";
+    const nodePath = nodePathByID.get(nodeID) || 'nodes';
     const incomingCount = incomingEdges.get(nodeID) || 0;
     const outgoingCount = outgoingEdges.get(nodeID) || 0;
 
@@ -570,7 +493,7 @@ export const validateWorkflowDefinitionDraft = (
       issues.push({
         path: `${nodePath}.edges`,
         message:
-          "Linear workflows allow only one incoming connection per node.",
+          'Linear workflows allow only one incoming connection per node.',
       });
     }
 
@@ -578,7 +501,7 @@ export const validateWorkflowDefinitionDraft = (
       issues.push({
         path: `${nodePath}.edges`,
         message:
-          "Linear workflows allow only one outgoing connection per node.",
+          'Linear workflows allow only one outgoing connection per node.',
       });
     }
   }
@@ -606,8 +529,8 @@ export const validateWorkflowDefinitionDraft = (
   for (const nodeID of adjacency.keys()) {
     if (hasCycle(nodeID)) {
       issues.push({
-        path: "edges",
-        message: "Workflow graph cannot contain cycles.",
+        path: 'edges',
+        message: 'Workflow graph cannot contain cycles.',
       });
       break;
     }
@@ -630,8 +553,8 @@ export const validateWorkflowDefinitionDraft = (
 
     if (reachable.size !== seenNodeIDs.size) {
       issues.push({
-        path: "edges",
-        message: "All workflow nodes must belong to one connected linear path.",
+        path: 'edges',
+        message: 'All workflow nodes must belong to one connected linear path.',
       });
     }
   }
@@ -641,16 +564,16 @@ export const validateWorkflowDefinitionDraft = (
 
 export const getNodeTone = (type: WorkflowNodeType) => {
   switch (type) {
-    case "notification":
-      return "border-primary/40 bg-primary/8 text-primary";
-    case "delay":
-      return "border-warning/35 bg-warning/10 text-warningemphasis";
-    case "condition":
-      return "border-info/35 bg-info/10 text-infoemphasis";
-    case "trigger":
-      return "border-success/35 bg-success/10 text-successemphasis";
+    case 'notification':
+      return 'border-primary/40 bg-primary/8 text-primary';
+    case 'delay':
+      return 'border-warning/35 bg-warning/10 text-warningemphasis';
+    case 'condition':
+      return 'border-info/35 bg-info/10 text-infoemphasis';
+    case 'trigger':
+      return 'border-success/35 bg-success/10 text-successemphasis';
     default:
-      return "border-border bg-muted/40 text-foreground";
+      return 'border-border bg-muted/40 text-foreground';
   }
 };
 
@@ -659,20 +582,20 @@ export const buildNodeSubtitle = (
   triggerEvent: string,
 ) => {
   switch (draft.type) {
-    case "trigger":
+    case 'trigger':
       return triggerEvent
         ? `Event: ${triggerEvent}`
-        : "Configure workflow event";
-    case "delay":
-      return draft.duration ? `Wait ${draft.duration}` : "Configure delay";
-    case "notification":
+        : 'Configure workflow event';
+    case 'delay':
+      return draft.duration ? `Wait ${draft.duration}` : 'Configure delay';
+    case 'notification':
       return hasConfiguredTemplateId(draft.templateId)
         ? `${draft.channel.toUpperCase()} content configured`
         : `${draft.channel.toUpperCase()} content needs configuration`;
-    case "condition":
-      return "Unsupported in linear workflows";
+    case 'condition':
+      return 'Unsupported in linear workflows';
     default:
-      return "";
+      return '';
   }
 };
 
@@ -681,7 +604,7 @@ export const buildCanvasNode = (
   id = createCanvasNodeId(),
 ): WorkflowCanvasNode => ({
   id,
-  type: "workflow-step",
+  type: 'workflow-step',
   position: { x: 0, y: 0 },
   data: { draft },
 });
@@ -689,14 +612,14 @@ export const buildCanvasNode = (
 export const buildCanvasEdge = (
   source: string,
   target: string,
-  branch = "",
+  branch = '',
   id = createCanvasEdgeId(),
 ): WorkflowCanvasEdge => ({
   id,
   source,
   target,
-  sourceHandle: "default",
-  type: "workflow-edge",
+  sourceHandle: 'default',
+  type: 'workflow-edge',
   data: { branch },
 });
 
@@ -707,7 +630,7 @@ export const layoutCanvasGraph = (
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({
-    rankdir: "TB",
+    rankdir: 'TB',
     nodesep: 40,
     ranksep: 34,
     marginx: 24,
@@ -778,17 +701,17 @@ export const buildDraftFromCanvas = (
     triggerEvent,
     nodes: orderedNodes.map((node) => ({ ...node.data.draft })),
     edges: edges.map((edge) => ({
-      source: nodeDraftById.get(edge.source)?.id || "",
-      target: nodeDraftById.get(edge.target)?.id || "",
-      branch: edge.data?.branch || "",
+      source: nodeDraftById.get(edge.source)?.id || '',
+      target: nodeDraftById.get(edge.target)?.id || '',
+      branch: edge.data?.branch || '',
     })),
   };
 
   draft.nodes.sort((left, right) => {
-    if (left.type === "trigger" && right.type !== "trigger") {
+    if (left.type === 'trigger' && right.type !== 'trigger') {
       return -1;
     }
-    if (left.type !== "trigger" && right.type === "trigger") {
+    if (left.type !== 'trigger' && right.type === 'trigger') {
       return 1;
     }
     return 0;

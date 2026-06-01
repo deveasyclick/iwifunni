@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   forwardRef,
@@ -6,9 +6,9 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
-} from "react";
-import EmailEditor, { type EditorRef } from "react-email-editor";
-import { Button } from "@/components/ui/button";
+} from 'react';
+import EmailEditor, { type EditorRef } from 'react-email-editor';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,17 +16,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+} from '@/components/ui/dropdown-menu';
+import { ChevronDown, Plus } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
 
 // ─── Body encoding/decoding ────────────────────────────────────────────────
 
-const DESIGN_PREFIX = "<!-- unlayer-design:";
-const DESIGN_SUFFIX = " -->";
+const DESIGN_PREFIX = '<!-- unlayer-design:';
+const DESIGN_SUFFIX = ' -->';
 
 export const encodeEmailBody = (design: object, html: string): string => {
-  const encoded = Buffer.from(JSON.stringify(design)).toString("base64");
+  const encoded = Buffer.from(JSON.stringify(design)).toString('base64');
   return `${DESIGN_PREFIX}${encoded}${DESIGN_SUFFIX}\n${html}`;
 };
 
@@ -38,11 +38,11 @@ export const decodeEmailBody = (
   if (endIdx === -1) return null;
 
   const b64 = body.slice(DESIGN_PREFIX.length, endIdx);
-  const html = body.slice(endIdx + DESIGN_SUFFIX.length).replace(/^\n/, "");
+  const html = body.slice(endIdx + DESIGN_SUFFIX.length).replace(/^\n/, '');
 
   try {
     const design = JSON.parse(
-      Buffer.from(b64, "base64").toString("utf-8"),
+      Buffer.from(b64, 'base64').toString('utf-8'),
     ) as object;
     return { design, html };
   } catch {
@@ -70,85 +70,85 @@ const makeRow = (contents: object[]) => ({
     duplicatable: true,
     deletable: true,
     hideable: true,
-    _meta: { htmlID: `u_row_${uid()}`, htmlClassNames: "u_row" },
+    _meta: { htmlID: `u_row_${uid()}`, htmlClassNames: 'u_row' },
   },
 });
 
 const makeTextContent = (text: string) => ({
   id: `content_${uid()}`,
-  type: "text",
+  type: 'text',
   values: {
-    containerPadding: "10px",
+    containerPadding: '10px',
     text: `<p>${text}</p>`,
     _meta: {
       htmlID: `u_content_text_${uid()}`,
-      htmlClassNames: "u_content_text",
+      htmlClassNames: 'u_content_text',
     },
   },
 });
 
-const makeHeadingContent = (text: string, tag: "h1" | "h2" | "h3" = "h2") => ({
+const makeHeadingContent = (text: string, tag: 'h1' | 'h2' | 'h3' = 'h2') => ({
   id: `content_${uid()}`,
-  type: "heading",
+  type: 'heading',
   values: {
-    containerPadding: "10px",
+    containerPadding: '10px',
     text,
     tag,
-    fontSize: tag === "h1" ? "28px" : tag === "h2" ? "22px" : "18px",
+    fontSize: tag === 'h1' ? '28px' : tag === 'h2' ? '22px' : '18px',
     _meta: {
       htmlID: `u_content_heading_${uid()}`,
-      htmlClassNames: "u_content_heading",
+      htmlClassNames: 'u_content_heading',
     },
   },
 });
 
 const makeImageContent = () => ({
   id: `content_${uid()}`,
-  type: "image",
+  type: 'image',
   values: {
-    containerPadding: "10px",
-    src: { url: "https://placehold.co/600x200/e2e8f0/64748b?text=Your+Image" },
-    textAlign: "center",
-    altText: "Image",
+    containerPadding: '10px',
+    src: { url: 'https://placehold.co/600x200/e2e8f0/64748b?text=Your+Image' },
+    textAlign: 'center',
+    altText: 'Image',
     fullWidth: false,
     _meta: {
       htmlID: `u_content_image_${uid()}`,
-      htmlClassNames: "u_content_image",
+      htmlClassNames: 'u_content_image',
     },
   },
 });
 
 const makeButtonContent = (label: string) => ({
   id: `content_${uid()}`,
-  type: "button",
+  type: 'button',
   values: {
-    containerPadding: "10px",
+    containerPadding: '10px',
     text: label,
-    href: { name: "web", values: { href: "#", target: "_blank" } },
-    textAlign: "center",
-    backgroundColor: "#3b82f6",
-    buttonColors: { color: "#FFFFFF", backgroundColor: "#3b82f6" },
+    href: { name: 'web', values: { href: '#', target: '_blank' } },
+    textAlign: 'center',
+    backgroundColor: '#3b82f6',
+    buttonColors: { color: '#FFFFFF', backgroundColor: '#3b82f6' },
     _meta: {
       htmlID: `u_content_button_${uid()}`,
-      htmlClassNames: "u_content_button",
+      htmlClassNames: 'u_content_button',
     },
   },
 });
 
 const makeDividerContent = () => ({
   id: `content_${uid()}`,
-  type: "divider",
+  type: 'divider',
   values: {
-    containerPadding: "10px",
-    width: "100%",
+    containerPadding: '10px',
+    width: '100%',
     border: {
-      borderTopWidth: "1px",
-      borderTopStyle: "solid",
-      borderTopColor: "#e2e8f0",
+      borderTopWidth: '1px',
+      borderTopStyle: 'solid',
+      borderTopColor: '#e2e8f0',
     },
     _meta: {
       htmlID: `u_content_divider_${uid()}`,
-      htmlClassNames: "u_content_divider",
+      htmlClassNames: 'u_content_divider',
     },
   },
 });
@@ -163,88 +163,88 @@ type BlockDef = {
 
 const BLOCK_DEFINITIONS: BlockDef[] = [
   {
-    label: "Heading 1",
-    group: "Typography",
-    build: () => makeRow([makeHeadingContent("Section Heading", "h1")]),
+    label: 'Heading 1',
+    group: 'Typography',
+    build: () => makeRow([makeHeadingContent('Section Heading', 'h1')]),
   },
   {
-    label: "Heading 2",
-    group: "Typography",
-    build: () => makeRow([makeHeadingContent("Section Heading", "h2")]),
+    label: 'Heading 2',
+    group: 'Typography',
+    build: () => makeRow([makeHeadingContent('Section Heading', 'h2')]),
   },
   {
-    label: "Heading 3",
-    group: "Typography",
-    build: () => makeRow([makeHeadingContent("Subsection", "h3")]),
+    label: 'Heading 3',
+    group: 'Typography',
+    build: () => makeRow([makeHeadingContent('Subsection', 'h3')]),
   },
   {
-    label: "Paragraph",
-    group: "Typography",
-    build: () => makeRow([makeTextContent("Write your message here.")]),
+    label: 'Paragraph',
+    group: 'Typography',
+    build: () => makeRow([makeTextContent('Write your message here.')]),
   },
   {
-    label: "Blockquote",
-    group: "Typography",
+    label: 'Blockquote',
+    group: 'Typography',
     build: () =>
       makeRow([
         {
           id: `content_${uid()}`,
-          type: "text",
+          type: 'text',
           values: {
-            containerPadding: "0px 0px 0px 16px",
+            containerPadding: '0px 0px 0px 16px',
             text: '<p style="border-left:4px solid #e2e8f0;padding-left:12px;color:#64748b;font-style:italic;">Your quote text here.</p>',
             _meta: {
               htmlID: `u_content_text_${uid()}`,
-              htmlClassNames: "u_content_text",
+              htmlClassNames: 'u_content_text',
             },
           },
         },
       ]),
   },
   {
-    label: "Image",
-    group: "Media",
+    label: 'Image',
+    group: 'Media',
     build: () => makeRow([makeImageContent()]),
   },
   {
-    label: "Button",
-    group: "Elements",
-    build: () => makeRow([makeButtonContent("Click Here")]),
+    label: 'Button',
+    group: 'Elements',
+    build: () => makeRow([makeButtonContent('Click Here')]),
   },
   {
-    label: "Divider",
-    group: "Elements",
+    label: 'Divider',
+    group: 'Elements',
     build: () => makeRow([makeDividerContent()]),
   },
   {
-    label: "Header section",
-    group: "Sections",
+    label: 'Header section',
+    group: 'Sections',
     build: () =>
       makeRow([
-        makeHeadingContent("Welcome!", "h1"),
+        makeHeadingContent('Welcome!', 'h1'),
         makeTextContent(
-          "Thank you for joining us. Here&apos;s what&apos;s new.",
+          'Thank you for joining us. Here&apos;s what&apos;s new.',
         ),
       ]),
   },
   {
-    label: "Card section",
-    group: "Sections",
+    label: 'Card section',
+    group: 'Sections',
     build: () =>
       makeRow([
-        makeHeadingContent("Feature Title", "h3"),
-        makeTextContent("Describe the feature or update briefly."),
-        makeButtonContent("Learn More"),
+        makeHeadingContent('Feature Title', 'h3'),
+        makeTextContent('Describe the feature or update briefly.'),
+        makeButtonContent('Learn More'),
       ]),
   },
   {
-    label: "CTA section",
-    group: "Sections",
+    label: 'CTA section',
+    group: 'Sections',
     build: () =>
       makeRow([
-        makeHeadingContent("Ready to get started?", "h2"),
-        makeTextContent("Join thousands of users today."),
-        makeButtonContent("Get Started"),
+        makeHeadingContent('Ready to get started?', 'h2'),
+        makeTextContent('Join thousands of users today.'),
+        makeButtonContent('Get Started'),
       ]),
   },
 ];
@@ -284,7 +284,7 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
         new Promise((resolve, reject) => {
           const editor = editorRef.current?.editor;
           if (!editor) {
-            reject(new Error("Editor not ready"));
+            reject(new Error('Editor not ready'));
             return;
           }
           editor.exportHtml(({ design, html }) => {
@@ -307,17 +307,21 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
       } else {
         editor.loadDesign({
           body: {
-            rows: [makeRow([makeTextContent("Start typing your message here.")])],
+            rows: [
+              makeRow([makeTextContent('Start typing your message here.')]),
+            ],
           },
         } as Parameters<typeof editor.loadDesign>[0]);
       }
 
-      editor.addEventListener("design:updated", () => {
+      editor.addEventListener('design:updated', () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
           editor.exportHtml(({ design, html }) => {
             onHtmlChangeRef.current?.(html);
-            onEncodedBodyChangeRef.current?.(encodeEmailBody(design as object, html));
+            onEncodedBodyChangeRef.current?.(
+              encodeEmailBody(design as object, html),
+            );
           });
         }, 800);
       });
@@ -386,26 +390,35 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
             projectId={projectId}
             minHeight={560}
             options={{
-              displayMode: "email",
+              displayMode: 'email',
               features: { stockImages: false },
               appearance: {
-                theme: resolvedTheme === "dark" ? "dark" : "light",
+                theme: resolvedTheme === 'dark' ? 'dark' : 'light',
               },
               mergeTags: {
                 subscriber: {
-                  name: "Subscriber",
+                  name: 'Subscriber',
                   mergeTags: {
-                    firstName: { name: "First Name", value: "{{subscriber.firstName}}" },
-                    lastName: { name: "Last Name", value: "{{subscriber.lastName}}" },
-                    email: { name: "Email", value: "{{subscriber.email}}" },
-                    id: { name: "Subscriber ID", value: "{{subscriber.id}}" },
+                    firstName: {
+                      name: 'First Name',
+                      value: '{{subscriber.firstName}}',
+                    },
+                    lastName: {
+                      name: 'Last Name',
+                      value: '{{subscriber.lastName}}',
+                    },
+                    email: { name: 'Email', value: '{{subscriber.email}}' },
+                    id: { name: 'Subscriber ID', value: '{{subscriber.id}}' },
                   },
                 },
                 workflow: {
-                  name: "Workflow",
+                  name: 'Workflow',
                   mergeTags: {
-                    name: { name: "Workflow Name", value: "{{workflow.name}}" },
-                    eventData: { name: "Event Data", value: "{{workflow.eventData}}" },
+                    name: { name: 'Workflow Name', value: '{{workflow.name}}' },
+                    eventData: {
+                      name: 'Event Data',
+                      value: '{{workflow.eventData}}',
+                    },
                   },
                 },
               },
@@ -417,6 +430,6 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
   },
 );
 
-UnlayerEmailEditor.displayName = "UnlayerEmailEditor";
+UnlayerEmailEditor.displayName = 'UnlayerEmailEditor';
 
 export default UnlayerEmailEditor;

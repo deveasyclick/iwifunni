@@ -1,6 +1,6 @@
-import { addEdge, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
-import { createStore } from "zustand/vanilla";
-import type { WorkflowBuilderDraft, WorkflowBuilderStoreState } from "./types";
+import { addEdge, applyEdgeChanges, applyNodeChanges } from '@xyflow/react';
+import { createStore } from 'zustand/vanilla';
+import type { WorkflowBuilderDraft, WorkflowBuilderStoreState } from './types';
 import {
   buildCanvasEdge,
   buildCanvasGraphFromDraft,
@@ -8,7 +8,7 @@ import {
   createNodeDraft,
   layoutCanvasGraph,
   normalizeNodeDraftForType,
-} from "./utils";
+} from './utils';
 
 export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
   const graph = buildCanvasGraphFromDraft(draft);
@@ -47,8 +47,8 @@ export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
     insertNodeOnEdge: (edgeId, type, options) => {
       const currentEdge = get().edges.find((edge) => edge.id === edgeId);
       if (!currentEdge) {
-        if (edgeId.startsWith("terminal:")) {
-          const sourceNodeId = edgeId.slice("terminal:".length);
+        if (edgeId.startsWith('terminal:')) {
+          const sourceNodeId = edgeId.slice('terminal:'.length);
           const sourceNode = get().nodes.find(
             (node) => node.id === sourceNodeId,
           );
@@ -105,7 +105,7 @@ export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
     },
     duplicateNode: (nodeId) => {
       const currentNode = get().nodes.find((node) => node.id === nodeId);
-      if (!currentNode || currentNode.data.draft.type === "trigger") {
+      if (!currentNode || currentNode.data.draft.type === 'trigger') {
         return;
       }
 
@@ -147,7 +147,7 @@ export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
       const remainingNodes = currentNodes.filter((node) => node.id !== nodeId);
       const nextNodes =
         remainingNodes.length === 0
-          ? [buildCanvasNode(createNodeDraft("trigger"))]
+          ? [buildCanvasNode(createNodeDraft('trigger'))]
           : remainingNodes;
       const incomingEdges = currentEdges.filter(
         (edge) => edge.target === nodeId,
@@ -196,9 +196,9 @@ export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
           edge.id === edgeId
             ? {
                 ...edge,
-                sourceHandle: "default",
+                sourceHandle: 'default',
                 label: undefined,
-                data: { branch: "" },
+                data: { branch: '' },
               }
             : edge,
         ),

@@ -1,27 +1,27 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import CardBox from "@/app/components/shared/CardBox";
-import type { CreateWorkflowPayload } from "@/app/types/workflow";
-import { Button } from "@/components/ui/button";
-import { workflowApi } from "@/app/dashboard/components/workflows/api";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import CardBox from '@/app/components/shared/CardBox';
+import type { CreateWorkflowPayload } from '@/app/types/workflow';
+import { Button } from '@/components/ui/button';
+import { workflowApi } from '@/app/dashboard/components/workflows/api';
 import {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
   validateWorkflowDefinitionDraft,
   WorkflowDefinitionBuilder,
   workflowDefinitionFromBuilderDraft,
-} from "@/app/dashboard/components/workflows/definition-builder";
-import { buildWorkflowChannelConfigureHref } from "./create-workflow-metadata";
+} from '@/app/dashboard/components/workflows/definition-builder';
+import { buildWorkflowChannelConfigureHref } from './create-workflow-metadata';
 
 type CreateWorkflowBuilderProps = {
   workflowId: string;
 };
 
 type AutosaveState = {
-  status: "loading" | "saving" | "saved" | "error" | "invalid";
+  status: 'loading' | 'saving' | 'saved' | 'error' | 'invalid';
   message: string;
 };
 
@@ -44,8 +44,8 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     ReturnType<typeof workflowApi.getWorkflow>
   > | null>(null);
   const [autosaveState, setAutosaveState] = useState<AutosaveState>({
-    status: workflowId ? "loading" : "error",
-    message: workflowId ? "Loading draft..." : "Workflow draft not found",
+    status: workflowId ? 'loading' : 'error',
+    message: workflowId ? 'Loading draft...' : 'Workflow draft not found',
   });
   const [definitionDraft, setDefinitionDraft] = useState(
     createDefaultWorkflowBuilderDraft,
@@ -68,8 +68,8 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     () =>
       buildSaveSignature(
         draftSignature,
-        workflow?.name || "",
-        workflow?.description || "",
+        workflow?.name || '',
+        workflow?.description || '',
       ),
     [draftSignature, workflow?.description, workflow?.name],
   );
@@ -77,10 +77,10 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
   useEffect(() => {
     if (!workflowId) {
       setLoading(false);
-      setError("Workflow draft not found");
+      setError('Workflow draft not found');
       setAutosaveState({
-        status: "error",
-        message: "Workflow draft not found",
+        status: 'error',
+        message: 'Workflow draft not found',
       });
       return;
     }
@@ -90,7 +90,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     const loadWorkflow = async () => {
       setLoading(true);
       setError(null);
-      setAutosaveState({ status: "loading", message: "Loading draft..." });
+      setAutosaveState({ status: 'loading', message: 'Loading draft...' });
 
       try {
         const nextWorkflow = await workflowApi.getWorkflow(workflowId);
@@ -102,21 +102,21 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
         lastSavedSignatureRef.current = buildSaveSignature(
           JSON.stringify(nextDraft),
           nextWorkflow.name,
-          nextWorkflow.description || "",
+          nextWorkflow.description || '',
         );
         setWorkflow(nextWorkflow);
         setDefinitionDraft(nextDraft);
-        setAutosaveState({ status: "saved", message: "Draft ready" });
+        setAutosaveState({ status: 'saved', message: 'Draft ready' });
       } catch (err) {
         if (cancelled) {
           return;
         }
         setError(
-          err instanceof Error ? err.message : "Failed to load workflow draft",
+          err instanceof Error ? err.message : 'Failed to load workflow draft',
         );
         setAutosaveState({
-          status: "error",
-          message: "Failed to load workflow draft",
+          status: 'error',
+          message: 'Failed to load workflow draft',
         });
       } finally {
         if (!cancelled) {
@@ -143,13 +143,13 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
 
     if (definitionIssues.length > 0) {
       setAutosaveState({
-        status: "invalid",
-        message: "Fix definition issues to resume autosave",
+        status: 'invalid',
+        message: 'Fix definition issues to resume autosave',
       });
       return;
     }
 
-    setAutosaveState({ status: "saving", message: "Saving changes..." });
+    setAutosaveState({ status: 'saving', message: 'Saving changes...' });
     const payload: CreateWorkflowPayload = {
       key: workflow.key,
       name: workflow.name,
@@ -165,11 +165,11 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
         );
         setWorkflow(updatedWorkflow);
         lastSavedSignatureRef.current = saveSignature;
-        setAutosaveState({ status: "saved", message: "All changes saved" });
+        setAutosaveState({ status: 'saved', message: 'All changes saved' });
       } catch (err) {
         setAutosaveState({
-          status: "error",
-          message: err instanceof Error ? err.message : "Autosave failed",
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Autosave failed',
         });
       }
     }, 700);
@@ -191,7 +191,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     return (
       <CardBox className="p-6">
         <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error || "Workflow draft not found"}
+          {error || 'Workflow draft not found'}
         </p>
         <Button asChild variant="outline">
           <Link href="/dashboard/workflows">Back to workflows</Link>
@@ -216,7 +216,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
           workflowId: workflow.id,
           key: workflow.key,
           name: workflow.name,
-          description: workflow.description || "",
+          description: workflow.description || '',
         }}
         autosaveState={autosaveState}
         onWorkflowSetupChange={(values) =>

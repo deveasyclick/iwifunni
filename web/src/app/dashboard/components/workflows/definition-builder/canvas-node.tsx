@@ -12,6 +12,7 @@ import {
   Rocket,
   Smartphone,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { memo } from "react";
 import {
@@ -112,6 +113,7 @@ const WorkflowCanvasNodeComponent = memo(
     const Icon = meta.icon;
     const canDelete = data.canDelete ?? true;
     const canDuplicate = data.canDuplicate ?? true;
+    const issueCount = data.nodeIssues?.length ?? 0;
 
     const handleAction = (
       event: React.MouseEvent<HTMLButtonElement>,
@@ -198,6 +200,31 @@ const WorkflowCanvasNodeComponent = memo(
           )}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/80 to-transparent" />
+
+          {data.nodeIssues && data.nodeIssues.length > 0 && (
+            <div className="pointer-events-auto absolute right-2 top-2 z-20">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="nodrag nopan inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/60 bg-destructive/15 text-destructive transition hover:border-destructive hover:bg-destructive/25"
+                    aria-label={`${data.nodeIssues.length} issue${data.nodeIssues.length !== 1 ? "s" : ""}`}
+                  >
+                    <AlertCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" sideOffset={8} className="max-w-xs">
+                  <div className="space-y-1">
+                    {data.nodeIssues.map((issue, idx) => (
+                      <p key={idx} className="text-xs">
+                        {issue.message}
+                      </p>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
 
           {draft.type !== "trigger" && (
             <Handle

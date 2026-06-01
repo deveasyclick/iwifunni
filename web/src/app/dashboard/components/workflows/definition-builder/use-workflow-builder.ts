@@ -3,7 +3,10 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { createWorkflowBuilderStore } from "./store";
-import type { WorkflowDefinitionBuilderProps } from "./types";
+import type {
+  WorkflowDefinitionBuilderProps,
+  WorkflowDefinitionIssue,
+} from "./types";
 import { buildDraftFromCanvas, getNodeDisplayName } from "./utils";
 
 export const useWorkflowBuilder = ({
@@ -34,8 +37,25 @@ export const useWorkflowBuilder = ({
     () => buildDraftFromCanvas(triggerEvent, nodes, edges),
     [edges, nodes, triggerEvent],
   );
+
   const canvasHorizontalOffset = 220;
   const canvasVerticalOffset = 120;
+
+  // Derive a map of node ID to its issues
+  const nodeIssuesMap = useMemo(() => {
+    const map = new Map<string, WorkflowDefinitionIssue[]>();
+
+    currentDraft.nodes.forEach((draftNode, index) => {
+      const nodeIssues = issues.filter((issue) =>
+        issue.path.startsWith(`nodes.${index}`),
+      );
+      if (nodeIssues.length > 0) {
+        map.set(draftNode.id, nodeIssues);
+      }
+    });
+
+    return map;
+  }, [currentDraft.nodes, issues]);
 
   const canvasNodes = useMemo(
     () =>
@@ -55,12 +75,14 @@ export const useWorkflowBuilder = ({
           onDuplicateNode: duplicateNode,
           canDelete: node.data.draft.type !== "trigger",
           canDuplicate: node.data.draft.type !== "trigger",
+          nodeIssues: nodeIssuesMap.get(node.data.draft.id) || [],
         },
       })),
     [
       canvasHorizontalOffset,
       canvasVerticalOffset,
       duplicateNode,
+      nodeIssuesMap,
       nodes,
       removeNode,
       setSelection,

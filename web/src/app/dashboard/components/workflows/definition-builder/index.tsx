@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { WorkflowBuilderCanvas } from "./canvas";
-import { WorkflowDefinitionInspector } from "./inspector";
-import type { WorkflowDefinitionBuilderProps } from "./types";
-import { useWorkflowBuilder } from "./use-workflow-builder";
+import { WorkflowBuilderCanvas } from './canvas';
+import { WorkflowDefinitionInspector } from './inspector';
+import type { WorkflowDefinitionBuilderProps } from './types';
+import { useWorkflowBuilder } from './use-workflow-builder';
 
 export {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
   validateWorkflowDefinitionDraft,
   workflowDefinitionFromBuilderDraft,
-} from "./utils";
+} from './utils';
 export type {
   BuilderEdgeDraft,
   BuilderNodeDraft,
   WorkflowBuilderDraft,
   WorkflowDefinitionIssue,
-} from "./types";
+} from './types';
 
 export const WorkflowDefinitionBuilder = ({
   value,
@@ -50,7 +50,7 @@ export const WorkflowDefinitionBuilder = ({
         />
 
         <WorkflowDefinitionInspector
-          issues={builder.issues}
+          issues={issues}
           selectedNode={builder.selectedNode}
           selectedEdge={builder.selectedEdge}
           selectedNodeIssues={builder.selectedNodeIssues}

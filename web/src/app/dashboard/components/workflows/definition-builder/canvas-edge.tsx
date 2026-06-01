@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { memo, useState } from "react";
-import { BaseEdge, getBezierPath, type EdgeProps } from "@xyflow/react";
-import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { WorkflowStepActionMenu } from "./action-menu";
-import type { WorkflowCanvasEdge } from "./types";
+import { memo, useState } from 'react';
+import { BaseEdge, type EdgeProps } from '@xyflow/react';
+import { Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { WorkflowStepActionMenu } from './action-menu';
+import type { WorkflowCanvasEdge } from './types';
 
 const WorkflowCanvasEdgeComponent = memo(
   ({
@@ -23,26 +23,22 @@ const WorkflowCanvasEdgeComponent = memo(
     const isTerminal = data?.isTerminal ?? false;
     const terminalTargetX = sourceX;
     const terminalTargetY = sourceY + 56;
-    const [edgePath, labelX, labelY] = getBezierPath({
-      sourceX,
-      sourceY,
-      targetX: isTerminal ? terminalTargetX : targetX,
-      targetY: isTerminal ? terminalTargetY : targetY,
-      sourcePosition,
-      targetPosition,
-    });
+    const targetXCoord = isTerminal ? terminalTargetX : targetX;
+    const targetYCoord = isTerminal ? terminalTargetY : targetY;
+    const edgePath = `M${sourceX},${sourceY} L${targetXCoord},${targetYCoord}`;
+    const labelX = (sourceX + targetXCoord) / 2;
+    const labelY = (sourceY + targetYCoord) / 2;
     const buttonSize = 28;
     const buttonX = labelX - buttonSize / 2;
     const buttonY = labelY - buttonSize / 2;
-
     return (
       <>
         <BaseEdge
           path={edgePath}
           style={{
-            stroke: "color-mix(in oklab, var(--primary) 22%, transparent)",
+            stroke: 'color-mix(in oklab, var(--primary) 22%, transparent)',
             strokeWidth: 6,
-            filter: "blur(6px)",
+            filter: 'blur(6px)',
           }}
         />
         <BaseEdge
@@ -50,27 +46,34 @@ const WorkflowCanvasEdgeComponent = memo(
           markerEnd="url(#workflow-arrow)"
           style={{
             stroke: selected
-              ? "var(--primary)"
-              : "color-mix(in oklab, var(--muted-foreground) 80%, var(--border))",
+              ? 'var(--primary)'
+              : 'color-mix(in oklab, var(--muted-foreground) 80%, var(--border))',
             strokeWidth: selected ? 2 : 1.6,
           }}
         />
 
         {data?.onInsertNode ? (
-          <foreignObject x={buttonX} y={buttonY} width={buttonSize} height={buttonSize}>
+          <foreignObject
+            x={buttonX}
+            y={buttonY}
+            width={buttonSize}
+            height={buttonSize}
+          >
             <div className="nodrag nopan flex h-full w-full items-center justify-center">
               <WorkflowStepActionMenu
                 open={menuOpen}
                 onOpenChange={setMenuOpen}
                 side="right"
                 sideOffset={18}
-                onSelect={(type, options) => data.onInsertNode?.(id, type, options)}
+                onSelect={(type, options) =>
+                  data.onInsertNode?.(id, type, options)
+                }
               >
                 <button
                   type="button"
                   className={cn(
-                    "nodrag nopan flex h-7 w-7 items-center justify-center rounded-full border border-border/20 bg-[color-mix(in_oklab,var(--dark)_92%,black)] text-bodytext shadow-lg transition-colors duration-200 hover:border-primary hover:text-primary",
-                    selected && "border-primary text-primary",
+                    'nodrag nopan flex h-7 w-7 items-center justify-center rounded-full border border-border/20 bg-[color-mix(in_oklab,var(--dark)_92%,black)] text-bodytext shadow-lg transition-colors duration-200 hover:border-primary hover:text-primary',
+                    selected && 'border-primary text-primary',
                   )}
                   aria-label="Insert workflow step"
                 >
@@ -85,6 +88,6 @@ const WorkflowCanvasEdgeComponent = memo(
   },
 );
 
-WorkflowCanvasEdgeComponent.displayName = "WorkflowCanvasEdgeComponent";
+WorkflowCanvasEdgeComponent.displayName = 'WorkflowCanvasEdgeComponent';
 
-export const edgeTypes = { "workflow-edge": WorkflowCanvasEdgeComponent };
+export const edgeTypes = { 'workflow-edge': WorkflowCanvasEdgeComponent };

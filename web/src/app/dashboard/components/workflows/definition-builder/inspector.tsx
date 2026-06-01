@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Check, Copy } from 'lucide-react';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { delayUnits } from "./constants";
+} from '@/components/ui/select';
+import { delayUnits } from './constants';
 import type {
   WorkflowAutosaveState,
   BuilderNodeDraft,
@@ -21,19 +21,19 @@ import type {
   WorkflowCanvasNode,
   WorkflowDefinitionIssue,
   WorkflowSetupSummary,
-} from "./types";
+} from './types';
 import {
   buildNodeDescription,
   formatDelayDuration,
   getNodeDisplayName,
   hasConfiguredTemplateId,
   parseDelayDuration,
-} from "./utils";
+} from './utils';
 
 type WorkflowDefinitionInspectorProps = {
-  issues: WorkflowDefinitionIssue[];
   selectedNode: WorkflowCanvasNode | null;
   selectedEdge: WorkflowCanvasEdge | null;
+  issues: WorkflowDefinitionIssue[];
   selectedNodeIssues: WorkflowDefinitionIssue[];
   selectedNodeIncoming: number;
   selectedNodeOutgoing: number;
@@ -49,7 +49,7 @@ type WorkflowDefinitionInspectorProps = {
   autosaveState?: WorkflowAutosaveState;
   onConfigureNotificationNode?: (nodeId: string, channel?: string) => void;
   onWorkflowSetupChange?: (
-    values: Partial<Pick<WorkflowSetupSummary, "name" | "description">>,
+    values: Partial<Pick<WorkflowSetupSummary, 'name' | 'description'>>,
   ) => void;
 };
 
@@ -72,25 +72,25 @@ export const WorkflowDefinitionInspector = ({
 }: WorkflowDefinitionInspectorProps) => {
   const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
   const selectedNotificationChannel =
-    selectedNode?.data.draft.type === "notification"
-      ? selectedNode.data.draft.channel || "email"
-      : "email";
+    selectedNode?.data.draft.type === 'notification'
+      ? selectedNode.data.draft.channel || 'email'
+      : 'email';
 
   const notificationContentHint =
-    selectedNotificationChannel === "sms"
-      ? "SMS body is rendered from the linked SMS template body at send time."
-      : selectedNotificationChannel === "push"
-        ? "Push title and message are rendered from the linked push template at send time."
-        : "Email subject and body are rendered from the linked email template at send time.";
+    selectedNotificationChannel === 'sms'
+      ? 'SMS body is rendered from the linked SMS template body at send time.'
+      : selectedNotificationChannel === 'push'
+        ? 'Push title and message are rendered from the linked push template at send time.'
+        : 'Email subject and body are rendered from the linked email template at send time.';
   const selectedDelayParts =
-    selectedNode?.data.draft.type === "delay"
+    selectedNode?.data.draft.type === 'delay'
       ? parseDelayDuration(selectedNode.data.draft.duration)
-      : { amount: "", unit: "minutes" as const };
+      : { amount: '', unit: 'minutes' as const };
   const inspectorTitle = selectedNode
-    ? "Configure step"
+    ? 'Configure step'
     : selectedEdge
-      ? "Configure transition"
-      : "Configure workflow";
+      ? 'Configure transition'
+      : 'Configure workflow';
 
   const copyNodeId = async (nodeId: string) => {
     try {
@@ -111,10 +111,10 @@ export const WorkflowDefinitionInspector = ({
           <h6 className="font-medium">{inspectorTitle}</h6>
           <p className="text-sm text-muted-foreground">
             {selectedNode
-              ? "Adjust this step without changing its system ID."
+              ? 'Adjust this step without changing its system ID.'
               : selectedEdge
-                ? "Review the current linear transition between steps."
-                : "Review workflow-level details and autosave status."}
+                ? 'Review the current linear transition between steps.'
+                : 'Review workflow-level details and autosave status.'}
           </p>
         </div>
 
@@ -142,13 +142,13 @@ export const WorkflowDefinitionInspector = ({
                 <Badge
                   variant={
                     selectedNodeIssues.length === 0
-                      ? "lightSuccess"
-                      : "secondary"
+                      ? 'lightSuccess'
+                      : 'secondary'
                   }
                 >
                   {selectedNodeIssues.length === 0
-                    ? "ready"
-                    : "needs attention"}
+                    ? 'ready'
+                    : 'needs attention'}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   {selectedNodeIncoming} in · {selectedNodeOutgoing} out
@@ -188,13 +188,13 @@ export const WorkflowDefinitionInspector = ({
                     <Copy className="mr-2 h-4 w-4" />
                   )}
                   {copiedNodeId === selectedNode.data.draft.id
-                    ? "Copied"
-                    : "Copy ID"}
+                    ? 'Copied'
+                    : 'Copy ID'}
                 </Button>
               </div>
             </div>
 
-            {selectedNode.data.draft.type === "delay" && (
+            {selectedNode.data.draft.type === 'delay' && (
               <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-3">
                 <div>
                   <label className="mb-2 block text-sm font-medium">
@@ -244,7 +244,7 @@ export const WorkflowDefinitionInspector = ({
               </div>
             )}
 
-            {selectedNode.data.draft.type === "notification" && (
+            {selectedNode.data.draft.type === 'notification' && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-border p-3">
                   <div className="flex items-center justify-between gap-3">
@@ -256,14 +256,14 @@ export const WorkflowDefinitionInspector = ({
                         {notificationContentHint}
                       </p>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Delivery type:{" "}
+                        Delivery type:{' '}
                         {selectedNotificationChannel.toUpperCase()}
                       </p>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {hasConfiguredTemplateId(
                           selectedNode.data.draft.templateId,
                         )
-                          ? "This notification step is configured."
+                          ? 'This notification step is configured.'
                           : `This ${selectedNotificationChannel} step still needs channel content.`}
                       </p>
                     </div>
@@ -285,7 +285,7 @@ export const WorkflowDefinitionInspector = ({
               </div>
             )}
 
-            {selectedNode.data.draft.type === "condition" && (
+            {selectedNode.data.draft.type === 'condition' && (
               <div className="rounded-xl border border-warning/20 bg-warning/5 p-3 text-sm text-warningemphasis">
                 Condition steps are legacy branching nodes. This linear builder
                 does not support editing or publishing them.
@@ -312,8 +312,8 @@ export const WorkflowDefinitionInspector = ({
           <div className="space-y-4">
             <div>
               <p className="text-sm font-medium">
-                {selectedEdgeSourceLabel || "Source"} →{" "}
-                {selectedEdgeTargetLabel || "Target"}
+                {selectedEdgeSourceLabel || 'Source'} →{' '}
+                {selectedEdgeTargetLabel || 'Target'}
               </p>
               <p className="text-xs text-muted-foreground">Linear transition</p>
             </div>
@@ -328,20 +328,20 @@ export const WorkflowDefinitionInspector = ({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {workflowSetup?.name || "Workflow draft"}
+                    {workflowSetup?.name || 'Workflow draft'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {workflowSetup?.key || "No workflow key"}
+                    {workflowSetup?.key || 'No workflow key'}
                   </p>
                 </div>
                 <Badge
                   variant={
-                    autosaveState?.status === "saved"
-                      ? "lightSuccess"
-                      : "secondary"
+                    autosaveState?.status === 'saved'
+                      ? 'lightSuccess'
+                      : 'secondary'
                   }
                 >
-                  {autosaveState?.message || "No node selected"}
+                  {autosaveState?.message || 'No node selected'}
                 </Badge>
               </div>
 
@@ -351,7 +351,7 @@ export const WorkflowDefinitionInspector = ({
                     Workflow name
                   </label>
                   <Input
-                    value={workflowSetup?.name || ""}
+                    value={workflowSetup?.name || ''}
                     onChange={(event) =>
                       onWorkflowSetupChange?.({ name: event.target.value })
                     }
@@ -364,7 +364,7 @@ export const WorkflowDefinitionInspector = ({
                     Description
                   </label>
                   <Textarea
-                    value={workflowSetup?.description || ""}
+                    value={workflowSetup?.description || ''}
                     onChange={(event) =>
                       onWorkflowSetupChange?.({
                         description: event.target.value,
@@ -380,13 +380,13 @@ export const WorkflowDefinitionInspector = ({
                     <label className="mb-2 block text-sm font-medium">
                       Workflow key
                     </label>
-                    <Input value={workflowSetup?.key || ""} readOnly />
+                    <Input value={workflowSetup?.key || ''} readOnly />
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">
                       Workflow ID
                     </label>
-                    <Input value={workflowSetup?.workflowId || ""} readOnly />
+                    <Input value={workflowSetup?.workflowId || ''} readOnly />
                   </div>
                 </div>
               </div>
@@ -396,34 +396,6 @@ export const WorkflowDefinitionInspector = ({
               Click any node to edit its step settings, or use the canvas edge
               controls to insert the next step.
             </div>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h6 className="font-medium">Definition Checks</h6>
-          <span className="text-xs text-muted-foreground">
-            {issues.length} issue{issues.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        {issues.length === 0 ? (
-          <p className="text-sm text-emerald-600">
-            The current workflow definition is valid for publish and runtime
-            execution.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {issues.map((issue) => (
-              <div
-                key={`${issue.path}-${issue.message}`}
-                className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-              >
-                <span className="font-medium">{issue.path}</span>:{" "}
-                {issue.message}
-              </div>
-            ))}
           </div>
         )}
       </div>

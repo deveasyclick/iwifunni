@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { CreateWorkflowPayload } from "@/app/types/workflow";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import type { CreateWorkflowPayload } from '@/app/types/workflow';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,28 +12,28 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { workflowApi } from "./api";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { workflowApi } from './api';
 import {
   createDefaultWorkflowBuilderDraft,
   workflowDefinitionFromBuilderDraft,
-} from "./definition-builder";
+} from './definition-builder';
 import {
   buildWorkflowBuilderHref,
   workflowSetupSchema,
   workflowSetupValuesFromSearchParams,
-} from "./create-workflow-metadata";
+} from './create-workflow-metadata';
 
-type SetupFieldErrors = Partial<Record<"key" | "name", string>>;
+type SetupFieldErrors = Partial<Record<'key' | 'name', string>>;
 
 const CreateWorkflow = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [key, setKey] = useState("");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [key, setKey] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<SetupFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -51,7 +51,7 @@ const CreateWorkflow = () => {
       const nextErrors: SetupFieldErrors = {};
       for (const issue of parsed.error.issues) {
         const path = issue.path[0];
-        if ((path === "key" || path === "name") && !nextErrors[path]) {
+        if ((path === 'key' || path === 'name') && !nextErrors[path]) {
           nextErrors[path] = issue.message;
         }
       }
@@ -74,12 +74,10 @@ const CreateWorkflow = () => {
     setCreating(true);
     try {
       const workflow = await workflowApi.createWorkflow(payload);
-      router.push(
-        buildWorkflowBuilderHref({ workflowId: workflow.id }),
-      );
+      router.push(buildWorkflowBuilderHref({ workflowId: workflow.id }));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to create workflow draft",
+        err instanceof Error ? err.message : 'Failed to create workflow draft',
       );
     } finally {
       setCreating(false);
@@ -88,7 +86,7 @@ const CreateWorkflow = () => {
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      router.push("/dashboard/workflows");
+      router.push('/dashboard/workflows');
     }
   };
 
@@ -101,7 +99,8 @@ const CreateWorkflow = () => {
               Workflow Setup
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Name the workflow and define its metadata before moving to the canvas and inspector.
+              Name the workflow and define its metadata before moving to the
+              canvas and inspector.
             </DialogDescription>
           </DialogHeader>
 
@@ -113,7 +112,10 @@ const CreateWorkflow = () => {
 
           <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium" htmlFor="workflow-key">
+              <label
+                className="mb-2 block text-sm font-medium"
+                htmlFor="workflow-key"
+              >
                 Key
               </label>
               <Input
@@ -130,7 +132,10 @@ const CreateWorkflow = () => {
               ) : null}
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium" htmlFor="workflow-name">
+              <label
+                className="mb-2 block text-sm font-medium"
+                htmlFor="workflow-name"
+              >
                 Name
               </label>
               <Input
@@ -149,7 +154,10 @@ const CreateWorkflow = () => {
           </div>
 
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium" htmlFor="workflow-description">
+            <label
+              className="mb-2 block text-sm font-medium"
+              htmlFor="workflow-description"
+            >
               Description
             </label>
             <Textarea
@@ -170,7 +178,7 @@ const CreateWorkflow = () => {
               disabled={creating}
               className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
             >
-              {creating ? "Creating draft..." : "Continue to canvas"}
+              {creating ? 'Creating draft...' : 'Continue to canvas'}
             </Button>
           </DialogFooter>
         </div>

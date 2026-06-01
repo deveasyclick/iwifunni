@@ -96,6 +96,7 @@ export type WorkflowCanvasNodeData = {
   onDuplicateNode?: WorkflowNodeAction;
   canDelete?: boolean;
   canDuplicate?: boolean;
+  nodeIssues?: WorkflowDefinitionIssue[];
 };
 
 export type WorkflowCanvasEdgeData = {
