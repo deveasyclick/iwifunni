@@ -8,7 +8,6 @@ import { useWorkflowBuilder } from './use-workflow-builder';
 export {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
-  validateWorkflowDefinitionDraft,
   workflowDefinitionFromBuilderDraft,
 } from './utils';
 export type {

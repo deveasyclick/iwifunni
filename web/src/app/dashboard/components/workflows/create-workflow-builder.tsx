@@ -10,11 +10,11 @@ import { workflowApi } from '@/app/dashboard/components/workflows/api';
 import {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
-  validateWorkflowDefinitionDraft,
   WorkflowDefinitionBuilder,
   workflowDefinitionFromBuilderDraft,
 } from '@/app/dashboard/components/workflows/definition-builder';
 import { buildWorkflowChannelConfigureHref } from './create-workflow-metadata';
+import { validateWorkflowDefinitionDraft } from './utils';
 
 type CreateWorkflowBuilderProps = {
   workflowId: string;

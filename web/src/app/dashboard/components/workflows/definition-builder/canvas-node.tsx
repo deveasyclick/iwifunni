@@ -1,119 +1,36 @@
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "@xyflow/react";
-import {
-  BellRing,
-  Clock3,
-  Copy,
-  PencilLine,
-  GitBranch,
-  Mail,
-  MessageSquare,
-  Rocket,
-  Smartphone,
-  Trash2,
-  AlertCircle,
-} from "lucide-react";
-import { memo } from "react";
+import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Copy, PencilLine, Trash2, AlertCircle } from 'lucide-react';
+import { memo } from 'react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import {
   buildNodeDescription,
   buildNodeSubtitle,
   getNodeDisplayName,
-  hasConfiguredTemplateId,
-} from "./utils";
-import type { WorkflowCanvasNode } from "./types";
+} from './utils';
+import type { WorkflowCanvasNode } from './types';
+import { getNodeMeta } from '../utils';
 
 const handleClassName =
-  "h-3! w-3! border-2! border-dark! bg-primary! opacity-0! pointer-events-none shadow-[0_0_0_3px_color-mix(in_oklab,var(--dark)_88%,black)]";
+  'h-3! w-3! border-2! border-dark! bg-primary! opacity-0! pointer-events-none shadow-[0_0_0_3px_color-mix(in_oklab,var(--dark)_88%,black)]';
 
 const actionButtonClassName =
-  "nodrag nopan inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/55 bg-black/85 text-bodytext transition hover:border-primary/50 hover:text-white";
-
-const getNodeMeta = (node: WorkflowCanvasNode["data"]["draft"]) => {
-  switch (node.type) {
-    case "trigger":
-      return {
-        icon: Rocket,
-        description: "Starts the workflow run.",
-        iconClassName:
-          "border border-success/25 bg-lightsuccess/80 text-success",
-        label: "Trigger",
-        status: "Entry",
-        statusClassName: "border-success/20 bg-lightsuccess text-success",
-      };
-    case "delay":
-      return {
-        icon: Clock3,
-        description: "Pauses before the next step.",
-        iconClassName:
-          "border border-warning/25 bg-lightwarning/80 text-warning",
-        label: "Delay",
-        status: "Wait",
-        statusClassName: "border-warning/20 bg-lightwarning text-warning",
-      };
-    case "condition":
-      return {
-        icon: GitBranch,
-        description: "Legacy branching step.",
-        iconClassName: "border border-info/25 bg-lightinfo/80 text-info",
-        label: "Condition",
-        status: "Unsupported",
-        statusClassName: "border-info/20 bg-lightinfo text-info",
-      };
-    case "notification": {
-      const channelIcon =
-        node.channel === "sms"
-          ? MessageSquare
-          : node.channel === "push"
-            ? Smartphone
-            : Mail;
-
-      return {
-        icon: channelIcon,
-        description: "Sends a configured channel message.",
-        iconClassName:
-          node.channel === "sms"
-            ? "border border-success/25 bg-lightsuccess/80 text-success"
-            : node.channel === "push"
-              ? "border border-warning/25 bg-lightwarning/80 text-warning"
-              : "border border-primary/25 bg-lightprimary/80 text-primary",
-        label: "Notification",
-        status: hasConfiguredTemplateId(node.templateId)
-          ? "Ready"
-          : "Configure",
-        statusClassName: hasConfiguredTemplateId(node.templateId)
-          ? "border-primary/20 bg-lightprimary text-primary"
-          : "border-warning/20 bg-lightwarning text-warning",
-      };
-    }
-    default:
-      return {
-        icon: BellRing,
-        description: "Workflow step",
-        iconClassName:
-          "border border-primary/25 bg-lightprimary/80 text-primary",
-        label: "Step",
-        status: "Draft",
-        statusClassName: "border-primary/20 bg-lightprimary text-primary",
-      };
-  }
-};
+  'nodrag nopan inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/55 bg-black/85 text-bodytext transition hover:border-primary/50 hover:text-white';
 
 const WorkflowCanvasNodeComponent = memo(
   ({ id, data, selected }: NodeProps<WorkflowCanvasNode>) => {
     const draft = data.draft;
-    const triggerEvent = data.triggerEvent || "";
+    const triggerEvent = data.triggerEvent || '';
     const meta = getNodeMeta(draft);
     const Icon = meta.icon;
     const canDelete = data.canDelete ?? true;
     const canDuplicate = data.canDuplicate ?? true;
-    const issueCount = data.nodeIssues?.length ?? 0;
 
     const handleAction = (
       event: React.MouseEvent<HTMLButtonElement>,
@@ -131,25 +48,25 @@ const WorkflowCanvasNodeComponent = memo(
     const actionItems = [
       {
         icon: PencilLine,
-        label: "Edit node",
+        label: 'Edit node',
         hoverClassName:
-          "hover:border-info/60 hover:bg-lightinfo/15 hover:text-info",
+          'hover:border-info/60 hover:bg-lightinfo/15 hover:text-info',
         enabled: true,
         onClick: data.onEditNode,
       },
       {
         icon: Copy,
-        label: canDuplicate ? "Duplicate node" : "Trigger cannot be duplicated",
+        label: canDuplicate ? 'Duplicate node' : 'Trigger cannot be duplicated',
         hoverClassName:
-          "hover:border-warning/60 hover:bg-lightwarning/15 hover:text-warning",
+          'hover:border-warning/60 hover:bg-lightwarning/15 hover:text-warning',
         enabled: canDuplicate,
         onClick: data.onDuplicateNode,
       },
       {
         icon: Trash2,
-        label: canDelete ? "Delete node" : "Trigger cannot be deleted",
+        label: canDelete ? 'Delete node' : 'Trigger cannot be deleted',
         hoverClassName:
-          "hover:border-destructive/60 hover:bg-destructive/15 hover:text-destructive",
+          'hover:border-destructive/60 hover:bg-destructive/15 hover:text-destructive',
         enabled: canDelete,
         onClick: data.onRemoveNode,
       },
@@ -171,8 +88,8 @@ const WorkflowCanvasNodeComponent = memo(
                         actionButtonClassName,
                         action.hoverClassName,
                         action.enabled
-                          ? ""
-                          : "cursor-not-allowed opacity-45 hover:text-bodytext",
+                          ? ''
+                          : 'cursor-not-allowed opacity-45 hover:text-bodytext',
                       )}
                       aria-label={action.label}
                       onClick={(event) =>
@@ -193,10 +110,10 @@ const WorkflowCanvasNodeComponent = memo(
 
         <div
           className={cn(
-            "relative overflow-hidden rounded-2xl border bg-dark px-4 py-3.5 text-white transition-all duration-200",
+            'relative overflow-hidden rounded-2xl border bg-dark px-4 py-3.5 text-white transition-all duration-200',
             selected
-              ? "border-primary ring-1 ring-primary shadow-[0_0_35px_color-mix(in_oklab,var(--primary)_30%,transparent)]"
-              : "border-border/45 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border)_55%,transparent)] hover:border-primary/40",
+              ? 'border-primary ring-1 ring-primary shadow-[0_0_35px_color-mix(in_oklab,var(--primary)_30%,transparent)]'
+              : 'border-border/45 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border)_55%,transparent)] hover:border-primary/40',
           )}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/80 to-transparent" />
@@ -208,7 +125,7 @@ const WorkflowCanvasNodeComponent = memo(
                   <button
                     type="button"
                     className="nodrag nopan inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/60 bg-destructive/15 text-destructive transition hover:border-destructive hover:bg-destructive/25"
-                    aria-label={`${data.nodeIssues.length} issue${data.nodeIssues.length !== 1 ? "s" : ""}`}
+                    aria-label={`${data.nodeIssues.length} issue${data.nodeIssues.length !== 1 ? 's' : ''}`}
                   >
                     <AlertCircle className="h-3.5 w-3.5" />
                   </button>
@@ -226,7 +143,7 @@ const WorkflowCanvasNodeComponent = memo(
             </div>
           )}
 
-          {draft.type !== "trigger" && (
+          {draft.type !== 'trigger' && (
             <Handle
               type="target"
               position={Position.Top}
@@ -236,7 +153,7 @@ const WorkflowCanvasNodeComponent = memo(
           )}
 
           <div className="flex items-start gap-2.5">
-            <div className={cn("rounded-lg p-1.5", meta.iconClassName)}>
+            <div className={cn('rounded-lg p-1.5', meta.iconClassName)}>
               <Icon className="h-3 w-3" />
             </div>
 
@@ -249,7 +166,7 @@ const WorkflowCanvasNodeComponent = memo(
                 {meta.status ? (
                   <div
                     className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                      'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium',
                       meta.statusClassName,
                     )}
                   >
@@ -282,6 +199,6 @@ const WorkflowCanvasNodeComponent = memo(
   },
 );
 
-WorkflowCanvasNodeComponent.displayName = "WorkflowCanvasNodeComponent";
+WorkflowCanvasNodeComponent.displayName = 'WorkflowCanvasNodeComponent';
 
-export const nodeTypes = { "workflow-step": WorkflowCanvasNodeComponent };
+export const nodeTypes = { 'workflow-step': WorkflowCanvasNodeComponent };

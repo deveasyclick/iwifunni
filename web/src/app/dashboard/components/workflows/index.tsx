@@ -1,15 +1,14 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import CardBox from "@/app/components/shared/CardBox";
-import { workflowApi } from "@/app/dashboard/components/workflows/api";
-import { validateWorkflowDefinitionDraft } from "@/app/dashboard/components/workflows/definition-builder";
-import type { WorkflowDefinition, WorkflowItem } from "@/app/types/workflow";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import CardBox from '@/app/components/shared/CardBox';
+import { workflowApi } from '@/app/dashboard/components/workflows/api';
+import type { WorkflowDefinition, WorkflowItem } from '@/app/types/workflow';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -17,19 +16,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
+import { validateWorkflowDefinitionDraft } from './utils';
 
 const formatCreatedAt = (value?: string) => {
   if (!value) {
-    return "-";
+    return '-';
   }
 
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    return "-";
+    return '-';
   }
 
-  return format(parsed, "MMM d, yyyy");
+  return format(parsed, 'MMM d, yyyy');
 };
 
 const normalizeDefinition = (
@@ -42,9 +42,9 @@ const normalizeDefinition = (
   return {
     trigger: {
       event:
-        typeof definition.trigger?.event === "string"
+        typeof definition.trigger?.event === 'string'
           ? definition.trigger.event
-          : "",
+          : '',
     },
     nodes: Array.isArray(definition.nodes) ? definition.nodes : [],
     edges: Array.isArray(definition.edges) ? definition.edges : [],
@@ -64,7 +64,7 @@ const WorkflowManagement = () => {
   const [items, setItems] = useState<WorkflowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [mutatingID, setMutatingID] = useState<string | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
@@ -75,7 +75,7 @@ const WorkflowManagement = () => {
       const data = await workflowApi.getWorkflows();
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load workflows");
+      setError(err instanceof Error ? err.message : 'Failed to load workflows');
       setItems([]);
     } finally {
       setLoading(false);
@@ -94,13 +94,17 @@ const WorkflowManagement = () => {
 
     return items.filter((item) => {
       const triggerEvent =
-        item.triggerEvent || normalizeDefinition(item.definition)?.trigger.event || "";
+        item.triggerEvent ||
+        normalizeDefinition(item.definition)?.trigger.event ||
+        '';
 
       return (
         item.name.toLowerCase().includes(term) ||
         item.key.toLowerCase().includes(term) ||
         triggerEvent.toLowerCase().includes(term) ||
-        (item.channels || []).some((channel) => channel.toLowerCase().includes(term))
+        (item.channels || []).some((channel) =>
+          channel.toLowerCase().includes(term),
+        )
       );
     });
   }, [items, search]);
@@ -119,14 +123,16 @@ const WorkflowManagement = () => {
       await workflowApi.publishWorkflow(item.id);
       await fetchWorkflows();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to publish workflow");
+      setError(
+        err instanceof Error ? err.message : 'Failed to publish workflow',
+      );
     } finally {
       setMutatingID(null);
     }
   };
 
   const deleteWorkflow = async (id: string) => {
-    if (!confirm("Archive this workflow?")) {
+    if (!confirm('Archive this workflow?')) {
       return;
     }
 
@@ -136,7 +142,9 @@ const WorkflowManagement = () => {
       await workflowApi.archiveWorkflow(id);
       await fetchWorkflows();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to archive workflow");
+      setError(
+        err instanceof Error ? err.message : 'Failed to archive workflow',
+      );
     } finally {
       setMutatingID(null);
     }
@@ -159,7 +167,10 @@ const WorkflowManagement = () => {
             placeholder="Search workflows"
             className="w-full sm:w-64"
           />
-          <Button asChild className="bg-primary text-primary-foreground hover:bg-primaryemphasis">
+          <Button
+            asChild
+            className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
+          >
             <Link href="/dashboard/workflows/new">Add Workflow</Link>
           </Button>
         </div>
@@ -187,21 +198,29 @@ const WorkflowManagement = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   Loading workflows...
                 </TableCell>
               </TableRow>
             ) : visibleItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   No workflows configured yet.
                 </TableCell>
               </TableRow>
             ) : (
               visibleItems.map((item) => {
-                const normalizedDefinition = normalizeDefinition(item.definition);
+                const normalizedDefinition = normalizeDefinition(
+                  item.definition,
+                );
                 const definitionIssues =
-                  item.status !== "active"
+                  item.status !== 'active'
                     ? getDefinitionIssues(normalizedDefinition)
                     : [];
 
@@ -222,17 +241,25 @@ const WorkflowManagement = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{item.key}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {item.key}
+                    </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
                         {item.triggerEvent ||
                           normalizedDefinition?.trigger.event ||
-                          "Not configured"}
+                          'Not configured'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={item.status === "active" ? "lightSuccess" : "secondary"}>
-                        {item.status || (item.isActive ? "active" : "archived")}
+                      <Badge
+                        variant={
+                          item.status === 'active'
+                            ? 'lightSuccess'
+                            : 'secondary'
+                        }
+                      >
+                        {item.status || (item.isActive ? 'active' : 'archived')}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.version ?? 1}</TableCell>
@@ -240,18 +267,22 @@ const WorkflowManagement = () => {
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-2">
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/dashboard/workflows/new/builder?workflowId=${item.id}`}>
+                          <Link
+                            href={`/dashboard/workflows/new/builder?workflowId=${item.id}`}
+                          >
                             Edit
                           </Link>
                         </Button>
-                        {item.status !== "active" && (
+                        {item.status !== 'active' && (
                           <Button
                             variant="outline"
                             size="sm"
                             disabled={mutatingID === `publish:${item.id}`}
                             onClick={() => void publishWorkflow(item)}
                           >
-                            {mutatingID === `publish:${item.id}` ? "Publishing..." : "Publish"}
+                            {mutatingID === `publish:${item.id}`
+                              ? 'Publishing...'
+                              : 'Publish'}
                           </Button>
                         )}
                         <Button
@@ -260,7 +291,7 @@ const WorkflowManagement = () => {
                           disabled={mutatingID === item.id}
                           onClick={() => void deleteWorkflow(item.id)}
                         >
-                          {mutatingID === item.id ? "Archiving..." : "Archive"}
+                          {mutatingID === item.id ? 'Archiving...' : 'Archive'}
                         </Button>
                       </div>
                     </TableCell>
