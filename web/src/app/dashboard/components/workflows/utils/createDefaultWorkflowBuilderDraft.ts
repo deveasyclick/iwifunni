@@ -49,22 +49,6 @@ export const createDefaultWorkflowBuilderDraft = (): WorkflowBuilderDraft => ({
       id: 'trigger_1',
       name: 'Test trigger',
     },
-    {
-      ...createNodeDraft('delay'),
-      id: 'delay_1',
-      name: 'Wait 5 minutes',
-      duration: '5m',
-    },
-    {
-      ...createNodeDraft('notification', 'email'),
-      id: 'email_1',
-      name: 'Send welcome email',
-      templateId: zeroUUID,
-      channel: 'email',
-    },
   ],
-  edges: [
-    { source: 'trigger_1', target: 'delay_1', branch: '' },
-    { source: 'delay_1', target: 'email_1', branch: '' },
-  ],
+  edges: [],
 });

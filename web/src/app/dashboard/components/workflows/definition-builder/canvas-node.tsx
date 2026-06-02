@@ -143,14 +143,12 @@ const WorkflowCanvasNodeComponent = memo(
             </div>
           )}
 
-          {draft.type !== 'trigger' && (
-            <Handle
-              type="target"
-              position={Position.Top}
-              isConnectable={false}
-              className={handleClassName}
-            />
-          )}
+          <Handle
+            type="target"
+            position={Position.Top}
+            isConnectable={false}
+            className={handleClassName}
+          />
 
           <div className="flex items-start gap-2.5">
             <div className={cn('rounded-lg p-1.5', meta.iconClassName)}>

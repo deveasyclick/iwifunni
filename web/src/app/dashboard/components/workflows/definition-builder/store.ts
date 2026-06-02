@@ -204,11 +204,17 @@ export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
         ),
       })),
     removeEdge: (edgeId) =>
-      set((state) => ({
-        edges: state.edges.filter((edge) => edge.id !== edgeId),
-        selectedEdgeId:
-          state.selectedEdgeId === edgeId ? null : state.selectedEdgeId,
-      })),
+      set((state) => {
+        // Terminal edges (the "+" button) cannot be removed
+        if (edgeId.startsWith('terminal:')) {
+          return state;
+        }
+        return {
+          edges: state.edges.filter((edge) => edge.id !== edgeId),
+          selectedEdgeId:
+            state.selectedEdgeId === edgeId ? null : state.selectedEdgeId,
+        };
+      }),
     setSelection: ({ nodeId, edgeId }) =>
       set({ selectedNodeId: nodeId ?? null, selectedEdgeId: edgeId ?? null }),
     autoLayout: () => {
