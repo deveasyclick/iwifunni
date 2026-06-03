@@ -25,6 +25,45 @@
 - Use [Taskfile.yml](../Taskfile.yml) commands when possible for backend validation, especially `task build`, `task lint`, and `task sqlc` when relevant.
 - For frontend work, validate with the available `pnpm` scripts in [web/package.json](../web/package.json) that match the files you touched.
 
+## Workflow Builder Frontend Conventions
+
+The workflow builder lives in `web/src/app/dashboard/components/workflows/`. It follows a strict domain-separated structure:
+
+### Module layout
+
+```
+workflows/
+├── draft/                    # Draft domain — pure data & logic (create, normalize, convert)
+├── store/builder/            # Zustand store — store, actions, selectors
+├── types/                    # All shared type definitions, organized by domain
+│   ├── draft.ts              # BuilderNodeDraft, WorkflowBuilderDraft, etc.
+│   ├── canvas.ts             # WorkflowCanvasNode, WorkflowCanvasEdge, etc.
+│   ├── actions.ts            # AddConnectedNodeOptions, action types
+│   ├── store.ts              # WorkflowBuilderStoreState
+│   ├── duration.ts           # DelayUnit
+│   ├── api.ts                # WorkflowEventPayload, TemplateUpdatePayload
+│   └── ui.ts                 # All component prop types (*Props)
+├── utils/                    # Pure utility functions
+│   ├── constants.ts
+│   ├── canvas/               # Canvas factories, graph builder, dagre layout
+│   ├── display/              # Node name, description, subtitle, meta, tone
+│   ├── duration/             # Parse + format delay durations
+│   └── validation/           # Trigger, nodes, edges validators
+└── definition-builder/       # PURE UI components only
+    ├── inspector/            # Sub-components (delay-config, notification-config, etc.)
+    └── index.tsx             # Main WorkflowDefinitionBuilder component
+```
+
+### Rules
+
+- **All types go in `types/`.** Do not define prop types (`*Props`) or domain types inside component files. Every shared type belongs in one of the `types/*.ts` files organized by domain.
+- **Component files are pure UI.** The `definition-builder/` folder must not contain business logic, state management, utility functions, or type definitions. Only JSX components and their hooks.
+- **No god utility files.** Split utilities by domain into sub-directories under `utils/` (e.g., `utils/canvas/`, `utils/duration/`, `utils/display/`, `utils/validation/`). A single file should not mix duration parsing, canvas layout, node display, and draft conversion logic.
+- **No empty re-export barrels.** Do not create files that only re-export from another module. Import directly from the source file.
+- **No `.tsx` without JSX.** Files that contain no JSX must be `.ts`, not `.tsx`. Utility functions, pure business logic, and type definitions are `.ts`.
+- **Store actions are separated.** The Zustand store in `store/builder/` has three files: `store.ts` (store creation), `actions.ts` (pure action factories), and `selectors.ts` (derived computations). Keep them separated, not inlined into the store.
+- **Draft logic is separated.** All draft creation, normalization, and conversion logic belongs in `draft/`, not in utility files or components.
+
 # Commit Message Rules
 Follow Conventional Commit format for all commits.
 
