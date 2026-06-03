@@ -19,8 +19,8 @@ const getNodeMeta = (node: BuilderNodeDraft) => {
         iconClassName:
           'border border-success/25 bg-lightsuccess/80 text-success',
         label: 'Trigger',
-        status: 'Entry',
-        statusClassName: 'border-success/20 bg-lightsuccess text-success',
+        status: '',
+        statusClassName: '',
       };
     case 'delay':
       return {
@@ -29,8 +29,8 @@ const getNodeMeta = (node: BuilderNodeDraft) => {
         iconClassName:
           'border border-warning/25 bg-lightwarning/80 text-warning',
         label: 'Delay',
-        status: 'Wait',
-        statusClassName: 'border-warning/20 bg-lightwarning text-warning',
+        status: '',
+        statusClassName: '',
       };
     case 'condition':
       return {
@@ -38,8 +38,8 @@ const getNodeMeta = (node: BuilderNodeDraft) => {
         description: 'Legacy branching step.',
         iconClassName: 'border border-info/25 bg-lightinfo/80 text-info',
         label: 'Condition',
-        status: 'Unsupported',
-        statusClassName: 'border-info/20 bg-lightinfo text-info',
+        status: '',
+        statusClassName: '',
       };
     case 'notification': {
       const channelIcon =
@@ -59,12 +59,8 @@ const getNodeMeta = (node: BuilderNodeDraft) => {
               ? 'border border-warning/25 bg-lightwarning/80 text-warning'
               : 'border border-primary/25 bg-lightprimary/80 text-primary',
         label: 'Notification',
-        status: hasConfiguredTemplateId(node.templateId)
-          ? 'Ready'
-          : 'Configure',
-        statusClassName: hasConfiguredTemplateId(node.templateId)
-          ? 'border-primary/20 bg-lightprimary text-primary'
-          : 'border-warning/20 bg-lightwarning text-warning',
+        status: '',
+        statusClassName: '',
       };
     }
     default:
@@ -74,8 +70,8 @@ const getNodeMeta = (node: BuilderNodeDraft) => {
         iconClassName:
           'border border-primary/25 bg-lightprimary/80 text-primary',
         label: 'Step',
-        status: 'Draft',
-        statusClassName: 'border-primary/20 bg-lightprimary text-primary',
+        status: '',
+        statusClassName: '',
       };
   }
 };

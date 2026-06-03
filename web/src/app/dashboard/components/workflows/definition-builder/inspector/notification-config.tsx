@@ -1,7 +1,7 @@
 'use client';
 
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { hasConfiguredTemplateId } from '@/app/dashboard/components/workflows/utils/display';
 import type { NotificationConfigProps } from '@/app/dashboard/components/workflows/types/ui';
 
 export const NotificationConfig = ({
@@ -29,21 +29,16 @@ export const NotificationConfig = ({
             <p className="mt-2 text-xs text-muted-foreground">
               Delivery type: {notificationChannel.toUpperCase()}
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {hasConfiguredTemplateId(draft.templateId)
-                ? 'This notification step is configured.'
-                : `This ${notificationChannel} step still needs channel content.`}
-            </p>
           </div>
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() =>
               onConfigureNotificationNode?.(draft.id, notificationChannel)
             }
           >
-            Configure
+            <Pencil className="h-4 w-4" />
           </Button>
         </div>
       </div>

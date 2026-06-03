@@ -137,14 +137,6 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
       return;
     }
 
-    if (definitionIssues.length > 0) {
-      setAutosaveState({
-        status: 'invalid',
-        message: 'Fix definition issues to resume autosave',
-      });
-      return;
-    }
-
     setAutosaveState({ status: 'saving', message: 'Saving changes...' });
     const payload: CreateWorkflowPayload = {
       key: workflow.key,

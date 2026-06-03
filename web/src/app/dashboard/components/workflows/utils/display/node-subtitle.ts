@@ -13,19 +13,17 @@ export const hasConfiguredTemplateId = (templateId: string) => {
 
 export const buildNodeSubtitle = (
   draft: BuilderNodeDraft,
-  triggerEvent: string,
+  _triggerEvent: string,
 ) => {
   switch (draft.type) {
     case 'trigger':
-      return triggerEvent
-        ? `Event: ${triggerEvent}`
-        : 'Configure workflow event';
+      return '';
     case 'delay':
       return draft.duration ? `Wait ${draft.duration}` : 'Configure delay';
     case 'notification':
       return hasConfiguredTemplateId(draft.templateId)
         ? `${draft.channel.toUpperCase()} content configured`
-        : `${draft.channel.toUpperCase()} content needs configuration`;
+        : '';
     case 'condition':
       return 'Unsupported in linear workflows';
     default:

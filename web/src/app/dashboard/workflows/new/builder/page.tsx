@@ -3,6 +3,7 @@ import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
 import CreateWorkflowBuilder from '../../../components/workflows/create-workflow-builder';
 import { buildWorkflowBuilderHref } from '../../../components/workflows/utils/urls';
 import { workflowIdFromRecord } from '../../../components/workflows/utils/search-params';
+import { workflowApi } from '../../../components/workflows/api';
 
 export const metadata: Metadata = {
   title: 'Workflow Builder',
@@ -15,7 +16,17 @@ type WorkflowBuilderPageProps = {
 const WorkflowBuilderPage = async ({
   searchParams,
 }: WorkflowBuilderPageProps) => {
-  const workflowId = workflowIdFromRecord(await searchParams);
+  const params = await searchParams;
+  const workflowId = workflowIdFromRecord(params);
+
+  let workflowName = 'Workflow Builder';
+  try {
+    const workflow = await workflowApi.getWorkflow(workflowId);
+    workflowName = workflow.name;
+  } catch {
+    // fall back to default title
+  }
+
   const breadcrumbItems = [
     {
       to: '/dashboard/workflows',
@@ -23,13 +34,13 @@ const WorkflowBuilderPage = async ({
     },
     {
       to: buildWorkflowBuilderHref({ workflowId }),
-      title: 'Workflow Builder',
+      title: workflowName,
     },
   ];
 
   return (
     <>
-      <BreadcrumbComp title="Workflow Builder" items={breadcrumbItems} />
+      <BreadcrumbComp title={workflowName} items={breadcrumbItems} />
       <CreateWorkflowBuilder workflowId={workflowId} />
     </>
   );

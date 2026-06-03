@@ -81,28 +81,30 @@ export const WorkflowDefinitionInspector = ({
               </p>
             </div>
 
-            {/* Status badge */}
-            <div className="rounded-xl border border-border p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Status
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <Badge
-                  variant={
-                    selectedNodeIssues.length === 0
-                      ? 'lightSuccess'
-                      : 'secondary'
-                  }
-                >
-                  {selectedNodeIssues.length === 0
-                    ? 'ready'
-                    : 'needs attention'}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {selectedNodeIncoming} in · {selectedNodeOutgoing} out
-                </span>
+            {/* Status badge — hidden for trigger nodes */}
+            {selectedNode.data.draft.type !== 'trigger' && (
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Status
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge
+                    variant={
+                      selectedNodeIssues.length === 0
+                        ? 'lightSuccess'
+                        : 'secondary'
+                    }
+                  >
+                    {selectedNodeIssues.length === 0
+                      ? 'ready'
+                      : 'needs attention'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedNodeIncoming} in · {selectedNodeOutgoing} out
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Step name */}
             <div>
@@ -121,25 +123,39 @@ export const WorkflowDefinitionInspector = ({
               />
             </div>
 
-            {/* Step ID */}
+            {/* Step ID — with copy button */}
             <div>
-              <label className="mb-2 block text-sm font-medium">Step ID</label>
+              <label className="mb-2 block text-sm font-medium">
+                {selectedNode.data.draft.type === 'trigger'
+                  ? 'Workflow key'
+                  : 'Step ID'}
+              </label>
               <div className="flex items-center gap-2">
-                <Input value={selectedNode.data.draft.id} readOnly />
+                <Input
+                  value={
+                    selectedNode.data.draft.type === 'trigger'
+                      ? (workflowSetup?.key ?? selectedNode.data.draft.id)
+                      : selectedNode.data.draft.id
+                  }
+                  readOnly
+                />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => void copyNodeId(selectedNode.data.draft.id)}
+                  onClick={() =>
+                    void copyNodeId(
+                      selectedNode.data.draft.type === 'trigger'
+                        ? (workflowSetup?.key ?? selectedNode.data.draft.id)
+                        : selectedNode.data.draft.id,
+                    )
+                  }
                 >
                   {copiedNodeId === selectedNode.data.draft.id ? (
-                    <Check className="mr-2 h-4 w-4" />
+                    <Check className="h-4 w-4" />
                   ) : (
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="h-4 w-4" />
                   )}
-                  {copiedNodeId === selectedNode.data.draft.id
-                    ? 'Copied'
-                    : 'Copy ID'}
                 </Button>
               </div>
             </div>
