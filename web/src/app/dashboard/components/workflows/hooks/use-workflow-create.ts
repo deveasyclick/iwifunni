@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useState } from 'react';
 import type { CreateWorkflowPayload } from '@/app/types/workflow';
 import { workflowApi } from '../api';
 import {
@@ -9,49 +9,44 @@ import {
   workflowDefinitionFromBuilderDraft,
 } from '../draft';
 import { buildWorkflowBuilderHref } from '../utils/urls';
-import { workflowSetupSchema } from '../schema/workflow-setup';
-import { workflowSetupValuesFromSearchParams } from '../utils/search-params';
+import { workflowSetupSchema, slugifyKey } from '../schema/workflow-setup';
 
-type SetupFieldErrors = Partial<Record<'key' | 'name', string>>;
+type SetupFieldErrors = Partial<Record<'name', string>>;
 
 export type WorkflowCreateResult = {
-  key: string;
   name: string;
   description: string;
   errors: SetupFieldErrors;
   error: string | null;
   creating: boolean;
-  setKey: (value: string) => void;
   setName: (value: string) => void;
   setDescription: (value: string) => void;
   continueToBuilder: () => Promise<void>;
-  handleOpenChange: (open: boolean) => void;
+  reset: () => void;
 };
 
 export const useWorkflowCreate = (): WorkflowCreateResult => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [key, setKey] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<SetupFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    const values = workflowSetupValuesFromSearchParams(searchParams);
-    setKey(values.key);
-    setName(values.name);
-    setDescription(values.description);
-  }, [searchParams]);
+  const reset = useCallback(() => {
+    setName('');
+    setDescription('');
+    setErrors({});
+    setError(null);
+  }, []);
 
   const continueToBuilder = useCallback(async () => {
-    const parsed = workflowSetupSchema.safeParse({ key, name, description });
+    const parsed = workflowSetupSchema.safeParse({ name, description });
     if (!parsed.success) {
       const nextErrors: SetupFieldErrors = {};
       for (const issue of parsed.error.issues) {
         const path = issue.path[0];
-        if ((path === 'key' || path === 'name') && !nextErrors[path]) {
+        if (path === 'name' && !nextErrors[path]) {
           nextErrors[path] = issue.message;
         }
       }
@@ -62,8 +57,9 @@ export const useWorkflowCreate = (): WorkflowCreateResult => {
     setError(null);
     setErrors({});
 
+    const generatedKey = slugifyKey(parsed.data.name);
     const payload: CreateWorkflowPayload = {
-      key: parsed.data.key,
+      key: generatedKey,
       name: parsed.data.name,
       description: parsed.data.description || undefined,
       definition: workflowDefinitionFromBuilderDraft(
@@ -82,34 +78,20 @@ export const useWorkflowCreate = (): WorkflowCreateResult => {
     } finally {
       setCreating(false);
     }
-  }, [key, name, description, router]);
-
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        router.push('/dashboard/workflows');
-      }
-    },
-    [router],
-  );
+  }, [name, description, router]);
 
   return {
-    key,
     name,
     description,
     errors,
     error,
     creating,
-    setKey: (value: string) => {
-      setKey(value);
-      setErrors((current) => ({ ...current, key: undefined }));
-    },
     setName: (value: string) => {
       setName(value);
       setErrors((current) => ({ ...current, name: undefined }));
     },
     setDescription,
     continueToBuilder,
-    handleOpenChange,
+    reset,
   };
 };

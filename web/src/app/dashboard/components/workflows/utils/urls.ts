@@ -7,9 +7,6 @@ export const buildWorkflowBuilderHref = (
   if (values?.workflowId?.trim()) {
     params.set('workflowId', values.workflowId.trim());
   }
-  if (values?.key?.trim()) {
-    params.set('key', values.key.trim());
-  }
   if (values?.name?.trim()) {
     params.set('name', values.name.trim());
   }
@@ -27,9 +24,6 @@ export const buildWorkflowSetupHref = (
   values: Partial<WorkflowSetupValues>,
 ) => {
   const params = new URLSearchParams();
-  if (values.key?.trim()) {
-    params.set('key', values.key.trim());
-  }
   if (values.name?.trim()) {
     params.set('name', values.name.trim());
   }

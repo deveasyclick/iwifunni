@@ -10,7 +10,6 @@ const firstSearchParamValue = (value: string | string[] | null | undefined) =>
 export const workflowSetupValuesFromSearchParams = (
   searchParams: SearchParamsReader,
 ): WorkflowSetupValues => ({
-  key: searchParams.get('key') || '',
   name: searchParams.get('name') || '',
   description: searchParams.get('description') || '',
 });
@@ -18,7 +17,6 @@ export const workflowSetupValuesFromSearchParams = (
 export const workflowSetupValuesFromRecord = (
   searchParams: Record<string, string | string[] | undefined>,
 ): WorkflowSetupValues => ({
-  key: firstSearchParamValue(searchParams.key),
   name: firstSearchParamValue(searchParams.name),
   description: firstSearchParamValue(searchParams.description),
 });
