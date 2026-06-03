@@ -9,13 +9,13 @@ export {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
   workflowDefinitionFromBuilderDraft,
-} from './utils';
+} from '../draft';
 export type {
   BuilderEdgeDraft,
   BuilderNodeDraft,
   WorkflowBuilderDraft,
   WorkflowDefinitionIssue,
-} from './types';
+} from '../types/draft';
 
 export const WorkflowDefinitionBuilder = ({
   value,

@@ -5,7 +5,7 @@ import { BaseEdge, type EdgeProps } from '@xyflow/react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkflowStepActionMenu } from './action-menu';
-import type { WorkflowCanvasEdge } from './types';
+import type { WorkflowCanvasEdge } from '../types/canvas';
 
 const WorkflowCanvasEdgeComponent = memo(
   ({

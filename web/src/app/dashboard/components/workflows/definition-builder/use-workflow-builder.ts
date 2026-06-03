@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { useStore } from "zustand";
-import { createWorkflowBuilderStore } from "./store";
-import type {
-  WorkflowDefinitionBuilderProps,
-  WorkflowDefinitionIssue,
-} from "./types";
-import { buildDraftFromCanvas, getNodeDisplayName } from "./utils";
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { useStore } from 'zustand';
+import { createWorkflowBuilderStore } from '../store/builder';
+import type { WorkflowDefinitionIssue } from '../types/draft';
+import type { WorkflowDefinitionBuilderProps } from './types';
+import { buildDraftFromCanvas } from '../draft';
+import { getNodeDisplayName } from '../utils/display';
 
 export const useWorkflowBuilder = ({
   value,
@@ -73,8 +72,8 @@ export const useWorkflowBuilder = ({
             setSelection({ nodeId, edgeId: null }),
           onRemoveNode: removeNode,
           onDuplicateNode: duplicateNode,
-          canDelete: node.data.draft.type !== "trigger",
-          canDuplicate: node.data.draft.type !== "trigger",
+          canDelete: node.data.draft.type !== 'trigger',
+          canDuplicate: node.data.draft.type !== 'trigger',
           nodeIssues: nodeIssuesMap.get(node.data.draft.id) || [],
         },
       })),
@@ -94,7 +93,7 @@ export const useWorkflowBuilder = ({
     const mappedEdges = edges.map((edge) => ({
       ...edge,
       data: {
-        branch: edge.data?.branch || "",
+        branch: edge.data?.branch || '',
         onInsertNode: insertNodeOnEdge,
       },
     }));
@@ -112,10 +111,10 @@ export const useWorkflowBuilder = ({
         id: `terminal:${lastNode.id}`,
         source: lastNode.id,
         target: lastNode.id,
-        sourceHandle: "default",
-        type: "workflow-edge" as const,
+        sourceHandle: 'default',
+        type: 'workflow-edge' as const,
         data: {
-          branch: "",
+          branch: '',
           isTerminal: true,
           onInsertNode: insertNodeOnEdge,
         },
@@ -158,33 +157,33 @@ export const useWorkflowBuilder = ({
   const selectedEdgeSourceLabel = selectedEdge
     ? getNodeDisplayName(
         nodes.find((node) => node.id === selectedEdge.source)?.data.draft ?? {
-          id: "",
-          name: "",
-          type: "delay",
-          duration: "",
-          templateId: "",
-          channel: "",
-          field: "",
-          operator: "",
-          value: "",
+          id: '',
+          name: '',
+          type: 'delay',
+          duration: '',
+          templateId: '',
+          channel: '',
+          field: '',
+          operator: '',
+          value: '',
         },
       )
-    : "";
+    : '';
   const selectedEdgeTargetLabel = selectedEdge
     ? getNodeDisplayName(
         nodes.find((node) => node.id === selectedEdge.target)?.data.draft ?? {
-          id: "",
-          name: "",
-          type: "delay",
-          duration: "",
-          templateId: "",
-          channel: "",
-          field: "",
-          operator: "",
-          value: "",
+          id: '',
+          name: '',
+          type: 'delay',
+          duration: '',
+          templateId: '',
+          channel: '',
+          field: '',
+          operator: '',
+          value: '',
         },
       )
-    : "";
+    : '';
 
   useEffect(() => {
     const externalSignature = JSON.stringify(value);

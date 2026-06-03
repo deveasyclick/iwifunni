@@ -1,3 +1,3 @@
-export { default as getNodeMeta } from './getNodeMeta';
-export { default as buildCanvasGraphFromDraft } from './buildCanvasGraphFromDraft';
-export { default as validateWorkflowDefinitionDraft } from './validateWorkflowDefinitionDraft';
+export { getNodeMeta } from './display';
+export { buildCanvasGraphFromDraft } from './canvas/graph';
+export { default as validateWorkflowDefinitionDraft } from './validation';

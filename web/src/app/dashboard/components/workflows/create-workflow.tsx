@@ -19,7 +19,7 @@ import { workflowApi } from './api';
 import {
   createDefaultWorkflowBuilderDraft,
   workflowDefinitionFromBuilderDraft,
-} from './definition-builder';
+} from './draft';
 import {
   buildWorkflowBuilderHref,
   workflowSetupSchema,

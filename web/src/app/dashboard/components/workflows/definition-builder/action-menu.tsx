@@ -8,17 +8,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { AddConnectedNodeOptions, WorkflowNodeType } from './types';
-
-type WorkflowStepActionMenuProps = {
-  children: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  onSelect: (type: WorkflowNodeType, options?: AddConnectedNodeOptions) => void;
-  align?: 'start' | 'center' | 'end';
-  side?: 'top' | 'right' | 'bottom' | 'left';
-  sideOffset?: number;
-};
+import type { WorkflowNodeType } from '../types/draft';
+import type { AddConnectedNodeOptions } from '../types/actions';
+import type { WorkflowStepActionMenuProps } from '../types/ui';
 
 const actionItems: Array<{
   label: string;

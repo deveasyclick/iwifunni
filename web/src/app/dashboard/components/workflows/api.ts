@@ -3,22 +3,14 @@ import type {
   WorkflowExecutionDetail,
   WorkflowExecutionItem,
   WorkflowItem,
-} from "@/app/types/workflow";
+} from '@/app/types/workflow';
 
-type WorkflowEventPayload = {
-  event: string;
-  subscriber_id?: string;
-  data?: Record<string, unknown>;
-};
-
-type WorkflowRequestInit = Omit<RequestInit, "body"> & {
-  body?: BodyInit | object;
-};
+import type { WorkflowEventPayload, WorkflowRequestInit } from './types/api';
 
 const parseError = async (response: Response): Promise<string> => {
-  const fallback = "Request failed";
+  const fallback = 'Request failed';
 
-  const text = await response.text().catch(() => "");
+  const text = await response.text().catch(() => '');
   if (!text) return fallback;
 
   try {
@@ -31,18 +23,18 @@ const parseError = async (response: Response): Promise<string> => {
 
 const buildRequestInit = (init?: WorkflowRequestInit): RequestInit => {
   const headers = new Headers(init?.headers);
-  const method = init?.method || "GET";
+  const method = init?.method || 'GET';
   const hasObjectBody =
     init?.body != null &&
-    typeof init.body === "object" &&
+    typeof init.body === 'object' &&
     !(init.body instanceof FormData);
 
-  if (method === "GET") {
-    headers.set("browserrefreshed", "false");
+  if (method === 'GET') {
+    headers.set('browserrefreshed', 'false');
   }
 
   if (hasObjectBody) {
-    headers.set("Content-Type", "application/json");
+    headers.set('Content-Type', 'application/json');
   }
 
   return {
@@ -51,7 +43,7 @@ const buildRequestInit = (init?: WorkflowRequestInit): RequestInit => {
     body: hasObjectBody
       ? JSON.stringify(init?.body)
       : (init?.body as BodyInit | undefined),
-    cache: init?.cache ?? "no-store",
+    cache: init?.cache ?? 'no-store',
   };
 };
 
@@ -74,50 +66,50 @@ async function request<T>(
 
 export const workflowApi = {
   archiveWorkflow(id: string) {
-    return request<void>(`/api/workflows/${id}`, { method: "DELETE" });
+    return request<void>(`/api/workflows/${id}`, { method: 'DELETE' });
   },
   createWorkflow(payload: CreateWorkflowPayload) {
-    return request<WorkflowItem>("/api/workflows", {
-      method: "POST",
+    return request<WorkflowItem>('/api/workflows', {
+      method: 'POST',
       body: payload,
     });
   },
   getWorkflow(id: string) {
-    return request<WorkflowItem>(`/api/workflows/${id}`, { method: "GET" });
+    return request<WorkflowItem>(`/api/workflows/${id}`, { method: 'GET' });
   },
   getExecution(id: string) {
     return request<WorkflowExecutionDetail>(`/api/workflow-executions/${id}`, {
-      method: "GET",
+      method: 'GET',
     });
   },
   getExecutions(workflowID?: string) {
     const search =
-      workflowID && workflowID !== "all"
+      workflowID && workflowID !== 'all'
         ? `?workflow_id=${encodeURIComponent(workflowID)}`
-        : "";
+        : '';
 
     return request<WorkflowExecutionItem[]>(
       `/api/workflow-executions${search}`,
       {
-        method: "GET",
+        method: 'GET',
       },
     );
   },
   getWorkflows() {
-    return request<WorkflowItem[]>("/api/workflows", { method: "GET" });
+    return request<WorkflowItem[]>('/api/workflows', { method: 'GET' });
   },
   updateWorkflow(id: string, payload: CreateWorkflowPayload) {
     return request<WorkflowItem>(`/api/workflows/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: payload,
     });
   },
   publishWorkflow(id: string) {
-    return request<void>(`/api/workflows/${id}/publish`, { method: "POST" });
+    return request<void>(`/api/workflows/${id}/publish`, { method: 'POST' });
   },
   triggerEvent(payload: WorkflowEventPayload) {
-    return request<void>("/api/events", {
-      method: "POST",
+    return request<void>('/api/events', {
+      method: 'POST',
       body: payload,
     });
   },

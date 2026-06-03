@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
+import { useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -11,22 +11,12 @@ import {
   type NodeChange,
   type NodeMouseHandler,
   ReactFlow,
-} from "@xyflow/react";
-import { nodeHeight } from "./constants";
-import { edgeTypes } from "./canvas-edge";
-import { nodeTypes } from "./canvas-node";
-import type { WorkflowCanvasEdge, WorkflowCanvasNode } from "./types";
-
-type WorkflowBuilderCanvasProps = {
-  nodes: WorkflowCanvasNode[];
-  edges: WorkflowCanvasEdge[];
-  onNodesChange: (changes: NodeChange<WorkflowCanvasNode>[]) => void;
-  onEdgesChange: (changes: EdgeChange<WorkflowCanvasEdge>[]) => void;
-  onConnect: (connection: Connection) => void;
-  onPaneClick: () => void;
-  onNodeClick: NodeMouseHandler<WorkflowCanvasNode>;
-  onEdgeClick: EdgeMouseHandler<WorkflowCanvasEdge>;
-};
+} from '@xyflow/react';
+import { nodeHeight } from '../utils/constants';
+import { edgeTypes } from './canvas-edge';
+import { nodeTypes } from './canvas-node';
+import type { WorkflowCanvasNode, WorkflowCanvasEdge } from '../types/canvas';
+import type { WorkflowBuilderCanvasProps } from '../types/ui';
 
 export const WorkflowBuilderCanvas = ({
   nodes,
@@ -53,19 +43,19 @@ export const WorkflowBuilderCanvas = ({
 
   const innerCanvasHeightClass = useMemo(() => {
     if (innerCanvasHeight <= 3600) {
-      return "h-[3600px]";
+      return 'h-[3600px]';
     }
     if (innerCanvasHeight <= 4400) {
-      return "h-[4400px]";
+      return 'h-[4400px]';
     }
     if (innerCanvasHeight <= 5200) {
-      return "h-[5200px]";
+      return 'h-[5200px]';
     }
     if (innerCanvasHeight <= 6000) {
-      return "h-[6000px]";
+      return 'h-[6000px]';
     }
 
-    return "h-[6800px]";
+    return 'h-[6800px]';
   }, [innerCanvasHeight]);
 
   return (
@@ -80,8 +70,8 @@ export const WorkflowBuilderCanvas = ({
             </p>
           </div>
           <span className="text-xs text-bodytext">
-            {nodes.length} node{nodes.length === 1 ? "" : "s"} · {edgeCount}{" "}
-            edge{edgeCount === 1 ? "" : "s"}
+            {nodes.length} node{nodes.length === 1 ? '' : 's'} · {edgeCount}{' '}
+            edge{edgeCount === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -116,10 +106,10 @@ export const WorkflowBuilderCanvas = ({
               maxZoom={1}
               elementsSelectable
               defaultEdgeOptions={{
-                type: "workflow-edge",
+                type: 'workflow-edge',
               }}
               connectionLineStyle={{
-                stroke: "var(--primary)",
+                stroke: 'var(--primary)',
                 strokeWidth: 2.2,
               }}
               deleteKeyCode={null}

@@ -1,25 +1,26 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import CardBox from "@/app/components/shared/CardBox";
-import { workflowApi } from "@/app/dashboard/components/workflows/api";
-import { buildWorkflowBuilderHref } from "@/app/dashboard/components/workflows/create-workflow-metadata";
-import { zeroUUID } from "@/app/dashboard/components/workflows/definition-builder/constants";
-import type { CreateTemplatePayload, TemplateItem } from "@/app/types/template";
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import CardBox from '@/app/components/shared/CardBox';
+import { workflowApi } from '@/app/dashboard/components/workflows/api';
+import { buildWorkflowBuilderHref } from '@/app/dashboard/components/workflows/create-workflow-metadata';
+import { zeroUUID } from '@/app/dashboard/components/workflows/utils/constants';
+import type { TemplateUpdatePayload } from '@/app/dashboard/components/workflows/types/api';
+import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
 import type {
   WorkflowChannel,
   WorkflowDefinition,
   WorkflowNode,
-} from "@/app/types/workflow";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import type { UnlayerEmailEditorHandle } from "./unlayer-email-editor";
+} from '@/app/types/workflow';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import type { UnlayerEmailEditorHandle } from './unlayer-email-editor';
 
-const UnlayerEmailEditor = dynamic(() => import("./unlayer-email-editor"), {
+const UnlayerEmailEditor = dynamic(() => import('./unlayer-email-editor'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-border/50 text-sm text-muted-foreground">
@@ -28,15 +29,7 @@ const UnlayerEmailEditor = dynamic(() => import("./unlayer-email-editor"), {
   ),
 });
 
-type ConfigureWorkflowChannelProps = {
-  workflowId: string;
-  nodeId: string;
-};
-
-type TemplateUpdatePayload = {
-  subject?: string;
-  body: string;
-};
+import type { ConfigureWorkflowChannelProps } from '@/app/dashboard/components/workflows/types/ui';
 
 const channelConfigLabels: Record<
   WorkflowChannel,
@@ -47,24 +40,24 @@ const channelConfigLabels: Record<
   }
 > = {
   email: {
-    subject: "Email subject",
-    body: "Email body",
-    hint: "Write the outgoing email subject and body used for this node.",
+    subject: 'Email subject',
+    body: 'Email body',
+    hint: 'Write the outgoing email subject and body used for this node.',
   },
   sms: {
-    subject: "SMS label",
-    body: "SMS body",
-    hint: "Write the SMS content that will be sent when this step runs.",
+    subject: 'SMS label',
+    body: 'SMS body',
+    hint: 'Write the SMS content that will be sent when this step runs.',
   },
   push: {
-    subject: "Push title",
-    body: "Push message",
-    hint: "Write the push title and message for this notification step.",
+    subject: 'Push title',
+    body: 'Push message',
+    hint: 'Write the push title and message for this notification step.',
   },
 };
 
 const parseError = async (response: Response): Promise<string> => {
-  const fallback = "Request failed";
+  const fallback = 'Request failed';
 
   try {
     const body = (await response.json()) as {
@@ -78,8 +71,8 @@ const parseError = async (response: Response): Promise<string> => {
 };
 
 const getNodeName = (node: WorkflowNode | null, fallbackNodeId: string) => {
-  const config = (node?.config || {}) as Record<string, unknown>;
-  if (typeof config.name === "string" && config.name.trim()) {
+  const config = node?.config || {};
+  if (typeof config.name === 'string' && config.name.trim()) {
     return config.name.trim();
   }
 
@@ -92,29 +85,35 @@ const ConfigureWorkflowChannel = ({
 }: ConfigureWorkflowChannelProps) => {
   const router = useRouter();
   const emailEditorRef = useRef<UnlayerEmailEditorHandle>(null);
-  const templateIdRef = useRef<string>("");
-  const workflowRef = useRef<Awaited<ReturnType<typeof workflowApi.getWorkflow>> | null>(null);
+  const templateIdRef = useRef<string>('');
+  const workflowRef = useRef<Awaited<
+    ReturnType<typeof workflowApi.getWorkflow>
+  > | null>(null);
   const nodeRef = useRef<WorkflowNode | null>(null);
-  const channelRef = useRef<WorkflowChannel>("email");
-  const subjectRef = useRef<string>("");
-  const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelRef = useRef<WorkflowChannel>('email');
+  const subjectRef = useRef<string>('');
+  const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [autosaveStatus, setAutosaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle');
   const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<Awaited<
     ReturnType<typeof workflowApi.getWorkflow>
   > | null>(null);
   const [node, setNode] = useState<WorkflowNode | null>(null);
-  const [channel, setChannel] = useState<WorkflowChannel>("email");
-  const [templateId, setTemplateId] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [emailPreviewHtml, setEmailPreviewHtml] = useState("");
+  const [channel, setChannel] = useState<WorkflowChannel>('email');
+  const [templateId, setTemplateId] = useState('');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState('');
 
   useEffect(() => {
     if (!workflowId || !nodeId) {
-      setError("Workflow or channel node was not provided");
+      setError('Workflow or channel node was not provided');
       setLoading(false);
       return;
     }
@@ -134,18 +133,18 @@ const ConfigureWorkflowChannel = ({
         const definition = nextWorkflow.definition;
         const nextNode =
           definition?.nodes.find((item) => item.id === nodeId) || null;
-        if (!nextNode || nextNode.type !== "notification") {
-          throw new Error("Notification node not found");
+        if (!nextNode || nextNode.type !== 'notification') {
+          throw new Error('Notification node not found');
         }
 
-        const config = (nextNode.config || {}) as Record<string, unknown>;
+        const config = nextNode.config || {};
         const nextChannel =
           Array.isArray(config.channels) &&
-          typeof config.channels[0] === "string"
+          typeof config.channels[0] === 'string'
             ? (config.channels[0] as WorkflowChannel)
-            : "email";
+            : 'email';
         const nextTemplateId =
-          typeof config.template_id === "string" ? config.template_id : "";
+          typeof config.template_id === 'string' ? config.template_id : '';
 
         setWorkflow(nextWorkflow);
         setNode(nextNode);
@@ -158,9 +157,9 @@ const ConfigureWorkflowChannel = ({
 
         if (nextTemplateId && nextTemplateId !== zeroUUID) {
           const response = await fetch(`/api/templates/${nextTemplateId}`, {
-            method: "GET",
-            headers: { browserrefreshed: "false" },
-            cache: "no-store",
+            method: 'GET',
+            headers: { browserrefreshed: 'false' },
+            cache: 'no-store',
           });
 
           if (!response.ok) {
@@ -169,19 +168,19 @@ const ConfigureWorkflowChannel = ({
 
           const template = (await response.json()) as TemplateItem;
           if (!cancelled) {
-            setSubject(template.subject || "");
-            setBody(template.body || "");
+            setSubject(template.subject || '');
+            setBody(template.body || '');
           }
         } else {
-          setSubject("");
-          setBody("");
+          setSubject('');
+          setBody('');
         }
       } catch (err) {
         if (!cancelled) {
           setError(
             err instanceof Error
               ? err.message
-              : "Failed to load channel editor",
+              : 'Failed to load channel editor',
           );
         }
       } finally {
@@ -203,85 +202,96 @@ const ConfigureWorkflowChannel = ({
     subjectRef.current = subject;
   }, [subject]);
 
-  const performAutosave = useCallback(async (encodedBody: string) => {
-    const currentWorkflow = workflowRef.current;
-    const currentNode = nodeRef.current;
-    const currentChannel = channelRef.current;
-    const currentSubject = subjectRef.current;
-    const currentTemplateId = templateIdRef.current;
+  const performAutosave = useCallback(
+    async (encodedBody: string) => {
+      const currentWorkflow = workflowRef.current;
+      const currentNode = nodeRef.current;
+      const currentChannel = channelRef.current;
+      const currentSubject = subjectRef.current;
+      const currentTemplateId = templateIdRef.current;
 
-    if (!currentWorkflow || !currentNode) return;
+      if (!currentWorkflow || !currentNode) return;
 
-    setAutosaveStatus("saving");
-    try {
-      const templatePayload: CreateTemplatePayload = {
-        name: `${currentWorkflow.name} ${getNodeName(currentNode, nodeId)} ${currentChannel}`,
-        channel: currentChannel,
-        body: encodedBody,
-        subject: currentChannel === "sms" ? undefined : currentSubject.trim() || undefined,
-      };
-
-      let savedTemplateId = currentTemplateId;
-      if (currentTemplateId && currentTemplateId !== zeroUUID) {
-        const response = await fetch(`/api/templates/${currentTemplateId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            body: templatePayload.body,
-            subject: templatePayload.subject,
-          } satisfies TemplateUpdatePayload),
-        });
-        if (!response.ok) throw new Error(await parseError(response));
-        const updated = (await response.json()) as TemplateItem;
-        savedTemplateId = updated.id;
-      } else {
-        const response = await fetch("/api/templates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(templatePayload),
-        });
-        if (!response.ok) throw new Error(await parseError(response));
-        const created = (await response.json()) as TemplateItem;
-        savedTemplateId = created.id;
-        setTemplateId(savedTemplateId);
-        templateIdRef.current = savedTemplateId;
-
-        const currentDefinition = currentWorkflow.definition as WorkflowDefinition;
-        const nextDefinition: WorkflowDefinition = {
-          ...currentDefinition,
-          nodes: currentDefinition.nodes.map((definitionNode) =>
-            definitionNode.id !== currentNode.id
-              ? definitionNode
-              : {
-                  ...definitionNode,
-                  config: {
-                    ...(definitionNode.config || {}),
-                    template_id: savedTemplateId,
-                    channels: [currentChannel],
-                  },
-                },
-          ),
+      setAutosaveStatus('saving');
+      try {
+        const templatePayload: CreateTemplatePayload = {
+          name: `${currentWorkflow.name} ${getNodeName(currentNode, nodeId)} ${currentChannel}`,
+          channel: currentChannel,
+          body: encodedBody,
+          subject:
+            currentChannel === 'sms'
+              ? undefined
+              : currentSubject.trim() || undefined,
         };
-        await workflowApi.updateWorkflow(currentWorkflow.id, {
-          key: currentWorkflow.key,
-          name: currentWorkflow.name,
-          description: currentWorkflow.description || undefined,
-          definition: nextDefinition,
-        });
+
+        let savedTemplateId = currentTemplateId;
+        if (currentTemplateId && currentTemplateId !== zeroUUID) {
+          const response = await fetch(`/api/templates/${currentTemplateId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              body: templatePayload.body,
+              subject: templatePayload.subject,
+            } satisfies TemplateUpdatePayload),
+          });
+          if (!response.ok) throw new Error(await parseError(response));
+          const updated = (await response.json()) as TemplateItem;
+          savedTemplateId = updated.id;
+        } else {
+          const response = await fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(templatePayload),
+          });
+          if (!response.ok) throw new Error(await parseError(response));
+          const created = (await response.json()) as TemplateItem;
+          savedTemplateId = created.id;
+          setTemplateId(savedTemplateId);
+          templateIdRef.current = savedTemplateId;
+
+          const currentDefinition =
+            currentWorkflow.definition as WorkflowDefinition;
+          const nextDefinition: WorkflowDefinition = {
+            ...currentDefinition,
+            nodes: currentDefinition.nodes.map((definitionNode) =>
+              definitionNode.id !== currentNode.id
+                ? definitionNode
+                : {
+                    ...definitionNode,
+                    config: {
+                      ...(definitionNode.config || {}),
+                      template_id: savedTemplateId,
+                      channels: [currentChannel],
+                    },
+                  },
+            ),
+          };
+          await workflowApi.updateWorkflow(currentWorkflow.id, {
+            key: currentWorkflow.key,
+            name: currentWorkflow.name,
+            description: currentWorkflow.description || undefined,
+            definition: nextDefinition,
+          });
+        }
+
+        setAutosaveStatus('saved');
+      } catch {
+        setAutosaveStatus('error');
       }
+    },
+    [nodeId],
+  );
 
-      setAutosaveStatus("saved");
-    } catch {
-      setAutosaveStatus("error");
-    }
-  }, [nodeId]);
-
-  const handleEncodedBodyChange = useCallback((encodedBody: string) => {
-    if (autosaveDebounceRef.current) clearTimeout(autosaveDebounceRef.current);
-    autosaveDebounceRef.current = setTimeout(() => {
-      void performAutosave(encodedBody);
-    }, 1500);
-  }, [performAutosave]);
+  const handleEncodedBodyChange = useCallback(
+    (encodedBody: string) => {
+      if (autosaveDebounceRef.current)
+        clearTimeout(autosaveDebounceRef.current);
+      autosaveDebounceRef.current = setTimeout(() => {
+        void performAutosave(encodedBody);
+      }, 1500);
+    },
+    [performAutosave],
+  );
 
   const labels = useMemo(() => channelConfigLabels[channel], [channel]);
   const previewSubject = subject.trim() || labels.subject;
@@ -289,14 +299,14 @@ const ConfigureWorkflowChannel = ({
 
   const saveChannelConfiguration = async () => {
     if (!workflow || !node) {
-      setError("Workflow draft is not ready");
+      setError('Workflow draft is not ready');
       return;
     }
 
     let resolvedBody = body;
-    if (channel === "email") {
+    if (channel === 'email') {
       if (!emailEditorRef.current) {
-        setError("Email editor is not ready");
+        setError('Email editor is not ready');
         return;
       }
       resolvedBody = await emailEditorRef.current.getEncodedBody();
@@ -313,14 +323,14 @@ const ConfigureWorkflowChannel = ({
         name: `${workflow.name} ${getNodeName(node, nodeId)} ${channel}`,
         channel,
         body: resolvedBody,
-        subject: channel === "sms" ? undefined : subject.trim() || undefined,
+        subject: channel === 'sms' ? undefined : subject.trim() || undefined,
       };
 
       let savedTemplateId = templateId;
       if (templateId && templateId !== zeroUUID) {
         const response = await fetch(`/api/templates/${templateId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             body: templatePayload.body,
             subject: templatePayload.subject,
@@ -334,9 +344,9 @@ const ConfigureWorkflowChannel = ({
         const updatedTemplate = (await response.json()) as TemplateItem;
         savedTemplateId = updatedTemplate.id;
       } else {
-        const response = await fetch("/api/templates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(templatePayload),
         });
 
@@ -380,7 +390,7 @@ const ConfigureWorkflowChannel = ({
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to save channel configuration",
+          : 'Failed to save channel configuration',
       );
     } finally {
       setSaving(false);
@@ -404,9 +414,15 @@ const ConfigureWorkflowChannel = ({
             </div>
 
             <div className="flex items-center gap-2">
-              {channel === "email" && autosaveStatus !== "idle" && (
-                <span className={`text-xs ${autosaveStatus === "saved" ? "text-muted-foreground" : autosaveStatus === "saving" ? "text-muted-foreground" : "text-destructive"}`}>
-                  {autosaveStatus === "saving" ? "Autosaving…" : autosaveStatus === "saved" ? "Autosaved" : "Autosave failed"}
+              {channel === 'email' && autosaveStatus !== 'idle' && (
+                <span
+                  className={`text-xs ${autosaveStatus === 'saved' ? 'text-muted-foreground' : autosaveStatus === 'saving' ? 'text-muted-foreground' : 'text-destructive'}`}
+                >
+                  {autosaveStatus === 'saving'
+                    ? 'Autosaving…'
+                    : autosaveStatus === 'saved'
+                      ? 'Autosaved'
+                      : 'Autosave failed'}
                 </span>
               )}
               <Button asChild variant="outline">
@@ -420,14 +436,14 @@ const ConfigureWorkflowChannel = ({
                 disabled={saving}
                 className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
               >
-                {saving ? "Saving..." : "Save channel"}
+                {saving ? 'Saving...' : 'Save channel'}
               </Button>
             </div>
           </div>
 
           <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
             <p className="text-sm font-medium text-foreground">
-              {workflow?.name || "Workflow draft"}
+              {workflow?.name || 'Workflow draft'}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Step: {getNodeName(node, nodeId)} · ID: {node?.id || nodeId} ·
@@ -451,7 +467,7 @@ const ConfigureWorkflowChannel = ({
               </div>
 
               <div className="space-y-4">
-                {channel !== "sms" ? (
+                {channel !== 'sms' ? (
                   <div>
                     <label
                       className="mb-2 block text-sm font-medium"
@@ -464,9 +480,9 @@ const ConfigureWorkflowChannel = ({
                       value={subject}
                       onChange={(event) => setSubject(event.target.value)}
                       placeholder={
-                        channel === "push"
-                          ? "Push title"
-                          : "Welcome to Iwifunni"
+                        channel === 'push'
+                          ? 'Push title'
+                          : 'Welcome to Iwifunni'
                       }
                     />
                   </div>
@@ -479,7 +495,7 @@ const ConfigureWorkflowChannel = ({
                   >
                     {labels.body}
                   </label>
-                  {channel === "email" ? (
+                  {channel === 'email' ? (
                     <UnlayerEmailEditor
                       ref={emailEditorRef}
                       initialValue={body}
@@ -493,9 +509,9 @@ const ConfigureWorkflowChannel = ({
                       onChange={(event) => setBody(event.target.value)}
                       className="min-h-72 font-mono text-sm"
                       placeholder={
-                        channel === "sms"
-                          ? "Hi {{.name}}, your update is ready."
-                          : "Hello {{.name}}"
+                        channel === 'sms'
+                          ? 'Hi {{.name}}, your update is ready.'
+                          : 'Hello {{.name}}'
                       }
                     />
                   )}
@@ -512,7 +528,7 @@ const ConfigureWorkflowChannel = ({
                 </p>
               </div>
 
-              {channel === "email" ? (
+              {channel === 'email' ? (
                 <div className="rounded-2xl border border-border/50 bg-white text-slate-900 shadow-sm">
                   <div className="border-b border-slate-200 px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -539,7 +555,7 @@ const ConfigureWorkflowChannel = ({
                 </div>
               ) : null}
 
-              {channel === "sms" ? (
+              {channel === 'sms' ? (
                 <div className="rounded-[28px] border border-border/40 bg-dark p-4">
                   <div className="ml-auto max-w-[85%] rounded-3xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground shadow-lg whitespace-pre-wrap">
                     {previewBody}
@@ -547,7 +563,7 @@ const ConfigureWorkflowChannel = ({
                 </div>
               ) : null}
 
-              {channel === "push" ? (
+              {channel === 'push' ? (
                 <div className="rounded-3xl border border-border/40 bg-dark p-4">
                   <div className="rounded-2xl border border-border/50 bg-card px-4 py-3 shadow-lg">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

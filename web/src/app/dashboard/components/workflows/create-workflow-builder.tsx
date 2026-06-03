@@ -10,20 +10,16 @@ import { workflowApi } from '@/app/dashboard/components/workflows/api';
 import {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
-  WorkflowDefinitionBuilder,
   workflowDefinitionFromBuilderDraft,
-} from '@/app/dashboard/components/workflows/definition-builder';
+} from '@/app/dashboard/components/workflows/draft';
+import { WorkflowDefinitionBuilder } from '@/app/dashboard/components/workflows/definition-builder';
 import { buildWorkflowChannelConfigureHref } from './create-workflow-metadata';
 import { validateWorkflowDefinitionDraft } from './utils';
 
-type CreateWorkflowBuilderProps = {
-  workflowId: string;
-};
-
-type AutosaveState = {
-  status: 'loading' | 'saving' | 'saved' | 'error' | 'invalid';
-  message: string;
-};
+import type {
+  CreateWorkflowBuilderProps,
+  WorkflowAutosaveState,
+} from '@/app/dashboard/components/workflows/types/ui';
 
 const buildSaveSignature = (
   definitionSignature: string,
@@ -43,7 +39,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
   const [workflow, setWorkflow] = useState<Awaited<
     ReturnType<typeof workflowApi.getWorkflow>
   > | null>(null);
-  const [autosaveState, setAutosaveState] = useState<AutosaveState>({
+  const [autosaveState, setAutosaveState] = useState<WorkflowAutosaveState>({
     status: workflowId ? 'loading' : 'error',
     message: workflowId ? 'Loading draft...' : 'Workflow draft not found',
   });

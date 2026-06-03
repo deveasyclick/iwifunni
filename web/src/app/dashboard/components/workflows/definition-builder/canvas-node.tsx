@@ -13,8 +13,8 @@ import {
   buildNodeDescription,
   buildNodeSubtitle,
   getNodeDisplayName,
-} from './utils';
-import type { WorkflowCanvasNode } from './types';
+} from '../utils/display';
+import type { WorkflowCanvasNode } from '../types/canvas';
 import { getNodeMeta } from '../utils';
 
 const handleClassName =
