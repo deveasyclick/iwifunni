@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { delayUnits } from '@/app/dashboard/components/workflows/utils/constants';
+import { delayUnits } from '@/app/dashboard/components/workflows/constants';
 import {
   parseDelayDuration,
   formatDelayDuration,

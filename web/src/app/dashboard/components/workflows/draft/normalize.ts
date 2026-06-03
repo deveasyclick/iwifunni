@@ -1,5 +1,5 @@
-import { uuidPattern, zeroUUID } from '../utils/constants';
-import type { BuilderNodeDraft, WorkflowNodeType } from './types';
+import { uuidPattern, zeroUUID } from '../constants';
+import type { BuilderNodeDraft, WorkflowNodeType } from '../types/draft';
 
 export const normalizeImportedTemplateId = (value: unknown) => {
   const templateId = typeof value === 'string' ? value.trim() : '';

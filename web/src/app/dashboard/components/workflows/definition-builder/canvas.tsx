@@ -7,7 +7,7 @@ import {
   Controls,
   ReactFlow,
 } from '@xyflow/react';
-import { nodeHeight } from '../utils/constants';
+import { nodeHeight } from '../constants';
 import { edgeTypes } from './canvas-edge';
 import { nodeTypes } from './canvas-node';
 import type { WorkflowCanvasNode, WorkflowCanvasEdge } from '../types/canvas';

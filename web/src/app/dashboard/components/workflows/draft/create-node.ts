@@ -1,7 +1,7 @@
 import type { WorkflowChannel } from '@/app/types/workflow';
-import type { BuilderNodeDraft, WorkflowNodeType } from './types';
+import type { BuilderNodeDraft, WorkflowNodeType } from '../types/draft';
 import { buildDefaultNodeName } from '../utils/display/node-name';
-import { zeroUUID } from '../utils/constants';
+import { zeroUUID } from '../constants';
 
 export const createNodeDraft = (
   type: WorkflowNodeType,

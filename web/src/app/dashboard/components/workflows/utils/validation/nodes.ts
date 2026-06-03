@@ -5,7 +5,7 @@ import {
   notificationChannels,
   uuidPattern,
   zeroUUID,
-} from '../constants';
+} from '../../constants';
 
 export const validateNodes = (
   definition: WorkflowDefinition,

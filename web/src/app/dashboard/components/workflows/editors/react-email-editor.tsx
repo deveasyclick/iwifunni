@@ -19,239 +19,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, Plus } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
-
-// ─── Body encoding/decoding ────────────────────────────────────────────────
-
-const DESIGN_PREFIX = '<!-- unlayer-design:';
-const DESIGN_SUFFIX = ' -->';
-
-export const encodeEmailBody = (design: object, html: string): string => {
-  const encoded = Buffer.from(JSON.stringify(design)).toString('base64');
-  return `${DESIGN_PREFIX}${encoded}${DESIGN_SUFFIX}\n${html}`;
-};
-
-export const decodeEmailBody = (
-  body: string,
-): { design: object; html: string } | null => {
-  if (!body.startsWith(DESIGN_PREFIX)) return null;
-  const endIdx = body.indexOf(DESIGN_SUFFIX);
-  if (endIdx === -1) return null;
-
-  const b64 = body.slice(DESIGN_PREFIX.length, endIdx);
-  const html = body.slice(endIdx + DESIGN_SUFFIX.length).replace(/^\n/, '');
-
-  try {
-    const design = JSON.parse(
-      Buffer.from(b64, 'base64').toString('utf-8'),
-    ) as object;
-    return { design, html };
-  } catch {
-    return null;
-  }
-};
-
-// ─── Block factories ───────────────────────────────────────────────────────
-
-const uid = () => Math.random().toString(36).slice(2, 10);
-
-const makeRow = (contents: object[]) => ({
-  id: `row_${uid()}`,
-  cells: [1],
-  columns: [
-    {
-      id: `col_${uid()}`,
-      contents,
-      values: {},
-    },
-  ],
-  values: {
-    selectable: true,
-    draggable: true,
-    duplicatable: true,
-    deletable: true,
-    hideable: true,
-    _meta: { htmlID: `u_row_${uid()}`, htmlClassNames: 'u_row' },
-  },
-});
-
-const makeTextContent = (text: string) => ({
-  id: `content_${uid()}`,
-  type: 'text',
-  values: {
-    containerPadding: '10px',
-    text: `<p>${text}</p>`,
-    _meta: {
-      htmlID: `u_content_text_${uid()}`,
-      htmlClassNames: 'u_content_text',
-    },
-  },
-});
-
-const makeHeadingContent = (text: string, tag: 'h1' | 'h2' | 'h3' = 'h2') => ({
-  id: `content_${uid()}`,
-  type: 'heading',
-  values: {
-    containerPadding: '10px',
-    text,
-    tag,
-    fontSize: tag === 'h1' ? '28px' : tag === 'h2' ? '22px' : '18px',
-    _meta: {
-      htmlID: `u_content_heading_${uid()}`,
-      htmlClassNames: 'u_content_heading',
-    },
-  },
-});
-
-const makeImageContent = () => ({
-  id: `content_${uid()}`,
-  type: 'image',
-  values: {
-    containerPadding: '10px',
-    src: { url: 'https://placehold.co/600x200/e2e8f0/64748b?text=Your+Image' },
-    textAlign: 'center',
-    altText: 'Image',
-    fullWidth: false,
-    _meta: {
-      htmlID: `u_content_image_${uid()}`,
-      htmlClassNames: 'u_content_image',
-    },
-  },
-});
-
-const makeButtonContent = (label: string) => ({
-  id: `content_${uid()}`,
-  type: 'button',
-  values: {
-    containerPadding: '10px',
-    text: label,
-    href: { name: 'web', values: { href: '#', target: '_blank' } },
-    textAlign: 'center',
-    backgroundColor: '#3b82f6',
-    buttonColors: { color: '#FFFFFF', backgroundColor: '#3b82f6' },
-    _meta: {
-      htmlID: `u_content_button_${uid()}`,
-      htmlClassNames: 'u_content_button',
-    },
-  },
-});
-
-const makeDividerContent = () => ({
-  id: `content_${uid()}`,
-  type: 'divider',
-  values: {
-    containerPadding: '10px',
-    width: '100%',
-    border: {
-      borderTopWidth: '1px',
-      borderTopStyle: 'solid',
-      borderTopColor: '#e2e8f0',
-    },
-    _meta: {
-      htmlID: `u_content_divider_${uid()}`,
-      htmlClassNames: 'u_content_divider',
-    },
-  },
-});
-
-// ─── Premade block definitions ─────────────────────────────────────────────
-
-type BlockDef = {
-  label: string;
-  group: string;
-  build: () => ReturnType<typeof makeRow>;
-};
-
-const BLOCK_DEFINITIONS: BlockDef[] = [
-  {
-    label: 'Heading 1',
-    group: 'Typography',
-    build: () => makeRow([makeHeadingContent('Section Heading', 'h1')]),
-  },
-  {
-    label: 'Heading 2',
-    group: 'Typography',
-    build: () => makeRow([makeHeadingContent('Section Heading', 'h2')]),
-  },
-  {
-    label: 'Heading 3',
-    group: 'Typography',
-    build: () => makeRow([makeHeadingContent('Subsection', 'h3')]),
-  },
-  {
-    label: 'Paragraph',
-    group: 'Typography',
-    build: () => makeRow([makeTextContent('Write your message here.')]),
-  },
-  {
-    label: 'Blockquote',
-    group: 'Typography',
-    build: () =>
-      makeRow([
-        {
-          id: `content_${uid()}`,
-          type: 'text',
-          values: {
-            containerPadding: '0px 0px 0px 16px',
-            text: '<p style="border-left:4px solid #e2e8f0;padding-left:12px;color:#64748b;font-style:italic;">Your quote text here.</p>',
-            _meta: {
-              htmlID: `u_content_text_${uid()}`,
-              htmlClassNames: 'u_content_text',
-            },
-          },
-        },
-      ]),
-  },
-  {
-    label: 'Image',
-    group: 'Media',
-    build: () => makeRow([makeImageContent()]),
-  },
-  {
-    label: 'Button',
-    group: 'Elements',
-    build: () => makeRow([makeButtonContent('Click Here')]),
-  },
-  {
-    label: 'Divider',
-    group: 'Elements',
-    build: () => makeRow([makeDividerContent()]),
-  },
-  {
-    label: 'Header section',
-    group: 'Sections',
-    build: () =>
-      makeRow([
-        makeHeadingContent('Welcome!', 'h1'),
-        makeTextContent(
-          'Thank you for joining us. Here&apos;s what&apos;s new.',
-        ),
-      ]),
-  },
-  {
-    label: 'Card section',
-    group: 'Sections',
-    build: () =>
-      makeRow([
-        makeHeadingContent('Feature Title', 'h3'),
-        makeTextContent('Describe the feature or update briefly.'),
-        makeButtonContent('Learn More'),
-      ]),
-  },
-  {
-    label: 'CTA section',
-    group: 'Sections',
-    build: () =>
-      makeRow([
-        makeHeadingContent('Ready to get started?', 'h2'),
-        makeTextContent('Join thousands of users today.'),
-        makeButtonContent('Get Started'),
-      ]),
-  },
-];
+import { encodeEmailBody, decodeEmailBody } from './encode';
+import { makeRow, makeTextContent } from './blocks/factories';
+import { BLOCK_DEFINITIONS } from './blocks/definitions';
+import type { BlockDef } from './blocks/definitions';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export type UnlayerEmailEditorHandle = {
+export type ReactEmailEditorHandle = {
   getEncodedBody: () => Promise<string>;
 };
 
@@ -263,7 +38,7 @@ type Props = {
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
+const ReactEmailEditor = forwardRef<ReactEmailEditorHandle, Props>(
   ({ initialValue, onHtmlChange, onEncodedBodyChange }, ref) => {
     const { resolvedTheme } = useTheme();
     const editorRef = useRef<EditorRef>(null);
@@ -311,7 +86,7 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
               makeRow([makeTextContent('Start typing your message here.')]),
             ],
           },
-        });
+        } as Parameters<typeof editor.loadDesign>[0]);
       }
 
       editor.addEventListener('design:updated', () => {
@@ -428,6 +203,6 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
   },
 );
 
-UnlayerEmailEditor.displayName = 'UnlayerEmailEditor';
+ReactEmailEditor.displayName = 'ReactEmailEditor';
 
-export default UnlayerEmailEditor;
+export default ReactEmailEditor;

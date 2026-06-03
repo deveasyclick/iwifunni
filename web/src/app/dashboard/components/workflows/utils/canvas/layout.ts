@@ -1,5 +1,5 @@
 import dagre from '@dagrejs/dagre';
-import { nodeWidth, nodeHeight } from '../constants';
+import { nodeWidth, nodeHeight } from '../../constants';
 import type {
   WorkflowCanvasNode,
   WorkflowCanvasEdge,

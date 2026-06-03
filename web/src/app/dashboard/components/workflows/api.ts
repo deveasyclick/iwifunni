@@ -1,3 +1,4 @@
+import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
 import type {
   CreateWorkflowPayload,
   WorkflowExecutionDetail,
@@ -5,7 +6,11 @@ import type {
   WorkflowItem,
 } from '@/app/types/workflow';
 
-import type { WorkflowEventPayload, WorkflowRequestInit } from './types/api';
+import type {
+  TemplateUpdatePayload,
+  WorkflowEventPayload,
+  WorkflowRequestInit,
+} from './types/api';
 
 const parseError = async (response: Response): Promise<string> => {
   const fallback = 'Request failed';
@@ -110,6 +115,24 @@ export const workflowApi = {
   triggerEvent(payload: WorkflowEventPayload) {
     return request<void>('/api/events', {
       method: 'POST',
+      body: payload,
+    });
+  },
+
+  // ─── Template API ────────────────────────────────────────────────────────
+
+  getTemplate(id: string) {
+    return request<TemplateItem>(`/api/templates/${id}`, { method: 'GET' });
+  },
+  createTemplate(payload: CreateTemplatePayload) {
+    return request<TemplateItem>('/api/templates', {
+      method: 'POST',
+      body: payload,
+    });
+  },
+  updateTemplate(id: string, payload: TemplateUpdatePayload) {
+    return request<TemplateItem>(`/api/templates/${id}`, {
+      method: 'PATCH',
       body: payload,
     });
   },

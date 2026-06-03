@@ -1,5 +1,5 @@
 import type { WorkflowChannel } from '@/app/types/workflow';
-import type { DelayUnit } from './duration/types';
+import type { DelayUnit } from '../utils/duration/types';
 
 export const notificationChannels: WorkflowChannel[] = ['email', 'sms', 'push'];
 export const delayUnits: DelayUnit[] = [

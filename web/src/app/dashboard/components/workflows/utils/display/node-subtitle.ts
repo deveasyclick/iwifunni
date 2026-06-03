@@ -1,4 +1,4 @@
-import { uuidPattern, zeroUUID } from '../constants';
+import { uuidPattern, zeroUUID } from '../../constants';
 import type { BuilderNodeDraft } from '@/app/dashboard/components/workflows/types/draft';
 
 export const hasConfiguredTemplateId = (templateId: string) => {
