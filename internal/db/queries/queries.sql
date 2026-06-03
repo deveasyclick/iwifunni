@@ -357,7 +357,7 @@ VALUES (
 	$7,
 	$8,
 	$9,
-	CASE WHEN $6 = 'active' THEN true ELSE false END
+	true
 )
 RETURNING *;
 

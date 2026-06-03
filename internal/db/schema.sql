@@ -219,6 +219,10 @@ CREATE TABLE workflows (
     UNIQUE (environment_id, key)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workflows_active_key
+  ON workflows (environment_id, key)
+  WHERE is_active = true;
+
 CREATE TABLE workflow_executions (
     id UUID PRIMARY KEY,
     workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
