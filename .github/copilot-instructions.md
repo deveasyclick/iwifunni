@@ -33,6 +33,9 @@ The workflow builder lives in `web/src/app/dashboard/components/workflows/`. It 
 
 ```
 workflows/
+├── api.ts                    # API client — all backend calls go through here
+├── constants/                # App-wide constants (zeroUUID, patterns, sizes)
+├── schema/                   # Zod validation schemas
 ├── draft/                    # Draft domain — pure data & logic (create, normalize, convert)
 ├── store/builder/            # Zustand store — store, actions, selectors
 ├── types/                    # All shared type definitions, organized by domain
@@ -43,21 +46,39 @@ workflows/
 │   ├── duration.ts           # DelayUnit
 │   ├── api.ts                # WorkflowEventPayload, TemplateUpdatePayload
 │   └── ui.ts                 # All component prop types (*Props)
+├── hooks/                    # Custom React hooks — all stateful logic
+│   ├── use-channel-config.ts
+│   ├── use-workflow-list.ts
+│   └── use-workflow-create.ts
+├── editors/                  # Rich text / email editor components
+│   ├── blocks/               # Block factories and definitions
+│   ├── encode.ts             # Body encoding/decoding
+│   └── react-email-editor.tsx
 ├── utils/                    # Pure utility functions
-│   ├── constants.ts
 │   ├── canvas/               # Canvas factories, graph builder, dagre layout
-│   ├── display/              # Node name, description, subtitle, meta, tone
+│   ├── display/              # Node name, description, subtitle, meta, tone, channel labels
 │   ├── duration/             # Parse + format delay durations
-│   └── validation/           # Trigger, nodes, edges validators
-└── definition-builder/       # PURE UI components only
-    ├── inspector/            # Sub-components (delay-config, notification-config, etc.)
-    └── index.tsx             # Main WorkflowDefinitionBuilder component
+│   ├── validation/           # Trigger, nodes, edges validators
+│   ├── urls.ts               # URL builder helpers
+│   └── search-params.ts      # Search param parsing helpers
+├── components/               # Page-level sub-components (dialogs, panels)
+│   ├── channel-editor-panel.tsx
+│   ├── channel-preview-panel.tsx
+│   └── delete-workflow-dialog.tsx
+├── configure-workflow-channel.tsx
+├── create-workflow.tsx
+├── create-workflow-builder.tsx
+└── WorkflowManagement.tsx    # Workflow list page
 ```
 
 ### Rules
 
 - **All types go in `types/`.** Do not define prop types (`*Props`) or domain types inside component files. Every shared type belongs in one of the `types/*.ts` files organized by domain.
-- **Component files are pure UI.** The `definition-builder/` folder must not contain business logic, state management, utility functions, or type definitions. Only JSX components and their hooks.
+- **Component files are pure UI.** Page-level components (`create-workflow.tsx`, `WorkflowManagement.tsx`, etc.) must not contain business logic, inline API calls, or complex state management. Extract those into `hooks/`.
+- **Business logic goes in `hooks/`.** Any component logic beyond simple UI state (data fetching, form submission, autosave, CRUD operations) must be extracted into a custom hook in `hooks/`.
+- **Dialogs and overlays go in `components/`.** Do not inline `Dialog`, `Sheet`, or other overlay components inside parent components. Extract them into separate component files under `components/`.
+- **Constants go in `constants/`.** Do not scatter literal constants across files. All shared constants (UUID patterns, sizes, channel lists, etc.) belong in `constants/index.ts`.
+- **Zod schemas go in `schema/`.** Do not define validation schemas inside component or utility files. Place them in `schema/` and import where needed.
 - **No god utility files.** Split utilities by domain into sub-directories under `utils/` (e.g., `utils/canvas/`, `utils/duration/`, `utils/display/`, `utils/validation/`). A single file should not mix duration parsing, canvas layout, node display, and draft conversion logic.
 - **No empty re-export barrels.** Do not create files that only re-export from another module. Import directly from the source file.
 - **No `.tsx` without JSX.** Files that contain no JSX must be `.ts`, not `.tsx`. Utility functions, pure business logic, and type definitions are `.ts`.

@@ -25,4 +25,5 @@ applyTo:
 - For form, input, and select components, use the [react-hook-form](https://react-hook-form.com/) and shadcn/ui form components. They provide a simpler API and a more consistent UX.
 - For icons, use the [iconify](https://iconify.design/docs/icon-components/react/) library. It's a zero-dependency library that provides a set of SVG icons and a React component for rendering them.
 - Prefer breaking large components into smaller, more focused components. This makes it easier to reuse and test.
+- Extract dialogs, modals, and overlays into separate component files under `components/`. Do not inline them inside parent components.
 - Always update pasted codes styling to follow my theme's color scheme in [web/src/app/css/globals.css](../../web/src/app/css/globals.css)
