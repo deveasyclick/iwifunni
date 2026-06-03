@@ -4,8 +4,8 @@ import ConfigureWorkflowChannel from '../../../../components/workflows/configure
 import {
   buildWorkflowBuilderHref,
   buildWorkflowChannelConfigureHref,
-  workflowIdFromRecord,
-} from '../../../../components/workflows/create-workflow-metadata';
+} from '../../../../components/workflows/utils/urls';
+import { workflowIdFromRecord } from '../../../../components/workflows/utils/search-params';
 
 export const metadata: Metadata = {
   title: 'Configure Channel',

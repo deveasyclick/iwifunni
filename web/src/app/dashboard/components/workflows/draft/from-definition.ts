@@ -1,5 +1,5 @@
 import type { WorkflowChannel, WorkflowDefinition } from '@/app/types/workflow';
-import type { WorkflowBuilderDraft } from './types';
+import type { WorkflowBuilderDraft } from '../types/draft';
 import {
   normalizeNodeDraftForType,
   normalizeImportedTemplateId,

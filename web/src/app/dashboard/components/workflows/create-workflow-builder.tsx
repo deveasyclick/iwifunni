@@ -12,8 +12,8 @@ import {
   createDefaultWorkflowBuilderDraft,
   workflowDefinitionFromBuilderDraft,
 } from '@/app/dashboard/components/workflows/draft';
-import { WorkflowDefinitionBuilder } from '@/app/dashboard/components/workflows/definition-builder';
-import { buildWorkflowChannelConfigureHref } from './create-workflow-metadata';
+import { WorkflowDefinitionBuilder } from '@/app/dashboard/components/workflows/definition-builder/index';
+import { buildWorkflowChannelConfigureHref } from './utils/urls';
 import { validateWorkflowDefinitionDraft } from './utils';
 
 import type {

@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
 import CreateWorkflowBuilder from '../../../components/workflows/create-workflow-builder';
-import {
-  buildWorkflowBuilderHref,
-  workflowIdFromRecord,
-} from '../../../components/workflows/create-workflow-metadata';
+import { buildWorkflowBuilderHref } from '../../../components/workflows/utils/urls';
+import { workflowIdFromRecord } from '../../../components/workflows/utils/search-params';
 
 export const metadata: Metadata = {
   title: 'Workflow Builder',

@@ -1,4 +1,4 @@
-import type { WorkflowBuilderDraft } from './types';
+import type { WorkflowBuilderDraft } from '../types/draft';
 import { createNodeDraft } from './create-node';
 
 export const createDefaultWorkflowBuilderDraft = (): WorkflowBuilderDraft => ({

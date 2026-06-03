@@ -3,7 +3,7 @@ import type {
   WorkflowNode,
   WorkflowEdge,
 } from '@/app/types/workflow';
-import type { WorkflowBuilderDraft } from './types';
+import type { WorkflowBuilderDraft } from '../types/draft';
 
 export const workflowDefinitionFromBuilderDraft = (
   draft: WorkflowBuilderDraft,

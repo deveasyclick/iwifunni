@@ -1,5 +1,5 @@
 import type { WorkflowCanvasNode, WorkflowCanvasEdge } from '../types/canvas';
-import type { WorkflowBuilderDraft } from './types';
+import type { WorkflowBuilderDraft } from '../types/draft';
 
 export const buildDraftFromCanvas = (
   triggerEvent: string,

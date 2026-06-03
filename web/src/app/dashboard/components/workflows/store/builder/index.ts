@@ -4,9 +4,13 @@ export type {
   WorkflowCanvasEdge,
   WorkflowCanvasNodeData,
   WorkflowCanvasEdgeData,
-  WorkflowBuilderStoreState,
+} from '../../types/canvas';
+export type {
   AddConnectedNodeOptions,
   InsertNodeOnEdgeAction,
   WorkflowNodeAction,
+} from '../../types/actions';
+export type {
+  WorkflowBuilderStoreState,
   WorkflowDefinitionModel,
-} from './types';
+} from '../../types/store';

@@ -13,4 +13,4 @@ export type {
   WorkflowBuilderDraft,
   WorkflowDefinitionIssue,
   WorkflowNodeType,
-} from './types';
+} from '../types/draft';

@@ -1,9 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { CreateWorkflowPayload } from '@/app/types/workflow';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,80 +12,22 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { workflowApi } from './api';
-import {
-  createDefaultWorkflowBuilderDraft,
-  workflowDefinitionFromBuilderDraft,
-} from './draft';
-import {
-  buildWorkflowBuilderHref,
-  workflowSetupSchema,
-  workflowSetupValuesFromSearchParams,
-} from './create-workflow-metadata';
-
-type SetupFieldErrors = Partial<Record<'key' | 'name', string>>;
+import { useWorkflowCreate } from './hooks/use-workflow-create';
 
 const CreateWorkflow = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [key, setKey] = useState('');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [errors, setErrors] = useState<SetupFieldErrors>({});
-  const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    const values = workflowSetupValuesFromSearchParams(searchParams);
-    setKey(values.key);
-    setName(values.name);
-    setDescription(values.description);
-  }, [searchParams]);
-
-  const continueToBuilder = async () => {
-    const parsed = workflowSetupSchema.safeParse({ key, name, description });
-    if (!parsed.success) {
-      const nextErrors: SetupFieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const path = issue.path[0];
-        if ((path === 'key' || path === 'name') && !nextErrors[path]) {
-          nextErrors[path] = issue.message;
-        }
-      }
-      setErrors(nextErrors);
-      return;
-    }
-
-    setError(null);
-    setErrors({});
-
-    const payload: CreateWorkflowPayload = {
-      key: parsed.data.key,
-      name: parsed.data.name,
-      description: parsed.data.description || undefined,
-      definition: workflowDefinitionFromBuilderDraft(
-        createDefaultWorkflowBuilderDraft(),
-      ),
-    };
-
-    setCreating(true);
-    try {
-      const workflow = await workflowApi.createWorkflow(payload);
-      router.push(buildWorkflowBuilderHref({ workflowId: workflow.id }));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to create workflow draft',
-      );
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      router.push('/dashboard/workflows');
-    }
-  };
+  const {
+    key,
+    name,
+    description,
+    errors,
+    error,
+    creating,
+    setKey,
+    setName,
+    setDescription,
+    continueToBuilder,
+    handleOpenChange,
+  } = useWorkflowCreate();
 
   return (
     <Dialog open onOpenChange={handleOpenChange}>
@@ -121,10 +60,7 @@ const CreateWorkflow = () => {
               <Input
                 id="workflow-key"
                 value={key}
-                onChange={(e) => {
-                  setKey(e.target.value);
-                  setErrors((current) => ({ ...current, key: undefined }));
-                }}
+                onChange={(e) => setKey(e.target.value)}
                 placeholder="user_onboarding"
               />
               {errors.key ? (
@@ -141,10 +77,7 @@ const CreateWorkflow = () => {
               <Input
                 id="workflow-name"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setErrors((current) => ({ ...current, name: undefined }));
-                }}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="User Onboarding"
               />
               {errors.name ? (

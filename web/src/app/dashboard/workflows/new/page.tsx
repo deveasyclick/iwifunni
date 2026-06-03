@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
 import CreateWorkflow from '../../components/workflows/create-workflow';
-import { buildWorkflowSetupHref } from '../../components/workflows/create-workflow-metadata';
+import { buildWorkflowSetupHref } from '../../components/workflows/utils/urls';
 
 export const metadata: Metadata = {
   title: 'Create Workflow',
