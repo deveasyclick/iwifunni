@@ -6,12 +6,8 @@ import {
   buildCanvasEdge,
   layoutCanvasGraph,
 } from '@/app/dashboard/components/workflows/utils/canvas';
-import type {
-  WorkflowBuilderStoreState,
-  AddConnectedNodeOptions,
-} from './types';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
+import type { WorkflowBuilderStoreState } from '../../types/store';
+import type { AddConnectedNodeOptions } from '../../types/actions';
 
 const createCanvasNodeId = () =>
   `canvas_${Math.random().toString(36).slice(2, 10)}`;

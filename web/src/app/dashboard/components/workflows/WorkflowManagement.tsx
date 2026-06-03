@@ -2,12 +2,17 @@
 
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import CardBox from '@/app/components/shared/CardBox';
 import { useWorkflowList } from './hooks/use-workflow-list';
+import { DeleteWorkflowDialog } from './components/delete-workflow-dialog';
+import CreateWorkflow from './create-workflow';
 import type { WorkflowItem } from '@/app/types/workflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -30,13 +35,12 @@ const renderTableBody = (
   loading: boolean,
   visibleItems: WorkflowItem[],
   mutatingID: string | null,
-  publishWorkflow: (item: WorkflowItem) => Promise<void>,
-  deleteWorkflow: (id: string) => Promise<void>,
+  requestDelete: (item: WorkflowItem) => void,
 ) => {
   if (loading) {
     return (
       <TableRow>
-        <TableCell colSpan={7} className="text-center text-muted-foreground">
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
           Loading workflows...
         </TableCell>
       </TableRow>
@@ -46,7 +50,7 @@ const renderTableBody = (
   if (visibleItems.length === 0) {
     return (
       <TableRow>
-        <TableCell colSpan={7} className="text-center text-muted-foreground">
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
           No workflows configured yet.
         </TableCell>
       </TableRow>
@@ -54,16 +58,12 @@ const renderTableBody = (
   }
 
   return visibleItems.map((item) => {
-    const triggerEvent =
-      item.triggerEvent || item.definition?.trigger.event || 'Not configured';
-
     const statusBadgeVariant =
       item.status === 'active'
         ? ('lightSuccess' as const)
         : ('secondary' as const);
     const statusLabel = item.status || (item.isActive ? 'active' : 'archived');
-    const isPublishing = mutatingID === `publish:${item.id}`;
-    const isArchiving = mutatingID === item.id;
+    const isDeleting = mutatingID === item.id;
 
     return (
       <TableRow key={item.id}>
@@ -79,39 +79,31 @@ const renderTableBody = (
         </TableCell>
         <TableCell className="font-mono text-xs">{item.key}</TableCell>
         <TableCell>
-          <span className="text-sm text-muted-foreground">{triggerEvent}</span>
-        </TableCell>
-        <TableCell>
           <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
         </TableCell>
-        <TableCell>{item.version ?? 1}</TableCell>
         <TableCell>{formatCreatedAt(item.createdAt)}</TableCell>
-        <TableCell className="text-end">
-          <div className="flex justify-end gap-2">
-            <Button asChild variant="ghost" size="sm">
+        <TableCell>
+          <div className="flex gap-1">
+            <Button asChild variant="ghost" size="icon">
               <Link
                 href={`/dashboard/workflows/new/builder?workflowId=${item.id}`}
               >
-                Edit
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit</span>
               </Link>
             </Button>
-            {item.status !== 'active' && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isPublishing}
-                onClick={() => void publishWorkflow(item)}
-              >
-                {isPublishing ? 'Publishing...' : 'Publish'}
-              </Button>
-            )}
             <Button
               variant="ghost"
-              size="sm"
-              disabled={isArchiving}
-              onClick={() => void deleteWorkflow(item.id)}
+              size="icon"
+              disabled={isDeleting}
+              onClick={() => requestDelete(item)}
             >
-              {isArchiving ? 'Archiving...' : 'Archive'}
+              {isDeleting ? (
+                <span className="text-xs">...</span>
+              ) : (
+                <Trash2 className="h-4 w-4 text-destructive" />
+              )}
+              <span className="sr-only">Delete</span>
             </Button>
           </div>
         </TableCell>
@@ -128,9 +120,13 @@ const WorkflowManagement = () => {
     search,
     setSearch,
     mutatingID,
-    publishWorkflow,
     deleteWorkflow,
+    deletingItem,
+    requestDelete,
+    cancelDelete,
   } = useWorkflowList();
+
+  const [showCreate, setShowCreate] = useState(false);
 
   return (
     <CardBox className="p-6">
@@ -150,10 +146,11 @@ const WorkflowManagement = () => {
             className="w-full sm:w-64"
           />
           <Button
-            asChild
+            onClick={() => setShowCreate(true)}
             className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
           >
-            <Link href="/dashboard/workflows/new">Add Workflow</Link>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add Workflow
           </Button>
         </div>
       </div>
@@ -170,24 +167,32 @@ const WorkflowManagement = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Key</TableHead>
-              <TableHead>Trigger</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Version</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-end">Actions</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {renderTableBody(
-              loading,
-              visibleItems,
-              mutatingID,
-              publishWorkflow,
-              deleteWorkflow,
-            )}
+            {renderTableBody(loading, visibleItems, mutatingID, requestDelete)}
           </TableBody>
         </Table>
       </div>
+
+      <DeleteWorkflowDialog
+        deletingItem={deletingItem}
+        mutatingID={mutatingID}
+        onConfirm={(id) => void deleteWorkflow(id)}
+        onCancel={cancelDelete}
+      />
+
+      <Dialog
+        open={showCreate}
+        onOpenChange={(open) => {
+          if (!open) setShowCreate(false);
+        }}
+      >
+        <CreateWorkflow onClose={() => setShowCreate(false)} />
+      </Dialog>
     </CardBox>
   );
 };

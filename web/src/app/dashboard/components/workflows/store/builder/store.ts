@@ -11,7 +11,7 @@ import {
   duplicateNodeAction,
   removeNodeAction,
 } from './actions';
-import type { WorkflowBuilderStoreState } from './types';
+import type { WorkflowBuilderStoreState } from '../../types/store';
 
 export const createWorkflowBuilderStore = (draft: WorkflowBuilderDraft) => {
   const graph = buildCanvasGraphFromDraft(draft);

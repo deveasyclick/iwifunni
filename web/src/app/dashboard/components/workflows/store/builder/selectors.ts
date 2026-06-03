@@ -5,11 +5,8 @@ import type {
 } from '@/app/dashboard/components/workflows/types/draft';
 import { buildDraftFromCanvas } from '@/app/dashboard/components/workflows/draft/from-canvas';
 import { getNodeDisplayName } from '@/app/dashboard/components/workflows/utils/display';
-import type {
-  WorkflowBuilderStoreState,
-  WorkflowCanvasNode,
-  WorkflowCanvasEdge,
-} from './types';
+import type { WorkflowBuilderStoreState } from '../../types/store';
+import type { WorkflowCanvasNode, WorkflowCanvasEdge } from '../../types/canvas';
 
 // ─── Draft derivation ───────────────────────────────────────────────────────
 

@@ -39,6 +39,9 @@ export type WorkflowListResult = {
   mutatingID: string | null;
   publishWorkflow: (item: WorkflowItem) => Promise<void>;
   deleteWorkflow: (id: string) => Promise<void>;
+  deletingItem: WorkflowItem | null;
+  requestDelete: (item: WorkflowItem) => void;
+  cancelDelete: () => void;
   refetch: () => Promise<void>;
 };
 
@@ -48,6 +51,7 @@ export const useWorkflowList = (): WorkflowListResult => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [mutatingID, setMutatingID] = useState<string | null>(null);
+  const [deletingItem, setDeletingItem] = useState<WorkflowItem | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
     setLoading(true);
@@ -112,8 +116,6 @@ export const useWorkflowList = (): WorkflowListResult => {
   };
 
   const deleteWorkflow = async (id: string) => {
-    if (!confirm('Archive this workflow?')) return;
-
     setError(null);
     setMutatingID(id);
     try {
@@ -125,7 +127,16 @@ export const useWorkflowList = (): WorkflowListResult => {
       );
     } finally {
       setMutatingID(null);
+      setDeletingItem(null);
     }
+  };
+
+  const requestDelete = (item: WorkflowItem) => {
+    setDeletingItem(item);
+  };
+
+  const cancelDelete = () => {
+    setDeletingItem(null);
   };
 
   return {
@@ -138,6 +149,9 @@ export const useWorkflowList = (): WorkflowListResult => {
     mutatingID,
     publishWorkflow,
     deleteWorkflow,
+    deletingItem,
+    requestDelete,
+    cancelDelete,
     refetch: fetchWorkflows,
   };
 };
