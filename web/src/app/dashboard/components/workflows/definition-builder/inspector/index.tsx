@@ -9,11 +9,6 @@ import {
   buildNodeDescription,
   getNodeDisplayName,
 } from '@/app/dashboard/components/workflows/utils/display';
-import type { WorkflowDefinitionIssue } from '@/app/dashboard/components/workflows/types/draft';
-import type {
-  WorkflowCanvasEdge,
-  WorkflowCanvasNode,
-} from '@/app/dashboard/components/workflows/types/canvas';
 import type { WorkflowDefinitionInspectorProps } from '../../types/ui';
 import { DelayConfig } from './delay-config';
 import { NotificationConfig } from './notification-config';
@@ -22,7 +17,6 @@ import { NodeIssues } from './node-issues';
 import { WorkflowSetupPanel } from './workflow-setup-panel';
 
 export const WorkflowDefinitionInspector = ({
-  issues,
   selectedNode,
   selectedEdge,
   selectedNodeIssues,
@@ -31,8 +25,6 @@ export const WorkflowDefinitionInspector = ({
   selectedEdgeSourceLabel,
   selectedEdgeTargetLabel,
   updateNodeDraft,
-  removeNode,
-  removeEdge,
   workflowSetup,
   autosaveState,
   onConfigureNotificationNode,

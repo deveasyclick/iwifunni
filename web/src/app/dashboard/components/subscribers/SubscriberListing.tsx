@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { Icon } from "@iconify/react";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { Icon } from '@iconify/react';
 import type {
   SubscriberStatusValue,
   SubscriberType,
-} from "@/app/types/subscriber";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from '@/app/types/subscriber';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -25,15 +25,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import CreateSubscriberForm from "./CreateSubscriberForm";
+} from '@/components/ui/tooltip';
+import CreateSubscriberForm from './CreateSubscriberForm';
 
 interface SubscriberListingProps {
   subscribers: SubscriberType[];
@@ -65,7 +65,7 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
     return subscribers.filter(
       (subscriber) =>
         !subscriber.deleted &&
-        (filter === "total_subscribers" ||
+        (filter === 'total_subscribers' ||
           subscriber.status.email === filter ||
           subscriber.status.sms === filter ||
           subscriber.status.push === filter) &&
@@ -85,14 +85,14 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
 
   const statusBadge = (status?: SubscriberStatusValue) => {
     switch (status) {
-      case "subscribed":
-        return "lightSuccess";
-      case "unsubscribed":
-        return "lightWarning";
-      case "bounced":
-        return "lightError";
+      case 'subscribed':
+        return 'lightSuccess';
+      case 'unsubscribed':
+        return 'lightWarning';
+      case 'bounced':
+        return 'lightError';
       default:
-        return "default";
+        return 'default';
     }
   };
 
@@ -169,27 +169,27 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
                   <h6 className="text-base">{subscriber.name}</h6>
                 </TableCell>
 
-                <TableCell>{subscriber.email || "N/A"}</TableCell>
+                <TableCell>{subscriber.email || 'N/A'}</TableCell>
 
-                <TableCell>{subscriber.phone || "N/A"}</TableCell>
+                <TableCell>{subscriber.phone || 'N/A'}</TableCell>
 
                 <TableCell className="max-w-45 truncate text-foreground">
-                  {subscriber.pushToken || "N/A"}
+                  {subscriber.pushToken || 'N/A'}
                 </TableCell>
 
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
-                    {subscriber.channels.includes("email") && (
+                    {subscriber.channels.includes('email') && (
                       <Badge variant="outline" className="text-xs">
                         Email
                       </Badge>
                     )}
-                    {subscriber.channels.includes("sms") && (
+                    {subscriber.channels.includes('sms') && (
                       <Badge variant="outline" className="text-xs">
                         SMS
                       </Badge>
                     )}
-                    {subscriber.channels.includes("push") && (
+                    {subscriber.channels.includes('push') && (
                       <Badge variant="outline" className="text-xs">
                         Push
                       </Badge>
@@ -199,28 +199,28 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
 
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
-                    {subscriber.channels.includes("email") && (
+                    {subscriber.channels.includes('email') && (
                       <Badge
                         variant={statusBadge(subscriber.status.email)}
                         className="rounded-md"
                       >
-                        Email: {subscriber.status.email || "unknown"}
+                        Email: {subscriber.status.email || 'unknown'}
                       </Badge>
                     )}
-                    {subscriber.channels.includes("sms") && (
+                    {subscriber.channels.includes('sms') && (
                       <Badge
                         variant={statusBadge(subscriber.status.sms)}
                         className="rounded-md"
                       >
-                        SMS: {subscriber.status.sms || "unknown"}
+                        SMS: {subscriber.status.sms || 'unknown'}
                       </Badge>
                     )}
-                    {subscriber.channels.includes("push") && (
+                    {subscriber.channels.includes('push') && (
                       <Badge
                         variant={statusBadge(subscriber.status.push)}
                         className="rounded-md"
                       >
-                        Push: {subscriber.status.push || "unknown"}
+                        Push: {subscriber.status.push || 'unknown'}
                       </Badge>
                     )}
                   </div>
@@ -228,7 +228,7 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
 
                 <TableCell>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(subscriber.subscriptionDate), "E, MMM d")}
+                    {format(new Date(subscriber.subscriptionDate), 'E, MMM d')}
                   </p>
                 </TableCell>
 

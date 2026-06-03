@@ -1,18 +1,18 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../layout/shared/breadcrumb/BreadcrumbComp";
-import NotificationList from "../components/notifications";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../layout/shared/breadcrumb/BreadcrumbComp';
+import NotificationList from '../components/notifications';
 
 export const metadata: Metadata = {
-  title: "Notifications",
+  title: 'Notifications',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    title: "Notifications",
+    title: 'Notifications',
   },
 ];
 

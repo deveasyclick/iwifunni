@@ -39,7 +39,7 @@ export const builderDraftFromDefinition = (
           field: typeof config.field === 'string' ? config.field : 'data.plan',
           operator:
             typeof config.operator === 'string' ? config.operator : 'equals',
-          value: config.value == null ? '' : String(config.value),
+          value: typeof config.value === 'string' ? config.value : '',
         },
         node.type,
       );

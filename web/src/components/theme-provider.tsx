@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-type Theme = "light" | "dark" | "system";
-type ResolvedTheme = "light" | "dark";
+type Theme = 'light' | 'dark' | 'system';
+type ResolvedTheme = 'light' | 'dark';
 
 type ThemeProviderProps = {
   children: React.ReactNode;
-  attribute?: "class" | "data-theme";
+  attribute?: 'class' | 'data-theme';
   defaultTheme?: Theme;
   enableSystem?: boolean;
   disableTransitionOnChange?: boolean;
@@ -20,53 +20,58 @@ type ThemeContextValue = {
   setTheme: React.Dispatch<React.SetStateAction<Theme>>;
 };
 
-const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined);
+const ThemeContext = React.createContext<ThemeContextValue | undefined>(
+  undefined,
+);
 
 function getSystemTheme(): ResolvedTheme {
-  if (typeof window === "undefined") {
-    return "light";
+  if (typeof window === 'undefined') {
+    return 'light';
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
 function applyThemeAttribute(
-  attribute: ThemeProviderProps["attribute"],
+  attribute: ThemeProviderProps['attribute'],
   resolvedTheme: ResolvedTheme,
 ) {
   const root = document.documentElement;
 
-  if (attribute === "data-theme") {
-    root.setAttribute("data-theme", resolvedTheme);
+  if (attribute === 'data-theme') {
+    root.setAttribute('data-theme', resolvedTheme);
     return;
   }
 
-  root.classList.toggle("dark", resolvedTheme === "dark");
+  root.classList.toggle('dark', resolvedTheme === 'dark');
 }
 
 export function ThemeProvider({
   children,
-  attribute = "class",
-  defaultTheme = "system",
+  attribute = 'class',
+  defaultTheme = 'system',
   enableSystem = true,
   disableTransitionOnChange = false,
-  storageKey = "theme",
+  storageKey = 'theme',
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>("light");
+  const [resolvedTheme, setResolvedTheme] =
+    React.useState<ResolvedTheme>('light');
 
   React.useEffect(() => {
     const storedTheme = window.localStorage.getItem(storageKey);
     const initialTheme =
-      storedTheme === "light" || storedTheme === "dark" || storedTheme === "system"
+      storedTheme === 'light' ||
+      storedTheme === 'dark' ||
+      storedTheme === 'system'
         ? storedTheme
         : defaultTheme;
 
     setTheme(initialTheme);
     setResolvedTheme(
-      initialTheme === "system" && enableSystem
+      initialTheme === 'system' && enableSystem
         ? getSystemTheme()
         : (initialTheme as ResolvedTheme),
     );
@@ -74,20 +79,22 @@ export function ThemeProvider({
 
   React.useEffect(() => {
     const nextResolvedTheme =
-      theme === "system" && enableSystem ? getSystemTheme() : (theme as ResolvedTheme);
+      theme === 'system' && enableSystem
+        ? getSystemTheme()
+        : (theme as ResolvedTheme);
 
     setResolvedTheme(nextResolvedTheme);
     window.localStorage.setItem(storageKey, theme);
 
     if (disableTransitionOnChange) {
-      document.documentElement.classList.add("theme-switching");
+      document.documentElement.classList.add('theme-switching');
     }
 
     applyThemeAttribute(attribute, nextResolvedTheme);
 
     if (disableTransitionOnChange) {
       window.setTimeout(() => {
-        document.documentElement.classList.remove("theme-switching");
+        document.documentElement.classList.remove('theme-switching');
       }, 0);
     }
   }, [attribute, disableTransitionOnChange, enableSystem, storageKey, theme]);
@@ -97,20 +104,20 @@ export function ThemeProvider({
       return;
     }
 
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const handleChange = () => {
-      if (theme === "system") {
+      if (theme === 'system') {
         setResolvedTheme(getSystemTheme());
         applyThemeAttribute(attribute, getSystemTheme());
       }
     };
 
     handleChange();
-    mediaQuery.addEventListener("change", handleChange);
+    mediaQuery.addEventListener('change', handleChange);
 
     return () => {
-      mediaQuery.removeEventListener("change", handleChange);
+      mediaQuery.removeEventListener('change', handleChange);
     };
   }, [attribute, enableSystem, theme]);
 
@@ -119,13 +126,15 @@ export function ThemeProvider({
     [resolvedTheme, theme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {
   const context = React.useContext(ThemeContext);
   if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
+    throw new Error('useTheme must be used within ThemeProvider');
   }
 
   return context;

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import CardBox from "@/app/components/shared/CardBox";
-import { Icon } from "@iconify/react";
+import Link from 'next/link';
+import CardBox from '@/app/components/shared/CardBox';
+import { Icon } from '@iconify/react';
 
 const IntegrationsCard = () => {
   return (

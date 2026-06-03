@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../../../layout/shared/breadcrumb/BreadcrumbComp";
-import CreateWorkflowBuilder from "../../../components/workflows/create-workflow-builder";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
+import CreateWorkflowBuilder from '../../../components/workflows/create-workflow-builder';
 import {
   buildWorkflowBuilderHref,
   workflowIdFromRecord,
-} from "../../../components/workflows/create-workflow-metadata";
+} from '../../../components/workflows/create-workflow-metadata';
 
 export const metadata: Metadata = {
-  title: "Workflow Builder",
+  title: 'Workflow Builder',
 };
 
 type WorkflowBuilderPageProps = {
@@ -20,12 +20,12 @@ const WorkflowBuilderPage = async ({
   const workflowId = workflowIdFromRecord(await searchParams);
   const breadcrumbItems = [
     {
-      to: "/dashboard/workflows",
-      title: "Workflows",
+      to: '/dashboard/workflows',
+      title: 'Workflows',
     },
     {
       to: buildWorkflowBuilderHref({ workflowId }),
-      title: "Workflow Builder",
+      title: 'Workflow Builder',
     },
   ];
 

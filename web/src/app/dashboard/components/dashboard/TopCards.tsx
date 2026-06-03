@@ -1,50 +1,50 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Icon } from "@iconify/react/dist/iconify.js";
-import CardBox from "@/app/components/shared/CardBox";
+import Link from 'next/link';
+import { Icon } from '@iconify/react/dist/iconify.js';
+import CardBox from '@/app/components/shared/CardBox';
 
 const TopCards = () => {
   const TopCardInfo = [
     {
-      key: "card4",
-      title: "Notifications",
-      stat: "23.4K",
-      icon: "system-uicons:notification",
-      rate: "12.3%",
-      bgcolor: "bg-info/10 dark:bg-info/10",
-      textclr: "text-info dark:text-info",
-      url: "/apps/notes",
+      key: 'card4',
+      title: 'Notifications',
+      stat: '23.4K',
+      icon: 'system-uicons:notification',
+      rate: '12.3%',
+      bgcolor: 'bg-info/10 dark:bg-info/10',
+      textclr: 'text-info dark:text-info',
+      url: '/apps/notes',
     },
     {
-      key: "card1",
-      title: "Delivered",
-      stat: "98.6%",
-      icon: "mdi:email-sent-outline",
-      bgcolor: "bg-success/10 dark:bg-success/10",
-      textclr: "text-success dark:text-success",
-      rate: "2.1%",
-      url: "/icons/iconify",
+      key: 'card1',
+      title: 'Delivered',
+      stat: '98.6%',
+      icon: 'mdi:email-sent-outline',
+      bgcolor: 'bg-success/10 dark:bg-success/10',
+      textclr: 'text-success dark:text-success',
+      rate: '2.1%',
+      url: '/icons/iconify',
     },
     {
-      key: "card2",
-      title: "Subscribers",
-      stat: "12.6K",
-      icon: "heroicons:users",
-      bgcolor: "bg-warning/10 dark:bg-warning/10",
-      textclr: "text-warning dark:text-warning",
-      rate: "3.4%",
-      url: "/apps/blog/post",
+      key: 'card2',
+      title: 'Subscribers',
+      stat: '12.6K',
+      icon: 'heroicons:users',
+      bgcolor: 'bg-warning/10 dark:bg-warning/10',
+      textclr: 'text-warning dark:text-warning',
+      rate: '3.4%',
+      url: '/apps/blog/post',
     },
     {
-      key: "card3",
-      title: "Workflows",
-      stat: "8",
-      icon: "material-symbols:graph-1",
-      bgcolor: "bg-secondary/10 dark:bg-secondary/10",
-      textclr: "text-secondary dark:text-secondary",
-      url: "/apps/tickets",
-      rate: "1",
+      key: 'card3',
+      title: 'Workflows',
+      stat: '8',
+      icon: 'material-symbols:graph-1',
+      bgcolor: 'bg-secondary/10 dark:bg-secondary/10',
+      textclr: 'text-secondary dark:text-secondary',
+      url: '/apps/tickets',
+      rate: '1',
     },
   ];
 

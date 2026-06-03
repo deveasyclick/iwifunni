@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { Icon } from "@iconify/react";
-import type { NotificationType } from "@/app/types/notification";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { Icon } from '@iconify/react';
+import type { NotificationType } from '@/app/types/notification';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -13,14 +13,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
 interface NotificationListingProps {
   notifications: NotificationType[];
@@ -46,7 +46,7 @@ const NotificationListing: React.FC<NotificationListingProps> = ({
 
     return records.filter(
       (notification) =>
-        (selectedFilter === "total_notifications" ||
+        (selectedFilter === 'total_notifications' ||
           notification.status === selectedFilter) &&
         (notification.id.toLowerCase().includes(lowerSearch) ||
           notification.title.toLowerCase().includes(lowerSearch) ||
@@ -62,16 +62,16 @@ const NotificationListing: React.FC<NotificationListingProps> = ({
 
   const statusBadge = (status?: string) => {
     switch (status) {
-      case "sent":
-        return "lightSuccess";
-      case "pending":
-        return "lightWarning";
-      case "failed":
-        return "lightError";
-      case "partial_failed":
-        return "lightSecondary";
+      case 'sent':
+        return 'lightSuccess';
+      case 'pending':
+        return 'lightWarning';
+      case 'failed':
+        return 'lightError';
+      case 'partial_failed':
+        return 'lightSecondary';
       default:
-        return "default";
+        return 'default';
     }
   };
 
@@ -135,7 +135,11 @@ const NotificationListing: React.FC<NotificationListingProps> = ({
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
                     {notification.channels.map((channel) => (
-                      <Badge key={channel} variant="outline" className="text-xs">
+                      <Badge
+                        key={channel}
+                        variant="outline"
+                        className="text-xs"
+                      >
                         {channel.toUpperCase()}
                       </Badge>
                     ))}
@@ -144,7 +148,7 @@ const NotificationListing: React.FC<NotificationListingProps> = ({
 
                 <TableCell>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(notification.created_at), "E, MMM d")}
+                    {format(new Date(notification.created_at), 'E, MMM d')}
                   </p>
                 </TableCell>
 

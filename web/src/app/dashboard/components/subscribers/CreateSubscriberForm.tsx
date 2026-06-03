@@ -1,11 +1,11 @@
-"use client";
-import { useState } from "react";
-import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import type { SubscriberType } from "@/app/types/subscriber";
+'use client';
+import { useState } from 'react';
+import { z } from 'zod';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { SubscriberType } from '@/app/types/subscriber';
 
 type CreateSubscriberFormProps = {
   onCreated?: (subscriber: SubscriberType) => void;
@@ -15,53 +15,53 @@ type CreateSubscriberFormProps = {
 
 const subscriberFormSchema = z
   .object({
-    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    name: z.string().trim().min(2, 'Name must be at least 2 characters'),
     email: z.preprocess(
       (value) =>
-        typeof value === "string" && value.trim() === "" ? undefined : value,
-      z.email("Enter a valid email address").optional(),
+        typeof value === 'string' && value.trim() === '' ? undefined : value,
+      z.email('Enter a valid email address').optional(),
     ),
     phone: z.preprocess(
       (value) =>
-        typeof value === "string" && value.trim() === "" ? undefined : value,
+        typeof value === 'string' && value.trim() === '' ? undefined : value,
       z.string().trim().optional(),
     ),
     pushToken: z.preprocess(
       (value) =>
-        typeof value === "string" && value.trim() === "" ? undefined : value,
+        typeof value === 'string' && value.trim() === '' ? undefined : value,
       z.string().trim().optional(),
     ),
     channels: z
-      .array(z.enum(["email", "sms", "push"]))
-      .min(1, "Select at least one notification channel"),
-    tags: z.array(z.string().trim().min(1)).max(10, "Maximum of 10 tags"),
+      .array(z.enum(['email', 'sms', 'push']))
+      .min(1, 'Select at least one notification channel'),
+    tags: z.array(z.string().trim().min(1)).max(10, 'Maximum of 10 tags'),
   })
   .superRefine((data, ctx) => {
-    if (data.channels.includes("email") && !data.email) {
+    if (data.channels.includes('email') && !data.email) {
       ctx.addIssue({
-        code: "custom",
-        path: ["email"],
-        message: "Email is required when Email channel is selected",
+        code: 'custom',
+        path: ['email'],
+        message: 'Email is required when Email channel is selected',
       });
     }
-    if (data.channels.includes("sms") && !data.phone) {
+    if (data.channels.includes('sms') && !data.phone) {
       ctx.addIssue({
-        code: "custom",
-        path: ["phone"],
-        message: "Phone is required when SMS channel is selected",
+        code: 'custom',
+        path: ['phone'],
+        message: 'Phone is required when SMS channel is selected',
       });
     }
-    if (data.channels.includes("push") && !data.pushToken) {
+    if (data.channels.includes('push') && !data.pushToken) {
       ctx.addIssue({
-        code: "custom",
-        path: ["pushToken"],
-        message: "Push token is required when Push channel is selected",
+        code: 'custom',
+        path: ['pushToken'],
+        message: 'Push token is required when Push channel is selected',
       });
     }
   });
 
 type FormFieldErrors = Partial<
-  Record<"name" | "email" | "phone" | "pushToken" | "channels" | "tags", string>
+  Record<'name' | 'email' | 'phone' | 'pushToken' | 'channels' | 'tags', string>
 >;
 
 const CreateSubscriberForm = ({
@@ -69,18 +69,18 @@ const CreateSubscriberForm = ({
   onCancel,
   compact = false,
 }: CreateSubscriberFormProps) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [pushToken, setPushToken] = useState("");
-  const [channels, setChannels] = useState<("email" | "sms" | "push")[]>([
-    "email",
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [pushToken, setPushToken] = useState('');
+  const [channels, setChannels] = useState<('email' | 'sms' | 'push')[]>([
+    'email',
   ]);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState('');
   const [tagList, setTagList] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormFieldErrors>({});
 
-  const toggleChannel = (channel: "email" | "sms" | "push") => {
+  const toggleChannel = (channel: 'email' | 'sms' | 'push') => {
     setChannels((currentChannels) =>
       currentChannels.includes(channel)
         ? currentChannels.filter((c) => c !== channel)
@@ -93,7 +93,7 @@ const CreateSubscriberForm = ({
       if (!tagList.includes(tags.trim())) {
         setTagList([...tagList, tags.trim()]);
       }
-      setTags("");
+      setTags('');
       setErrors((prev) => ({ ...prev, tags: undefined }));
     }
   };
@@ -127,9 +127,9 @@ const CreateSubscriberForm = ({
     setErrors({});
 
     try {
-      const response = await fetch("/api/subscriber", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/subscriber', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: parsed.data.name,
           email: parsed.data.email,
@@ -137,51 +137,63 @@ const CreateSubscriberForm = ({
           pushToken: parsed.data.pushToken,
           channels: parsed.data.channels,
           status: {
-            email: "subscribed",
-            sms: parsed.data.channels.includes("sms") ? "subscribed" : undefined,
-            push: parsed.data.channels.includes("push") ? "subscribed" : undefined,
+            email: 'subscribed',
+            sms: parsed.data.channels.includes('sms')
+              ? 'subscribed'
+              : undefined,
+            push: parsed.data.channels.includes('push')
+              ? 'subscribed'
+              : undefined,
           },
           tags: parsed.data.tags,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create subscriber");
+        throw new Error('Failed to create subscriber');
       }
 
-      const payload = await response.json();
-      const createdSubscriber = payload?.data as SubscriberType | undefined;
+      const payload = (await response.json()) as
+        | { data?: SubscriberType }
+        | undefined;
+      const createdSubscriber = payload?.data;
 
       resetForm();
-      onCreated?.(createdSubscriber ?? {
-        id: Date.now().toString(),
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        pushToken: parsed.data.pushToken,
-        channels: parsed.data.channels,
-        status: {
-          email: "subscribed",
-          sms: parsed.data.channels.includes("sms") ? "subscribed" : undefined,
-          push: parsed.data.channels.includes("push") ? "subscribed" : undefined,
+      onCreated?.(
+        createdSubscriber ?? {
+          id: Date.now().toString(),
+          name: parsed.data.name,
+          email: parsed.data.email,
+          phone: parsed.data.phone,
+          pushToken: parsed.data.pushToken,
+          channels: parsed.data.channels,
+          status: {
+            email: 'subscribed',
+            sms: parsed.data.channels.includes('sms')
+              ? 'subscribed'
+              : undefined,
+            push: parsed.data.channels.includes('push')
+              ? 'subscribed'
+              : undefined,
+          },
+          tags: parsed.data.tags,
+          subscriptionDate: new Date(),
+          deleted: false,
         },
-        tags: parsed.data.tags,
-        subscriptionDate: new Date(),
-        deleted: false,
-      });
+      );
     } catch (error) {
-      console.error("Failed to create subscriber", error);
+      console.error('Failed to create subscriber', error);
     }
   };
 
   const resetForm = () => {
-    setName("");
-    setEmail("");
-    setPhone("");
-    setPushToken("");
-    setChannels(["email"]);
+    setName('');
+    setEmail('');
+    setPhone('');
+    setPushToken('');
+    setChannels(['email']);
     setTagList([]);
-    setTags("");
+    setTags('');
     setErrors({});
   };
 
@@ -274,9 +286,9 @@ const CreateSubscriberForm = ({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="email-channel"
-                checked={channels.includes("email")}
+                checked={channels.includes('email')}
                 onCheckedChange={() => {
-                  toggleChannel("email");
+                  toggleChannel('email');
                   setErrors((prev) => ({ ...prev, channels: undefined }));
                 }}
               />
@@ -290,9 +302,9 @@ const CreateSubscriberForm = ({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="sms-channel"
-                checked={channels.includes("sms")}
+                checked={channels.includes('sms')}
                 onCheckedChange={() => {
-                  toggleChannel("sms");
+                  toggleChannel('sms');
                   setErrors((prev) => ({ ...prev, channels: undefined }));
                 }}
               />
@@ -306,9 +318,9 @@ const CreateSubscriberForm = ({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="push-channel"
-                checked={channels.includes("push")}
+                checked={channels.includes('push')}
                 onCheckedChange={() => {
-                  toggleChannel("push");
+                  toggleChannel('push');
                   setErrors((prev) => ({ ...prev, channels: undefined }));
                 }}
               />
@@ -336,7 +348,7 @@ const CreateSubscriberForm = ({
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === 'Enter') {
                 e.preventDefault();
                 handleAddTag();
               }
@@ -379,7 +391,9 @@ const CreateSubscriberForm = ({
 
       <div className="flex gap-3 mt-6 justify-end">
         <Button
-          onClick={handleSubmit}
+          onClick={() => {
+            void handleSubmit();
+          }}
           className="rounded-md bg-primary text-primary-foreground hover:bg-primaryemphasis"
         >
           Save Subscriber

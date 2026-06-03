@@ -9,7 +9,10 @@ export const layoutCanvasGraph = (
   nodes: WorkflowCanvasNode[],
   edges: WorkflowCanvasEdge[],
 ) => {
-  const graph = new dagre.graphlib.Graph();
+  const graph = new dagre.graphlib.Graph<
+    Record<string, unknown>,
+    Record<string, unknown>
+  >();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({
     rankdir: 'TB',
@@ -23,6 +26,7 @@ export const layoutCanvasGraph = (
     graph.setNode(node.id, { width: nodeWidth, height: nodeHeight }),
   );
   edges.forEach((edge) => graph.setEdge(edge.source, edge.target));
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   dagre.layout(graph);
 
   return {
@@ -32,8 +36,8 @@ export const layoutCanvasGraph = (
         ...node,
         position: positioned
           ? {
-              x: positioned.x - nodeWidth / 2,
-              y: positioned.y - nodeHeight / 2,
+              x: (positioned as Record<string, number>).x - nodeWidth / 2,
+              y: (positioned as Record<string, number>).y - nodeHeight / 2,
             }
           : node.position,
       };

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import CardBox from "@/app/components/shared/CardBox";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import CardBox from '@/app/components/shared/CardBox';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -22,12 +22,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import type { CreateTemplatePayload, TemplateItem } from "@/app/types/template";
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
 
 const parseError = async (res: Response): Promise<string> => {
-  const fallback = "Request failed";
+  const fallback = 'Request failed';
   try {
     const body = (await res.json()) as { error?: string; message?: string };
     return body.error || body.message || fallback;
@@ -40,22 +40,22 @@ const TemplateManagement = () => {
   const [items, setItems] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [mutatingID, setMutatingID] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [channel, setChannel] = useState("email");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [name, setName] = useState('');
+  const [channel, setChannel] = useState('email');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/templates", {
-        method: "GET",
-        headers: { browserrefreshed: "false" },
-        cache: "no-store",
+      const res = await fetch('/api/templates', {
+        method: 'GET',
+        headers: { browserrefreshed: 'false' },
+        cache: 'no-store',
       });
 
       if (!res.ok) {
@@ -65,7 +65,7 @@ const TemplateManagement = () => {
       const data = (await res.json()) as TemplateItem[];
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load templates");
+      setError(err instanceof Error ? err.message : 'Failed to load templates');
       setItems([]);
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ const TemplateManagement = () => {
     setError(null);
 
     if (!name.trim() || !body.trim()) {
-      setError("Template name and body are required");
+      setError('Template name and body are required');
       return;
     }
 
@@ -107,12 +107,12 @@ const TemplateManagement = () => {
       subject: subject.trim() || undefined,
     };
 
-    setMutatingID("create");
+    setMutatingID('create');
     try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
+      const res = await fetch('/api/templates', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
@@ -122,20 +122,22 @@ const TemplateManagement = () => {
       }
 
       setOpen(false);
-      setName("");
-      setChannel("email");
-      setSubject("");
-      setBody("");
+      setName('');
+      setChannel('email');
+      setSubject('');
+      setBody('');
       await fetchTemplates();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create template");
+      setError(
+        err instanceof Error ? err.message : 'Failed to create template',
+      );
     } finally {
       setMutatingID(null);
     }
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm("Delete this template?")) {
+    if (!confirm('Delete this template?')) {
       return;
     }
 
@@ -143,7 +145,7 @@ const TemplateManagement = () => {
     setMutatingID(id);
     try {
       const res = await fetch(`/api/templates/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
       if (!res.ok && res.status !== 204) {
@@ -152,7 +154,9 @@ const TemplateManagement = () => {
 
       await fetchTemplates();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete template");
+      setError(
+        err instanceof Error ? err.message : 'Failed to delete template',
+      );
     } finally {
       setMutatingID(null);
     }
@@ -181,10 +185,18 @@ const TemplateManagement = () => {
                 Create an email, SMS, or push template for the current project.
               </DialogDescription>
             </DialogHeader>
-            <form className="space-y-4" onSubmit={submitCreate}>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                void submitCreate(e);
+              }}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block" htmlFor="template-name">
+                  <label
+                    className="text-sm font-medium mb-2 block"
+                    htmlFor="template-name"
+                  >
                     Name
                   </label>
                   <Input
@@ -195,7 +207,10 @@ const TemplateManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block" htmlFor="template-channel">
+                  <label
+                    className="text-sm font-medium mb-2 block"
+                    htmlFor="template-channel"
+                  >
                     Channel
                   </label>
                   <select
@@ -211,7 +226,10 @@ const TemplateManagement = () => {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="template-subject">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="template-subject"
+                >
                   Subject
                 </label>
                 <Input
@@ -222,7 +240,10 @@ const TemplateManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="template-body">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="template-body"
+                >
                   Body
                 </label>
                 <Textarea
@@ -236,10 +257,10 @@ const TemplateManagement = () => {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={mutatingID === "create"}
+                  disabled={mutatingID === 'create'}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingID === "create" ? "Saving..." : "Create template"}
+                  {mutatingID === 'create' ? 'Saving...' : 'Create template'}
                 </Button>
               </DialogFooter>
             </form>
@@ -277,13 +298,19 @@ const TemplateManagement = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground"
+                >
                   Loading templates...
                 </TableCell>
               </TableRow>
             ) : visibleItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground"
+                >
                   No templates found.
                 </TableCell>
               </TableRow>
@@ -293,12 +320,17 @@ const TemplateManagement = () => {
                   <TableCell>{item.name}</TableCell>
                   <TableCell>{item.channel}</TableCell>
                   <TableCell>
-                    <Badge variant={item.is_active ? "lightSuccess" : "lightWarning"} className="rounded-md">
-                      {item.is_active ? "active" : "inactive"}
+                    <Badge
+                      variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
+                      className="rounded-md"
+                    >
+                      {item.is_active ? 'active' : 'inactive'}
                     </Badge>
                   </TableCell>
                   <TableCell>{item.version}</TableCell>
-                  <TableCell>{format(new Date(item.created_at), "E, MMM d")}</TableCell>
+                  <TableCell>
+                    {format(new Date(item.created_at), 'E, MMM d')}
+                  </TableCell>
                   <TableCell className="text-end">
                     <Button
                       variant="outline"
@@ -306,7 +338,7 @@ const TemplateManagement = () => {
                       disabled={mutatingID === item.id}
                       onClick={() => void deleteTemplate(item.id)}
                     >
-                      {mutatingID === item.id ? "Deleting..." : "Delete"}
+                      {mutatingID === item.id ? 'Deleting...' : 'Delete'}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -1,11 +1,11 @@
-import { NextRequest } from "next/server";
-import { withSessionCookies } from "@/lib/auth-session";
-import { proxyBackendPublic } from "@/lib/backend-api";
+import { NextRequest } from 'next/server';
+import { withSessionCookies } from '@/lib/auth-session';
+import { proxyBackendPublic } from '@/lib/backend-api';
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const response = await proxyBackendPublic("/auth/signup", {
-    method: "POST",
+  const response = await proxyBackendPublic('/auth/signup', {
+    method: 'POST',
     body,
   });
 

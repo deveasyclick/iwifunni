@@ -1,7 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Icon } from "@iconify/react";
-import StatCard from "../utilities/stat-card/StatCard";
-import CardBox from "../shared/CardBox";
+import { Icon } from '@iconify/react';
+import StatCard from '../utilities/stat-card/StatCard';
+import CardBox from '../shared/CardBox';
 
 export default function Hero() {
   return (
@@ -10,7 +9,7 @@ export default function Hero() {
         <p className="text-sm text-primary mb-4">Open Source • Self-hostable</p>
 
         <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-          The open-source notification infrastructure for{" "}
+          The open-source notification infrastructure for{' '}
           <span className="text-primary">modern apps</span>
         </h1>
 

@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
-import WorkflowManagement from "../components/workflows";
+import type { Metadata } from 'next';
+import WorkflowManagement from '../components/workflows';
 
 export const metadata: Metadata = {
-  title: "Workflows",
+  title: 'Workflows',
 };
 
 const WorkflowPage = () => {

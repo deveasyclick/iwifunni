@@ -14,8 +14,8 @@ const WorkflowCanvasEdgeComponent = memo(
     sourceY,
     targetX,
     targetY,
-    sourcePosition,
-    targetPosition,
+    sourcePosition: _sourcePosition,
+    targetPosition: _targetPosition,
     data,
     selected,
   }: EdgeProps<WorkflowCanvasEdge>) => {

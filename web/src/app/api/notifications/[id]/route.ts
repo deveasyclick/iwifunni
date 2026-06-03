@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { proxyBackend } from "@/lib/backend-api";
+import { NextRequest } from 'next/server';
+import { proxyBackend } from '@/lib/backend-api';
 
 type RouteContext = {
   params: Promise<{
@@ -11,6 +11,6 @@ export async function GET(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   return proxyBackend(req, `/notifications/${id}`, {
-    method: "GET",
+    method: 'GET',
   });
 }

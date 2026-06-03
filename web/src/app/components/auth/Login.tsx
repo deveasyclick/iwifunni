@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import CardBox from "../shared/CardBox";
-import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import FullLogo from "../shared/FullLogo";
-import { SocialAuthButtons } from "./SocialAuthButtons";
-import { useRouter, useSearchParams } from "next/navigation";
+import CardBox from '../shared/CardBox';
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import FullLogo from '../shared/FullLogo';
+import { SocialAuthButtons } from './SocialAuthButtons';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export const Login = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(searchParams.get("error"));
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(searchParams.get('error'));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -25,10 +25,10 @@ export const Login = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
       });
@@ -39,14 +39,16 @@ export const Login = () => {
       } | null;
 
       if (!response.ok) {
-        setError(payload?.error || "Unable to sign in.");
+        setError(payload?.error || 'Unable to sign in.');
         return;
       }
 
-      router.replace(payload?.needs_onboarding ? "/auth/onboarding" : "/dashboard");
+      router.replace(
+        payload?.needs_onboarding ? '/auth/onboarding' : '/dashboard',
+      );
       router.refresh();
     } catch {
-      setError("Unable to sign in right now.");
+      setError('Unable to sign in right now.');
     } finally {
       setIsSubmitting(false);
     }
@@ -60,10 +62,15 @@ export const Login = () => {
             <FullLogo />
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Welcome back. Verified accounts continue to your dashboard or onboarding.
+            Welcome back. Verified accounts continue to your dashboard or
+            onboarding.
           </p>
           <SocialAuthButtons />
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+          >
             <div>
               <div className="mb-2 block">
                 <Label htmlFor="email" className="font-medium">
@@ -117,7 +124,7 @@ export const Login = () => {
               </p>
             ) : null}
             <Button className="w-full" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Signing In..." : "Sign In"}
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">

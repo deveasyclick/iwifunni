@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
-import { ApexOptions } from "apexcharts";
-import CardBox from "@/app/components/shared/CardBox";
+import dynamic from 'next/dynamic';
+import { ApexOptions } from 'apexcharts';
+import CardBox from '@/app/components/shared/CardBox';
 
-const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 const ChannelBreakdown = () => {
   const series = [45, 30, 15, 10];
 
   const chartOptions: ApexOptions = {
     chart: {
-      type: "donut",
-      fontFamily: "inherit",
-      foreColor: "#AAB4C5",
+      type: 'donut',
+      fontFamily: 'inherit',
+      foreColor: '#AAB4C5',
     },
-    labels: ["In-App", "Email", "SMS", "Push"],
-    colors: ["#5d87ff", "#13deb9", "#f6b51e", "#8754ec"],
+    labels: ['In-App', 'Email', 'SMS', 'Push'],
+    colors: ['#5d87ff', '#13deb9', '#f6b51e', '#8754ec'],
 
     stroke: { show: false },
     dataLabels: { enabled: false },
@@ -25,15 +25,15 @@ const ChannelBreakdown = () => {
     plotOptions: {
       pie: {
         donut: {
-          size: "78%",
+          size: '78%',
           labels: {
             show: true,
             total: {
               show: true,
-              label: "Total",
-              color: "#94A3B8",
-              fontSize: "12px",
-              formatter: () => "23.4k",
+              label: 'Total',
+              color: '#94A3B8',
+              fontSize: '12px',
+              formatter: () => '23.4k',
             },
           },
         },
@@ -41,7 +41,7 @@ const ChannelBreakdown = () => {
     },
 
     tooltip: {
-      theme: "dark",
+      theme: 'dark',
       y: {
         formatter: (val) => `${val}%`,
       },
@@ -69,10 +69,10 @@ const ChannelBreakdown = () => {
         {/* Legend */}
         <div className="flex flex-col gap-4 text-sm w-full max-w-45">
           {[
-            { label: "In-App", value: "45% (10.5k)", color: "bg-primary" },
-            { label: "Email", value: "30% (7.0k)", color: "bg-success" },
-            { label: "SMS", value: "15% (3.5k)", color: "bg-warning" },
-            { label: "Push", value: "10% (2.4k)", color: "bg-info" },
+            { label: 'In-App', value: '45% (10.5k)', color: 'bg-primary' },
+            { label: 'Email', value: '30% (7.0k)', color: 'bg-success' },
+            { label: 'SMS', value: '15% (3.5k)', color: 'bg-warning' },
+            { label: 'Push', value: '10% (2.4k)', color: 'bg-info' },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between">
               <div className="flex items-center gap-2">

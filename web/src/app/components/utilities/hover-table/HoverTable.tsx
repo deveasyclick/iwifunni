@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { TbDotsVertical } from 'react-icons/tb'
-import Image from 'next/image'
-import CardBox from '@/app/components/shared/CardBox'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import { TbDotsVertical } from 'react-icons/tb';
+import Image from 'next/image';
+import CardBox from '@/app/components/shared/CardBox';
+import { Icon } from '@iconify/react/dist/iconify.js';
 
 import {
   Table,
@@ -12,15 +12,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { PerformersData } from '../table-data'
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { PerformersData } from '../table-data';
 
 function HoverTable() {
   const tableActionData = [
@@ -36,28 +36,28 @@ function HoverTable() {
       icon: 'solar:trash-bin-minimalistic-outline',
       listtitle: 'Delete',
     },
-  ]
+  ];
 
   return (
     <CardBox>
-      <h3 className='text-xl font-semibold mb-2'>Hover Table</h3>
-      <div className='flex flex-col border rounded-md border-ld '>
-        <div className='-m-1.5 overflow-x-auto'>
-          <div className='p-1.5 min-w-full inline-block align-middle'>
-            <div className='overflow-x-auto'>
+      <h3 className="text-xl font-semibold mb-2">Hover Table</h3>
+      <div className="flex flex-col border rounded-md border-ld ">
+        <div className="-m-1.5 overflow-x-auto">
+          <div className="p-1.5 min-w-full inline-block align-middle">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className='text-sm font-semibold '>
+                    <TableHead className="text-sm font-semibold ">
                       Assigned
                     </TableHead>
-                    <TableHead className='text-sm font-semibold'>
+                    <TableHead className="text-sm font-semibold">
                       Project
                     </TableHead>
-                    <TableHead className='text-sm font-semibold'>
+                    <TableHead className="text-sm font-semibold">
                       Priority
                     </TableHead>
-                    <TableHead className='text-sm font-semibold'>
+                    <TableHead className="text-sm font-semibold">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -67,22 +67,23 @@ function HoverTable() {
                   {PerformersData.map((item, index) => (
                     <TableRow
                       key={index}
-                      className='group/row hover:bg-lightprimary  cursor-pointer'>
+                      className="group/row hover:bg-lightprimary  cursor-pointer"
+                    >
                       {/* Assigned */}
-                      <TableCell className='ps-3 min-w-[200px]'>
-                        <div className='flex gap-3 items-center'>
+                      <TableCell className="ps-3 min-w-[200px]">
+                        <div className="flex gap-3 items-center">
                           <Image
                             src={item.profileImg}
-                            alt='profile'
+                            alt="profile"
                             width={40}
                             height={40}
-                            className='h-10 w-10 rounded-full'
+                            className="h-10 w-10 rounded-full"
                           />
                           <div>
-                            <h6 className='text-sm font-semibold mb-1'>
+                            <h6 className="text-sm font-semibold mb-1">
                               {item.username}
                             </h6>
-                            <p className='text-xs text-muted-foreground font-medium'>
+                            <p className="text-xs text-muted-foreground font-medium">
                               {item.designation}
                             </p>
                           </div>
@@ -91,7 +92,7 @@ function HoverTable() {
 
                       {/* Project */}
                       <TableCell>
-                        <p className='text-muted-foreground text-sm font-medium'>
+                        <p className="text-muted-foreground text-sm font-medium">
                           {item.project}
                         </p>
                       </TableCell>
@@ -99,7 +100,8 @@ function HoverTable() {
                       {/* Priority */}
                       <TableCell>
                         <Badge
-                          className={`text-sm rounded-full py-1 px-3 justify-center ${item.bgcolor}`}>
+                          className={`text-sm rounded-full py-1 px-3 justify-center ${item.bgcolor}`}
+                        >
                           {item.priority}
                         </Badge>
                       </TableCell>
@@ -108,15 +110,16 @@ function HoverTable() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <span className='h-9 w-9 flex justify-center items-center rounded-full hover:bg-lightprimary hover:text-primary cursor-pointer'>
+                            <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-lightprimary hover:text-primary cursor-pointer">
                               <TbDotsVertical size={22} />
                             </span>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align='end' className='w-40'>
+                          <DropdownMenuContent align="end" className="w-40">
                             {tableActionData.map((action, idx) => (
                               <DropdownMenuItem
                                 key={idx}
-                                className='flex gap-3 items-center'>
+                                className="flex gap-3 items-center"
+                              >
                                 <Icon icon={action.icon} height={18} />
                                 <span>{action.listtitle}</span>
                               </DropdownMenuItem>
@@ -133,7 +136,7 @@ function HoverTable() {
         </div>
       </div>
     </CardBox>
-  )
+  );
 }
 
-export default HoverTable
+export default HoverTable;

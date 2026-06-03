@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { proxyBackend } from "@/lib/backend-api";
-import { setOnboardingCookie } from "@/lib/auth-session";
+import { NextRequest, NextResponse } from 'next/server';
+import { proxyBackend } from '@/lib/backend-api';
+import { setOnboardingCookie } from '@/lib/auth-session';
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const response = await proxyBackend(req, "/auth/onboarding", {
-    method: "POST",
+  const response = await proxyBackend(req, '/auth/onboarding', {
+    method: 'POST',
     body,
   });
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     payload = raw ? JSON.parse(raw) : {};
   } catch {
-    payload = { error: raw || "Request failed" };
+    payload = { error: raw || 'Request failed' };
   }
 
   const nextResponse = NextResponse.json(payload, { status: response.status });

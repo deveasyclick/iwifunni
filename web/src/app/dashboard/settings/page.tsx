@@ -1,20 +1,20 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-import BreadcrumbComp from "../layout/shared/breadcrumb/BreadcrumbComp";
-import CardBox from "@/app/components/shared/CardBox";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../layout/shared/breadcrumb/BreadcrumbComp';
+import CardBox from '@/app/components/shared/CardBox';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: "Settings",
+  title: 'Settings',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    title: "Settings",
+    title: 'Settings',
   },
 ];
 
@@ -65,9 +65,7 @@ const SettingsPage = () => {
               Connect and prioritize your notification delivery providers.
             </p>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/settings/providers">
-                Open Providers
-              </Link>
+              <Link href="/dashboard/settings/providers">Open Providers</Link>
             </Button>
           </CardBox>
         </div>

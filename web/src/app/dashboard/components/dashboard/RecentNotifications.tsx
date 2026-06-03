@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import {
   Table,
   TableBody,
@@ -6,52 +6,52 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import CardBox from "@/app/components/shared/CardBox";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import CardBox from '@/app/components/shared/CardBox';
 
 export const RecentNotifications = () => {
   const notifications = [
     {
       id: 1,
-      message: "Welcome to Novu! 👋",
-      channel: "In-App",
-      to: "user_123",
-      status: "Delivered",
-      time: "Just now",
+      message: 'Welcome to Novu! 👋',
+      channel: 'In-App',
+      to: 'user_123',
+      status: 'Delivered',
+      time: 'Just now',
     },
     {
       id: 2,
-      message: "Welcome to Novu!",
-      channel: "Email",
-      to: "user_123@example.com",
-      status: "Delivered",
-      time: "2m ago",
+      message: 'Welcome to Novu!',
+      channel: 'Email',
+      to: 'user_123@example.com',
+      status: 'Delivered',
+      time: '2m ago',
     },
     {
       id: 3,
-      message: "Your code is 123456",
-      channel: "SMS",
-      to: "+1 (555) 123 4567",
-      status: "Delivered",
-      time: "5m ago",
+      message: 'Your code is 123456',
+      channel: 'SMS',
+      to: '+1 (555) 123 4567',
+      status: 'Delivered',
+      time: '5m ago',
     },
     {
       id: 4,
-      message: "New message from John",
-      channel: "Push",
-      to: "user_123",
-      status: "Failed",
-      time: "10m ago",
+      message: 'New message from John',
+      channel: 'Push',
+      to: 'user_123',
+      status: 'Failed',
+      time: '10m ago',
     },
     {
       id: 5,
-      message: "Reset your password",
-      channel: "Email",
-      to: "user_456@example.com",
-      status: "Delivered",
-      time: "1h ago",
+      message: 'Reset your password',
+      channel: 'Email',
+      to: 'user_456@example.com',
+      status: 'Delivered',
+      time: '1h ago',
     },
   ];
 
@@ -83,7 +83,7 @@ export const RecentNotifications = () => {
                 whileHover={{
                   scale: 1.01,
                 }}
-                transition={{ type: "spring", stiffness: 300 }}
+                transition={{ type: 'spring', stiffness: 300 }}
                 className="border-b border-border"
               >
                 <TableCell className="font-medium">{item.message}</TableCell>
@@ -104,9 +104,9 @@ export const RecentNotifications = () => {
                   >
                     <Badge
                       className={`px-3 py-0.5 rounded-full text-xs ${
-                        item.status === "Delivered"
-                          ? "bg-success text-white"
-                          : "bg-error text-white"
+                        item.status === 'Delivered'
+                          ? 'bg-success text-white'
+                          : 'bg-error text-white'
                       }`}
                     >
                       {item.status}

@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import CardBox from "../shared/CardBox";
-import { FormEvent, useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import FullLogo from "../shared/FullLogo";
-import { useRouter } from "next/navigation";
+import CardBox from '../shared/CardBox';
+import { FormEvent, useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import FullLogo from '../shared/FullLogo';
+import { useRouter } from 'next/navigation';
 
 export const Onboarding = () => {
   const router = useRouter();
-  const [organizationName, setOrganizationName] = useState("");
+  const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,10 +20,10 @@ export const Onboarding = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/onboarding", {
-        method: "POST",
+      const response = await fetch('/api/auth/onboarding', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ organization_name: organizationName }),
       });
@@ -33,14 +33,14 @@ export const Onboarding = () => {
       } | null;
 
       if (!response.ok) {
-        setError(payload?.error || "Unable to complete onboarding.");
+        setError(payload?.error || 'Unable to complete onboarding.');
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace('/dashboard');
       router.refresh();
     } catch {
-      setError("Unable to complete onboarding right now.");
+      setError('Unable to complete onboarding right now.');
     } finally {
       setIsSubmitting(false);
     }
@@ -56,7 +56,11 @@ export const Onboarding = () => {
           <p className="text-sm text-muted-foreground text-center mb-6">
             Name your organization to finish setting up your workspace.
           </p>
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+          >
             <div>
               <div className="mb-2 block">
                 <Label htmlFor="organizationName" className="font-medium">
@@ -77,8 +81,12 @@ export const Onboarding = () => {
                 {error}
               </p>
             ) : null}
-            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Finishing..." : "Finish Setup"}
+            <Button
+              className="w-full mt-6"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Finishing...' : 'Finish Setup'}
             </Button>
           </form>
         </CardBox>

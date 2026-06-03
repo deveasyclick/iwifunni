@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { clearSessionCookies, setSessionCookies } from "@/lib/auth-session";
+import { NextRequest, NextResponse } from 'next/server';
+import { clearSessionCookies, setSessionCookies } from '@/lib/auth-session';
 
 type BackendResult = {
   status: number;
@@ -15,15 +15,15 @@ type SessionPayload = {
 const BACKEND_BASE_URL =
   process.env.IWIFUNNI_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  "http://localhost:8080";
+  'http://localhost:8080';
 
 function resolveAuthHeader(req: NextRequest): string | null {
-  const authorization = req.headers.get("authorization");
+  const authorization = req.headers.get('authorization');
   if (authorization) {
     return authorization;
   }
 
-  const accessToken = req.cookies.get("access_token")?.value;
+  const accessToken = req.cookies.get('access_token')?.value;
   if (accessToken) {
     return `Bearer ${accessToken}`;
   }
@@ -32,37 +32,37 @@ function resolveAuthHeader(req: NextRequest): string | null {
 }
 
 function normalizePath(path: string): string {
-  if (path.startsWith("/")) {
+  if (path.startsWith('/')) {
     return path;
   }
   return `/${path}`;
 }
 
 function isSessionPayload(payload: unknown): payload is SessionPayload {
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== 'object') {
     return false;
   }
 
   const candidate = payload as SessionPayload;
   return (
-    typeof candidate.access_token === "string" &&
-    typeof candidate.refresh_token === "string"
+    typeof candidate.access_token === 'string' &&
+    typeof candidate.refresh_token === 'string'
   );
 }
 
 function getErrorMessage(payload: unknown): string {
-  if (payload && typeof payload === "object") {
+  if (payload && typeof payload === 'object') {
     const candidate = payload as { error?: unknown };
-    if (typeof candidate.error === "string") {
+    if (typeof candidate.error === 'string') {
       return candidate.error;
     }
   }
 
-  if (typeof payload === "string") {
+  if (typeof payload === 'string') {
     return payload;
   }
 
-  return "";
+  return '';
 }
 
 function shouldAttemptRefresh(result: BackendResult): boolean {
@@ -71,7 +71,7 @@ function shouldAttemptRefresh(result: BackendResult): boolean {
   }
 
   const error = getErrorMessage(result.payload).toLowerCase();
-  return error.includes("bearer token");
+  return error.includes('bearer token');
 }
 
 function toNextResponse(result: BackendResult): NextResponse {
@@ -90,19 +90,19 @@ async function sendToBackend(
   const target = `${BACKEND_BASE_URL}${normalizePath(path)}`;
   const headers = new Headers(init?.headers);
   if (authHeader) {
-    headers.set("Authorization", authHeader);
+    headers.set('Authorization', authHeader);
   }
-  headers.set("Accept", "application/json");
+  headers.set('Accept', 'application/json');
 
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
 
   try {
     const response = await fetch(target, {
       ...init,
       headers,
-      cache: "no-store",
+      cache: 'no-store',
     });
 
     if (response.status === 204) {
@@ -114,14 +114,14 @@ async function sendToBackend(
     try {
       payload = raw ? JSON.parse(raw) : {};
     } catch {
-      payload = { error: raw || "Request failed" };
+      payload = { error: raw || 'Request failed' };
     }
 
     return { status: response.status, payload };
   } catch {
     return {
       status: 502,
-      payload: { error: "Failed to reach backend service" },
+      payload: { error: 'Failed to reach backend service' },
     };
   }
 }
@@ -130,13 +130,13 @@ async function refreshSession(req: NextRequest): Promise<{
   session: SessionPayload | null;
   clearCookies: boolean;
 }> {
-  const refreshToken = req.cookies.get("refresh_token")?.value;
+  const refreshToken = req.cookies.get('refresh_token')?.value;
   if (!refreshToken) {
     return { session: null, clearCookies: false };
   }
 
-  const result = await sendToBackend("/auth/refresh", {
-    method: "POST",
+  const result = await sendToBackend('/auth/refresh', {
+    method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
 
@@ -172,7 +172,7 @@ export async function proxyBackend(
 
     if (!refreshedSession) {
       const response = NextResponse.json(
-        { error: "Missing bearer token" },
+        { error: 'Missing bearer token' },
         { status: 401 },
       );
       if (shouldClearSession) {

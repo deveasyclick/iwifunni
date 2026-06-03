@@ -13,6 +13,7 @@ import {
   parseDelayDuration,
   formatDelayDuration,
 } from '@/app/dashboard/components/workflows/utils/duration';
+import type { BuilderNodeDraft } from '@/app/dashboard/components/workflows/types/draft';
 import type { DelayConfigProps } from '@/app/dashboard/components/workflows/types/ui';
 
 export const DelayConfig = ({ draft, updateNodeDraft }: DelayConfigProps) => {
@@ -25,13 +26,16 @@ export const DelayConfig = ({ draft, updateNodeDraft }: DelayConfigProps) => {
         <Input
           value={selectedDelayParts.amount}
           onChange={(event) =>
-            updateNodeDraft(draft.id, (d) => ({
-              ...d,
-              duration: formatDelayDuration(
-                event.target.value,
-                selectedDelayParts.unit,
-              ),
-            }))
+            updateNodeDraft(
+              draft.id,
+              (d): BuilderNodeDraft => ({
+                ...d,
+                duration: formatDelayDuration(
+                  event.target.value,
+                  selectedDelayParts.unit,
+                ),
+              }),
+            )
           }
           inputMode="decimal"
           placeholder="5"
@@ -42,13 +46,16 @@ export const DelayConfig = ({ draft, updateNodeDraft }: DelayConfigProps) => {
         <Select
           value={selectedDelayParts.unit}
           onValueChange={(unit) =>
-            updateNodeDraft(draft.id, (d) => ({
-              ...d,
-              duration: formatDelayDuration(
-                selectedDelayParts.amount,
-                unit as typeof selectedDelayParts.unit,
-              ),
-            }))
+            updateNodeDraft(
+              draft.id,
+              (d): BuilderNodeDraft => ({
+                ...d,
+                duration: formatDelayDuration(
+                  selectedDelayParts.amount,
+                  unit as typeof selectedDelayParts.unit,
+                ),
+              }),
+            )
           }
         >
           <SelectTrigger>

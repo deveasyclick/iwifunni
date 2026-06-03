@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { proxyBackend } from "@/lib/backend-api";
+import { NextRequest, NextResponse } from 'next/server';
+import { proxyBackend } from '@/lib/backend-api';
 
 async function wrapData(response: NextResponse) {
   if (!response.ok || response.status === 204) {
@@ -11,8 +11,8 @@ async function wrapData(response: NextResponse) {
 }
 
 export async function GET(req: NextRequest) {
-  const response = await proxyBackend(req, "/subscribers", {
-    method: "GET",
+  const response = await proxyBackend(req, '/subscribers', {
+    method: 'GET',
   });
 
   return wrapData(response);
@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const response = await proxyBackend(req, "/subscribers", {
-    method: "POST",
+  const response = await proxyBackend(req, '/subscribers', {
+    method: 'POST',
     body,
   });
 
@@ -29,16 +29,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const id = typeof body?.id === "string" ? body.id : "";
+  const body = (await req.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  const id = typeof body?.id === 'string' ? body.id : '';
   if (!id) {
     return NextResponse.json(
-      { error: "Subscriber id is required" },
+      { error: 'Subscriber id is required' },
       { status: 400 },
     );
   }
 
   return proxyBackend(req, `/subscribers/${id}`, {
-    method: "DELETE",
+    method: 'DELETE',
   });
 }

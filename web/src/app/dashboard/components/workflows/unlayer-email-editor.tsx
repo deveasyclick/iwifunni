@@ -288,7 +288,7 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
             return;
           }
           editor.exportHtml(({ design, html }) => {
-            resolve(encodeEmailBody(design as object, html));
+            resolve(encodeEmailBody(design, html));
           });
         }),
     }));
@@ -311,7 +311,7 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
               makeRow([makeTextContent('Start typing your message here.')]),
             ],
           },
-        } as Parameters<typeof editor.loadDesign>[0]);
+        });
       }
 
       editor.addEventListener('design:updated', () => {
@@ -319,9 +319,7 @@ const UnlayerEmailEditor = forwardRef<UnlayerEmailEditorHandle, Props>(
         debounceRef.current = setTimeout(() => {
           editor.exportHtml(({ design, html }) => {
             onHtmlChangeRef.current?.(html);
-            onEncodedBodyChangeRef.current?.(
-              encodeEmailBody(design as object, html),
-            );
+            onEncodedBodyChangeRef.current?.(encodeEmailBody(design, html));
           });
         }, 800);
       });

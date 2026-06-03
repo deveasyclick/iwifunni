@@ -1,5 +1,5 @@
-"use client";
-import { Card } from "@/components/ui/card";
+'use client';
+import { Card } from '@/components/ui/card';
 
 interface MyAppProps {
   children: React.ReactNode;
@@ -7,7 +7,8 @@ interface MyAppProps {
 }
 const CardBox: React.FC<MyAppProps> = ({ children, className }) => {
   return (
-    <Card className={`card border border-border ${className}`}
+    <Card
+      className={`card border border-border ${className}`}
       style={{
         borderRadius: `7px`,
       }}
@@ -15,7 +16,6 @@ const CardBox: React.FC<MyAppProps> = ({ children, className }) => {
       {children}
     </Card>
   );
-
 };
 
 export default CardBox;

@@ -1,27 +1,26 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Icon } from "@iconify/react";
-import CardBox from "../shared/CardBox";
+import { Icon } from '@iconify/react';
+import CardBox from '../shared/CardBox';
 
 const items = [
   {
-    icon: "mdi:bell-outline",
-    title: "In-App",
-    desc: "Real-time in-app notifications.",
+    icon: 'mdi:bell-outline',
+    title: 'In-App',
+    desc: 'Real-time in-app notifications.',
   },
   {
-    icon: "mdi:email-outline",
-    title: "Email",
-    desc: "Beautiful emails delivered at scale.",
+    icon: 'mdi:email-outline',
+    title: 'Email',
+    desc: 'Beautiful emails delivered at scale.',
   },
   {
-    icon: "mdi:message-outline",
-    title: "SMS",
-    desc: "Reach users instantly with SMS.",
+    icon: 'mdi:message-outline',
+    title: 'SMS',
+    desc: 'Reach users instantly with SMS.',
   },
   {
-    icon: "mdi:dots-horizontal",
-    title: "More",
-    desc: "Push, Slack, Webhooks, and more.",
+    icon: 'mdi:dots-horizontal',
+    title: 'More',
+    desc: 'Push, Slack, Webhooks, and more.',
   },
 ];
 export default function Channels() {

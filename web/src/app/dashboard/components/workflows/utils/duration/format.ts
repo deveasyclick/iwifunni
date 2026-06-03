@@ -1,7 +1,10 @@
 import type { DelayUnit } from './types';
 import { formatDurationAmount } from './parse';
 
-export const formatDelayDuration = (amount: string, unit: DelayUnit) => {
+export const formatDelayDuration = (
+  amount: string,
+  unit: DelayUnit,
+): string => {
   const normalizedAmount = amount.trim();
   if (!normalizedAmount) {
     return '';

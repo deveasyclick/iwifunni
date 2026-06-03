@@ -1,4 +1,4 @@
-export type ApiKeyStatus = "active" | "revoked" | "rotating" | "expired" | string;
+export type ApiKeyStatus = 'active' | 'revoked' | 'rotating' | 'expired';
 
 export interface ApiKeyItem {
   id: string;

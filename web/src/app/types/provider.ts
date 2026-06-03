@@ -19,5 +19,5 @@ export interface CreateProviderPayload {
 }
 
 export interface UpdateProviderStatePayload {
-  action: "enable" | "disable" | "set_primary";
+  action: 'enable' | 'disable' | 'set_primary';
 }

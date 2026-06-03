@@ -1,4 +1,4 @@
-import FullLogo from "../shared/FullLogo";
+import FullLogo from '../shared/FullLogo';
 
 export default function Footer() {
   return (

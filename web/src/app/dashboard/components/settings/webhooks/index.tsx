@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import CardBox from "@/app/components/shared/CardBox";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import CardBox from '@/app/components/shared/CardBox';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -22,11 +22,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import type { CreateWebhookPayload, WebhookItem } from "@/app/types/webhook";
+} from '@/components/ui/table';
+import type { CreateWebhookPayload, WebhookItem } from '@/app/types/webhook';
 
 const parseError = async (res: Response): Promise<string> => {
-  const fallback = "Request failed";
+  const fallback = 'Request failed';
   try {
     const body = (await res.json()) as { error?: string; message?: string };
     return body.error || body.message || fallback;
@@ -39,21 +39,21 @@ const WebhookManagement = () => {
   const [items, setItems] = useState<WebhookItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [mutatingID, setMutatingID] = useState<string | null>(null);
-  const [url, setURL] = useState("");
-  const [secret, setSecret] = useState("");
-  const [events, setEvents] = useState("notification.sent,notification.failed");
+  const [url, setURL] = useState('');
+  const [secret, setSecret] = useState('');
+  const [events, setEvents] = useState('notification.sent,notification.failed');
 
   const fetchWebhooks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/webhooks", {
-        method: "GET",
-        headers: { browserrefreshed: "false" },
-        cache: "no-store",
+      const res = await fetch('/api/webhooks', {
+        method: 'GET',
+        headers: { browserrefreshed: 'false' },
+        cache: 'no-store',
       });
 
       if (!res.ok) {
@@ -63,7 +63,7 @@ const WebhookManagement = () => {
       const data = (await res.json()) as WebhookItem[];
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load webhooks");
+      setError(err instanceof Error ? err.message : 'Failed to load webhooks');
       setItems([]);
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ const WebhookManagement = () => {
     return items.filter((item) => {
       return (
         item.url.toLowerCase().includes(term) ||
-        item.events.join(",").toLowerCase().includes(term)
+        item.events.join(',').toLowerCase().includes(term)
       );
     });
   }, [items, search]);
@@ -96,22 +96,22 @@ const WebhookManagement = () => {
       url: url.trim(),
       secret: secret.trim(),
       events: events
-        .split(",")
+        .split(',')
         .map((item) => item.trim())
         .filter(Boolean),
     };
 
     if (!payload.url || !payload.secret || payload.events.length === 0) {
-      setError("URL, secret, and at least one event are required");
+      setError('URL, secret, and at least one event are required');
       return;
     }
 
-    setMutatingID("create");
+    setMutatingID('create');
     try {
-      const res = await fetch("/api/webhooks", {
-        method: "POST",
+      const res = await fetch('/api/webhooks', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
@@ -121,19 +121,19 @@ const WebhookManagement = () => {
       }
 
       setOpen(false);
-      setURL("");
-      setSecret("");
-      setEvents("notification.sent,notification.failed");
+      setURL('');
+      setSecret('');
+      setEvents('notification.sent,notification.failed');
       await fetchWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create webhook");
+      setError(err instanceof Error ? err.message : 'Failed to create webhook');
     } finally {
       setMutatingID(null);
     }
   };
 
   const deleteWebhook = async (id: string) => {
-    if (!confirm("Delete this webhook?")) {
+    if (!confirm('Delete this webhook?')) {
       return;
     }
 
@@ -141,7 +141,7 @@ const WebhookManagement = () => {
     setMutatingID(id);
     try {
       const res = await fetch(`/api/webhooks/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
       if (!res.ok && res.status !== 204) {
@@ -150,7 +150,7 @@ const WebhookManagement = () => {
 
       await fetchWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete webhook");
+      setError(err instanceof Error ? err.message : 'Failed to delete webhook');
     } finally {
       setMutatingID(null);
     }
@@ -179,9 +179,17 @@ const WebhookManagement = () => {
                 Enter the destination URL, secret, and comma-separated events.
               </DialogDescription>
             </DialogHeader>
-            <form className="space-y-4" onSubmit={submitCreate}>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                void submitCreate(e);
+              }}
+            >
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="webhook-url">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="webhook-url"
+                >
                   URL
                 </label>
                 <Input
@@ -192,7 +200,10 @@ const WebhookManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="webhook-secret">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="webhook-secret"
+                >
                   Secret
                 </label>
                 <Input
@@ -203,7 +214,10 @@ const WebhookManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="webhook-events">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="webhook-events"
+                >
                   Events
                 </label>
                 <Input
@@ -216,10 +230,10 @@ const WebhookManagement = () => {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={mutatingID === "create"}
+                  disabled={mutatingID === 'create'}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingID === "create" ? "Saving..." : "Create webhook"}
+                  {mutatingID === 'create' ? 'Saving...' : 'Create webhook'}
                 </Button>
               </DialogFooter>
             </form>
@@ -256,35 +270,52 @@ const WebhookManagement = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   Loading webhooks...
                 </TableCell>
               </TableRow>
             ) : visibleItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   No webhooks found.
                 </TableCell>
               </TableRow>
             ) : (
               visibleItems.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w-md truncate">{item.url}</TableCell>
+                  <TableCell className="max-w-md truncate">
+                    {item.url}
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
                       {item.events.map((event) => (
-                        <Badge key={event} variant="outline" className="text-xs">
+                        <Badge
+                          key={event}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {event}
                         </Badge>
                       ))}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={item.is_active ? "lightSuccess" : "lightWarning"} className="rounded-md">
-                      {item.is_active ? "active" : "inactive"}
+                    <Badge
+                      variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
+                      className="rounded-md"
+                    >
+                      {item.is_active ? 'active' : 'inactive'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{format(new Date(item.created_at), "E, MMM d")}</TableCell>
+                  <TableCell>
+                    {format(new Date(item.created_at), 'E, MMM d')}
+                  </TableCell>
                   <TableCell className="text-end">
                     <Button
                       variant="outline"
@@ -292,7 +323,7 @@ const WebhookManagement = () => {
                       disabled={mutatingID === item.id}
                       onClick={() => void deleteWebhook(item.id)}
                     >
-                      {mutatingID === item.id ? "Deleting..." : "Delete"}
+                      {mutatingID === item.id ? 'Deleting...' : 'Delete'}
                     </Button>
                   </TableCell>
                 </TableRow>

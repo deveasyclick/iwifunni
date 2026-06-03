@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import CardBox from "@/app/components/shared/CardBox";
-import type { WorkflowItem } from "@/app/types/workflow";
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import CardBox from '@/app/components/shared/CardBox';
+import type { WorkflowItem } from '@/app/types/workflow';
 
 export const TopWorkflows = () => {
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
@@ -11,9 +11,9 @@ export const TopWorkflows = () => {
   useEffect(() => {
     const fetchWorkflows = async () => {
       try {
-        const response = await fetch("/api/workflows", {
-          headers: { browserrefreshed: "false" },
-          cache: "no-store",
+        const response = await fetch('/api/workflows', {
+          headers: { browserrefreshed: 'false' },
+          cache: 'no-store',
         });
         if (!response.ok) {
           return;
@@ -33,7 +33,10 @@ export const TopWorkflows = () => {
     <CardBox>
       <div className="flex items-center justify-between mb-3">
         <h5 className="card-title">Top workflows</h5>
-        <Link href="/dashboard/apps/workflows" className="text-sm text-primary hover:underline">
+        <Link
+          href="/dashboard/apps/workflows"
+          className="text-sm text-primary hover:underline"
+        >
           View all workflows →
         </Link>
       </div>
@@ -57,15 +60,19 @@ export const TopWorkflows = () => {
               </div>
 
               <div className="text-sm text-muted-foreground w-20 text-right capitalize">
-                {item.triggerEvent || item.definition?.trigger?.event || `${item.channels?.length ?? 0} channels`}
+                {item.triggerEvent ||
+                  item.definition?.trigger?.event ||
+                  `${item.channels?.length ?? 0} channels`}
               </div>
 
               <div
                 className={`text-sm font-medium w-20 text-right ${
-                  item.status === "active" || item.isActive ? "text-success" : "text-muted-foreground"
+                  item.status === 'active' || item.isActive
+                    ? 'text-success'
+                    : 'text-muted-foreground'
                 }`}
               >
-                {item.status || (item.isActive ? "Active" : "Archived")}
+                {item.status || (item.isActive ? 'Active' : 'Archived')}
               </div>
             </div>
           ))

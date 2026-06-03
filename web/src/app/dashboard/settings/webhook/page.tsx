@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../../layout/shared/breadcrumb/BreadcrumbComp";
-import WebhookManagement from "../../components/settings/webhooks";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
+import WebhookManagement from '../../components/settings/webhooks';
 
 export const metadata: Metadata = {
-  title: "Settings - Webhooks",
+  title: 'Settings - Webhooks',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    to: "/dashboard/settings",
-    title: "Settings",
+    to: '/dashboard/settings',
+    title: 'Settings',
   },
   {
-    title: "Webhooks",
+    title: 'Webhooks',
   },
 ];
 

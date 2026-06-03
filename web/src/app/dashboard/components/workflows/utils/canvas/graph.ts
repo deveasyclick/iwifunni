@@ -1,8 +1,5 @@
 import type { WorkflowBuilderDraft } from '@/app/dashboard/components/workflows/types/draft';
-import type {
-  WorkflowCanvasNode,
-  WorkflowCanvasEdge,
-} from '@/app/dashboard/components/workflows/types/canvas';
+
 import { buildCanvasNode, buildCanvasEdge } from './factories';
 import { layoutCanvasGraph } from './layout';
 

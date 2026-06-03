@@ -104,13 +104,13 @@ export const enrichCanvasEdges = (
       source: lastNode.id,
       target: lastNode.id,
       sourceHandle: 'default',
-      type: 'workflow-edge' as const,
+      type: 'workflow-edge',
       data: {
         branch: '',
         isTerminal: true,
         onInsertNode: insertNodeOnEdge,
       },
-    } as WorkflowCanvasEdge,
+    } as const,
   ];
 };
 

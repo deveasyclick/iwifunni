@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from 'next/image';
 
 const ProfileWelcome = () => {
   return (
@@ -6,7 +6,7 @@ const ProfileWelcome = () => {
       <div className="flex items-center gap-3">
         <div>
           <Image
-            src={"/images/profile/user-1.jpg"}
+            src={'/images/profile/user-1.jpg'}
             alt="user-img"
             width={50}
             height={50}
@@ -22,7 +22,7 @@ const ProfileWelcome = () => {
       </div>
       <div className="hidden sm:block absolute right-8 bottom-0">
         <Image
-          src={"/images/dashboard/customer-support-img.png"}
+          src={'/images/dashboard/customer-support-img.png'}
           alt="support-img"
           width={145}
           height={95}

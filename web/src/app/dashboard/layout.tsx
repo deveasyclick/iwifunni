@@ -1,7 +1,7 @@
-import Header from "./layout/header/Header";
-import Sidebar from "./layout/sidebar/Sidebar";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import Header from './layout/header/Header';
+import Sidebar from './layout/sidebar/Sidebar';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 export default async function Layout({
   children,
@@ -9,11 +9,11 @@ export default async function Layout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  if (!cookieStore.get("access_token")?.value) {
-    redirect("/auth/login");
+  if (!cookieStore.get('access_token')?.value) {
+    redirect('/auth/login');
   }
-  if (cookieStore.get("needs_onboarding")?.value === "true") {
-    redirect("/auth/onboarding");
+  if (cookieStore.get('needs_onboarding')?.value === 'true') {
+    redirect('/auth/onboarding');
   }
 
   return (

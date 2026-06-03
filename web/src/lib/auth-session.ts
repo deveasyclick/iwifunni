@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
 const sessionCookieOptions = {
   httpOnly: true,
-  path: "/",
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
+  path: '/',
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
 };
 
 type SessionPayload = {
@@ -14,14 +14,14 @@ type SessionPayload = {
 };
 
 function isSessionPayload(payload: unknown): payload is SessionPayload {
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== 'object') {
     return false;
   }
 
   const candidate = payload as SessionPayload;
   return (
-    typeof candidate.access_token === "string" &&
-    typeof candidate.refresh_token === "string"
+    typeof candidate.access_token === 'string' &&
+    typeof candidate.refresh_token === 'string'
   );
 }
 
@@ -30,11 +30,11 @@ export function setOnboardingCookie(
   needsOnboarding: boolean,
 ) {
   if (needsOnboarding) {
-    response.cookies.set("needs_onboarding", "true", sessionCookieOptions);
+    response.cookies.set('needs_onboarding', 'true', sessionCookieOptions);
     return;
   }
 
-  response.cookies.set("needs_onboarding", "", {
+  response.cookies.set('needs_onboarding', '', {
     ...sessionCookieOptions,
     maxAge: 0,
   });
@@ -45,12 +45,16 @@ export function setSessionCookies(
   payload: SessionPayload,
 ) {
   if (payload.access_token) {
-    response.cookies.set("access_token", payload.access_token, sessionCookieOptions);
+    response.cookies.set(
+      'access_token',
+      payload.access_token,
+      sessionCookieOptions,
+    );
   }
 
   if (payload.refresh_token) {
     response.cookies.set(
-      "refresh_token",
+      'refresh_token',
       payload.refresh_token,
       sessionCookieOptions,
     );
@@ -60,15 +64,15 @@ export function setSessionCookies(
 }
 
 export function clearSessionCookies(response: NextResponse) {
-  response.cookies.set("access_token", "", {
+  response.cookies.set('access_token', '', {
     ...sessionCookieOptions,
     maxAge: 0,
   });
-  response.cookies.set("refresh_token", "", {
+  response.cookies.set('refresh_token', '', {
     ...sessionCookieOptions,
     maxAge: 0,
   });
-  response.cookies.set("needs_onboarding", "", {
+  response.cookies.set('needs_onboarding', '', {
     ...sessionCookieOptions,
     maxAge: 0,
   });
@@ -83,7 +87,7 @@ export async function withSessionCookies(
   try {
     payload = raw ? JSON.parse(raw) : {};
   } catch {
-    payload = { error: raw || "Request failed" };
+    payload = { error: raw || 'Request failed' };
   }
 
   const nextResponse = NextResponse.json(payload, { status: response.status });

@@ -1,36 +1,36 @@
-"use client";
+'use client';
 
-import CardBox from "@/app/components/shared/CardBox";
-import { Icon } from "@iconify/react";
+import CardBox from '@/app/components/shared/CardBox';
+import { Icon } from '@iconify/react';
 
 const deliveryStats = [
   {
     id: 1,
-    label: "Delivery rate",
-    value: "98.6%",
-    change: "+2.1%",
-    trend: "up",
+    label: 'Delivery rate',
+    value: '98.6%',
+    change: '+2.1%',
+    trend: 'up',
   },
   {
     id: 2,
-    label: "Bounced",
-    value: "1.2%",
-    change: "-0.4%",
-    trend: "down",
+    label: 'Bounced',
+    value: '1.2%',
+    change: '-0.4%',
+    trend: 'down',
   },
   {
     id: 3,
-    label: "Failed",
-    value: "0.2%",
-    change: "-0.1%",
-    trend: "down",
+    label: 'Failed',
+    value: '0.2%',
+    change: '-0.1%',
+    trend: 'down',
   },
   {
     id: 4,
-    label: "Spam complaints",
-    value: "0.01%",
-    change: "+0.01%",
-    trend: "up",
+    label: 'Spam complaints',
+    value: '0.01%',
+    change: '+0.01%',
+    trend: 'up',
   },
 ];
 
@@ -61,14 +61,14 @@ const DeliveryPerformance = () => {
 
               <span
                 className={`flex items-center text-xs font-medium ${
-                  item.trend === "up" ? "text-success" : "text-error"
+                  item.trend === 'up' ? 'text-success' : 'text-error'
                 }`}
               >
                 <Icon
                   icon={
-                    item.trend === "up"
-                      ? "mdi:arrow-up-thin"
-                      : "mdi:arrow-down-thin"
+                    item.trend === 'up'
+                      ? 'mdi:arrow-up-thin'
+                      : 'mdi:arrow-down-thin'
                   }
                   className="w-4 h-4"
                 />

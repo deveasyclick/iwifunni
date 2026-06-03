@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { format } from "date-fns";
-import { Icon } from "@iconify/react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { format } from 'date-fns';
+import { Icon } from '@iconify/react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -13,38 +13,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import CardBox from "@/app/components/shared/CardBox";
-import BreadcrumbComp from "@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp";
-import type { NotificationType } from "@/app/types/notification";
+} from '@/components/ui/table';
+import CardBox from '@/app/components/shared/CardBox';
+import BreadcrumbComp from '@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp';
+import type { NotificationType } from '@/app/types/notification';
 
 type NotificationDetail = NotificationType;
 
 const formatDateTime = (value: Date | string | undefined) => {
   if (!value) {
-    return "-";
+    return '-';
   }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "-";
+    return '-';
   }
 
-  return format(date, "MMM dd, yyyy HH:mm");
+  return format(date, 'MMM dd, yyyy HH:mm');
 };
 
 const getStatusBadge = (status?: string) => {
   switch (status) {
-    case "sent":
-      return "lightSuccess";
-    case "pending":
-      return "lightWarning";
-    case "failed":
-      return "lightError";
-    case "partial_failed":
-      return "lightSecondary";
+    case 'sent':
+      return 'lightSuccess';
+    case 'pending':
+      return 'lightWarning';
+    case 'failed':
+      return 'lightError';
+    case 'partial_failed':
+      return 'lightSecondary';
     default:
-      return "default";
+      return 'default';
   }
 };
 
@@ -62,7 +62,7 @@ export default function NotificationDetailPage() {
     const fetchNotification = async () => {
       try {
         const res = await fetch(`/api/notifications/${notificationId}`, {
-          headers: { browserrefreshed: "false" },
+          headers: { browserrefreshed: 'false' },
         });
 
         if (!res.ok) {
@@ -70,21 +70,22 @@ export default function NotificationDetailPage() {
           return;
         }
 
-        const data = await res.json();
-        if (data?.data) {
-          setNotification(data.data as NotificationDetail);
+        const data = (await res.json()) as
+          | { data?: NotificationDetail }
+          | NotificationDetail;
+        const body = 'data' in data ? data.data : (data as NotificationDetail);
+        if (body) {
+          setNotification(body);
           return;
         }
-
-        setNotification(data as NotificationDetail);
       } catch (err) {
-        console.error("Error fetching notification:", err);
+        console.error('Error fetching notification:', err);
         setNotification(null);
       } finally {
         setLoading(false);
       }
     };
-    fetchNotification();
+    void fetchNotification();
   }, [notificationId]);
 
   const handleRefresh = () => {
@@ -92,9 +93,9 @@ export default function NotificationDetailPage() {
   };
 
   const BCrumb = [
-    { to: "/", title: "Home" },
-    { to: "/dashboard/notifications", title: "Notifications" },
-    { title: notificationId || "Notification" },
+    { to: '/', title: 'Home' },
+    { to: '/dashboard/notifications', title: 'Notifications' },
+    { title: notificationId || 'Notification' },
   ];
 
   if (loading) {
@@ -111,7 +112,7 @@ export default function NotificationDetailPage() {
         <div className="flex flex-col items-center gap-4">
           <div className="text-lg text-error">Notification not found</div>
           <Button
-            onClick={() => router.push("/dashboard/notifications")}
+            onClick={() => router.push('/dashboard/notifications')}
             className="rounded-md bg-primary text-primary-foreground hover:bg-primaryemphasis"
           >
             Back to notifications
@@ -125,7 +126,10 @@ export default function NotificationDetailPage() {
 
   return (
     <>
-      <BreadcrumbComp title={`Notification: ${notification.id}`} items={BCrumb} />
+      <BreadcrumbComp
+        title={`Notification: ${notification.id}`}
+        items={BCrumb}
+      />
 
       <CardBox>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -148,7 +152,7 @@ export default function NotificationDetailPage() {
               Refresh
             </Button>
             <Button
-              onClick={() => router.push("/dashboard/notifications")}
+              onClick={() => router.push('/dashboard/notifications')}
               className="rounded-md bg-primary text-primary-foreground hover:bg-primaryemphasis"
               size="sm"
             >
@@ -162,31 +166,42 @@ export default function NotificationDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-muted rounded-md border border-border">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Status</p>
-            <Badge variant={getStatusBadge(notification.status)} className="rounded-md">
-              {notification.status || "unknown"}
+            <Badge
+              variant={getStatusBadge(notification.status)}
+              className="rounded-md"
+            >
+              {notification.status || 'unknown'}
             </Badge>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">User ID</p>
-            <p className="text-sm font-medium">{notification.user_id ?? "N/A"}</p>
+            <p className="text-sm font-medium">
+              {notification.user_id ?? 'N/A'}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Retry Count</p>
-            <p className="text-sm font-medium">{notification.retry_count ?? 0}</p>
+            <p className="text-sm font-medium">
+              {notification.retry_count ?? 0}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Created</p>
             <p className="text-sm font-medium">
-              {format(new Date(notification.created_at), "E, MMM d")}
+              {format(new Date(notification.created_at), 'E, MMM d')}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Service ID</p>
-            <p className="text-sm font-medium">{notification.service_id ?? "N/A"}</p>
+            <p className="text-sm font-medium">
+              {notification.service_id ?? 'N/A'}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Environment ID</p>
-            <p className="text-sm font-medium">{notification.environment_id ?? "N/A"}</p>
+            <p className="text-sm font-medium">
+              {notification.environment_id ?? 'N/A'}
+            </p>
           </div>
         </div>
 
@@ -196,7 +211,7 @@ export default function NotificationDetailPage() {
             Message
           </p>
           <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-            {notification.message || "N/A"}
+            {notification.message || 'N/A'}
           </p>
         </div>
 
@@ -212,14 +227,18 @@ export default function NotificationDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No channels specified</p>
+            <p className="text-sm text-muted-foreground">
+              No channels specified
+            </p>
           )}
         </div>
 
         {/* Metadata Section */}
         {metadataEntries.length > 0 && (
           <div className="mb-6">
-            <p className="text-sm font-semibold text-foreground mb-3">Metadata</p>
+            <p className="text-sm font-semibold text-foreground mb-3">
+              Metadata
+            </p>
             <div className="overflow-x-auto rounded-md border border-border">
               <Table className="text-sm">
                 <TableHeader>
@@ -231,10 +250,12 @@ export default function NotificationDetailPage() {
                 <TableBody>
                   {metadataEntries.map(([key, value]) => (
                     <TableRow key={key}>
-                      <TableCell className="font-mono text-xs">
-                        {key}
+                      <TableCell className="font-mono text-xs">{key}</TableCell>
+                      <TableCell>
+                        {typeof value === 'object' && value !== null
+                          ? JSON.stringify(value)
+                          : String(value)}
                       </TableCell>
-                      <TableCell>{String(value)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -246,12 +267,9 @@ export default function NotificationDetailPage() {
         {/* Details Footer */}
         <div className="mt-6 pt-4 border-t border-border flex gap-2 text-xs text-muted-foreground">
           <Icon icon="tabler:info-circle" height="16" />
-          <span>
-            Last updated {formatDateTime(notification.updated_at)}
-          </span>
+          <span>Last updated {formatDateTime(notification.updated_at)}</span>
         </div>
       </CardBox>
     </>
   );
 }
-

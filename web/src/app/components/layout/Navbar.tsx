@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import FullLogo from "../shared/FullLogo";
+import FullLogo from '../shared/FullLogo';
 
 export default function Navbar() {
   return (

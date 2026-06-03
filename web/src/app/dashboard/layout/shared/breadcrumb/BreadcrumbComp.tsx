@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import CardBox from "@/app/components/shared/CardBox";
-import Image from "next/image";
-import Link from "next/link";
+import CardBox from '@/app/components/shared/CardBox';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface BreadcrumbItem {
   title: string;
@@ -34,14 +34,14 @@ const BreadcrumbComp = ({ items = [], title }: BreadCrumbType) => {
                     <Link
                       href={item.to}
                       className="text-sm text-muted-foreground opacity-80 leading-none hover:underline"
-                      aria-current={isLast ? "page" : undefined}
+                      aria-current={isLast ? 'page' : undefined}
                     >
                       {item.title}
                     </Link>
                   ) : (
                     <span
                       className="text-sm text-muted-foreground leading-none"
-                      aria-current={isLast ? "page" : undefined}
+                      aria-current={isLast ? 'page' : undefined}
                     >
                       {item.title}
                     </span>

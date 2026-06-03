@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import CardBox from "../shared/CardBox";
-import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import FullLogo from "../shared/FullLogo";
-import { SocialAuthButtons } from "./SocialAuthButtons";
-import { useRouter, useSearchParams } from "next/navigation";
+import CardBox from '../shared/CardBox';
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import FullLogo from '../shared/FullLogo';
+import { SocialAuthButtons } from './SocialAuthButtons';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export const VerifyEmail = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState(searchParams.get("email") || "");
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState(searchParams.get('email') || '');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,10 +24,10 @@ export const VerifyEmail = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/verify-email", {
-        method: "POST",
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, code }),
       });
@@ -38,14 +38,16 @@ export const VerifyEmail = () => {
       } | null;
 
       if (!response.ok) {
-        setError(payload?.error || "Unable to verify your email.");
+        setError(payload?.error || 'Unable to verify your email.');
         return;
       }
 
-      router.replace(payload?.needs_onboarding ? "/auth/onboarding" : "/dashboard");
+      router.replace(
+        payload?.needs_onboarding ? '/auth/onboarding' : '/dashboard',
+      );
       router.refresh();
     } catch {
-      setError("Unable to verify your email right now.");
+      setError('Unable to verify your email right now.');
     } finally {
       setIsSubmitting(false);
     }
@@ -62,7 +64,11 @@ export const VerifyEmail = () => {
             Enter the six-digit code sent to your email to continue.
           </p>
           <SocialAuthButtons helperText="Or continue with social sign-in" />
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+          >
             <div>
               <div className="mb-2 block">
                 <Label htmlFor="email" className="font-medium">
@@ -91,7 +97,9 @@ export const VerifyEmail = () => {
                 maxLength={6}
                 placeholder="123456"
                 value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
                 required
               />
             </div>
@@ -100,8 +108,12 @@ export const VerifyEmail = () => {
                 {error}
               </p>
             ) : null}
-            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Verifying..." : "Verify Email"}
+            <Button
+              className="w-full mt-6"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Verifying...' : 'Verify Email'}
             </Button>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">

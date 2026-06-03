@@ -1,6 +1,6 @@
 import type { DelayUnit } from './types';
 
-const formatDurationAmount = (value: number) => {
+const formatDurationAmount = (value: number): string => {
   if (Number.isInteger(value)) {
     return String(value);
   }

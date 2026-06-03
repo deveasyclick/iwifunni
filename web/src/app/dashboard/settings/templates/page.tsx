@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../../layout/shared/breadcrumb/BreadcrumbComp";
-import TemplateManagement from "../../components/settings/templates";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
+import TemplateManagement from '../../components/settings/templates';
 
 export const metadata: Metadata = {
-  title: "Settings - Templates",
+  title: 'Settings - Templates',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    to: "/dashboard/settings",
-    title: "Settings",
+    to: '/dashboard/settings',
+    title: 'Settings',
   },
   {
-    title: "Templates",
+    title: 'Templates',
   },
 ];
 

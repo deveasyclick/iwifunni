@@ -153,21 +153,20 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
       definition,
     };
 
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const updatedWorkflow = await workflowApi.updateWorkflow(
-          workflow.id,
-          payload,
-        );
-        setWorkflow(updatedWorkflow);
-        lastSavedSignatureRef.current = saveSignature;
-        setAutosaveState({ status: 'saved', message: 'All changes saved' });
-      } catch (err) {
-        setAutosaveState({
-          status: 'error',
-          message: err instanceof Error ? err.message : 'Autosave failed',
+    const timeoutId = window.setTimeout(() => {
+      void workflowApi
+        .updateWorkflow(workflow.id, payload)
+        .then((updatedWorkflow) => {
+          setWorkflow(updatedWorkflow);
+          lastSavedSignatureRef.current = saveSignature;
+          setAutosaveState({ status: 'saved', message: 'All changes saved' });
+        })
+        .catch((err: unknown) => {
+          setAutosaveState({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Autosave failed',
+          });
         });
-      }
     }, 700);
 
     return () => window.clearTimeout(timeoutId);

@@ -1,11 +1,11 @@
-import Activities from "./components/dashboard/Activities";
-import ChannelBreakdown from "./components/dashboard/ChannelBreakdown";
-import { TopCards } from "./components/dashboard/TopCards";
-import ProfileWelcome from "./components/dashboard/ProfileWelcome";
-import { RecentNotifications } from "./components/dashboard/RecentNotifications";
-import { TopWorkflows } from "./components/dashboard/TopWorkflow";
-import DeliveryPerformance from "./components/dashboard/DeliveryPerformance";
-import IntegrationsCard from "./components/dashboard/Integrations";
+import Activities from './components/dashboard/Activities';
+import ChannelBreakdown from './components/dashboard/ChannelBreakdown';
+import { TopCards } from './components/dashboard/TopCards';
+import ProfileWelcome from './components/dashboard/ProfileWelcome';
+import { RecentNotifications } from './components/dashboard/RecentNotifications';
+import { TopWorkflows } from './components/dashboard/TopWorkflow';
+import DeliveryPerformance from './components/dashboard/DeliveryPerformance';
+import IntegrationsCard from './components/dashboard/Integrations';
 
 const page = () => {
   return (

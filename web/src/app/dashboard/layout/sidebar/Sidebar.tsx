@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import SidebarContent from "./sidebaritems";
-import SimpleBar from "simplebar-react";
-import { Icon } from "@iconify/react";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import SidebarContent from './sidebaritems';
+import SimpleBar from 'simplebar-react';
+import { Icon } from '@iconify/react';
 import {
   AMLogo,
   AMMenu,
   AMMenuItem,
   AMSidebar,
   AMSubmenu,
-} from "tailwind-sidebar";
-import "tailwind-sidebar/styles.css";
-import { Button } from "@/components/ui/button";
-import FullLogo from "@/app/components/shared/FullLogo";
-import { useTheme } from "@/components/theme-provider";
+} from 'tailwind-sidebar';
+import 'tailwind-sidebar/styles.css';
+import { Button } from '@/components/ui/button';
+import FullLogo from '@/app/components/shared/FullLogo';
+import { useTheme } from '@/components/theme-provider';
 
 interface SidebarItemType {
   heading?: string;
@@ -42,7 +42,7 @@ const renderSidebarItems = (
     const iconElement = IconComp ? (
       <Icon icon={IconComp} height={21} width={21} />
     ) : (
-      <Icon icon={"ri:checkbox-blank-circle-line"} height={9} width={9} />
+      <Icon icon={'ri:checkbox-blank-circle-line'} height={9} width={9} />
     );
 
     // Heading
@@ -72,11 +72,11 @@ const renderSidebarItems = (
     }
 
     // Regular menu item
-    const linkTarget = item.url?.startsWith("https") ? "_blank" : "_self";
+    const linkTarget = item.url?.startsWith('https') ? '_blank' : '_self';
 
     const itemClassNames = isSubItem
       ? `mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground !hover:bg-transparent ${
-          isSelected ? "!bg-transparent !text-primary" : ""
+          isSelected ? '!bg-transparent !text-primary' : ''
         } !px-1.5`
       : `mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground`;
 
@@ -96,7 +96,7 @@ const renderSidebarItems = (
           badgeColor="bg-lightsecondary"
           badgeTextColor="text-secondary"
           disabled={item.disabled}
-          badgeContent={item.isPro ? "Pro" : undefined}
+          badgeContent={item.isPro ? 'Pro' : undefined}
           component={Link}
           className={`${itemClassNames} shrink-0`}
         >
@@ -119,7 +119,7 @@ const SidebarLayout = ({ onClose }: { onClose?: () => void }) => {
       collapsible="none"
       animation={true}
       showProfile={false}
-      width={"270px"}
+      width={'270px'}
       showTrigger={false}
       mode={sidebarMode}
       className="fixed left-0 top-0 border border-border bg-sidebar dark:bg-sidebar z-10 h-screen"

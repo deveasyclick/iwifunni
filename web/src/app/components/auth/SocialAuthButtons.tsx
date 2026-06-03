@@ -1,14 +1,14 @@
-import Link from "next/link";
-import { FaGithub, FaGoogle } from "react-icons/fa6";
+import Link from 'next/link';
+import { FaGithub, FaGoogle } from 'react-icons/fa6';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 type SocialAuthButtonsProps = {
   helperText?: string;
 };
 
 export function SocialAuthButtons({
-  helperText = "Or continue with email",
+  helperText = 'Or continue with email',
 }: SocialAuthButtonsProps) {
   return (
     <div className="mb-6 space-y-4">

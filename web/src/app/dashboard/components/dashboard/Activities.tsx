@@ -1,69 +1,69 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import dynamic from "next/dynamic";
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ApexOptions } from "apexcharts";
-import CardBox from "@/app/components/shared/CardBox";
+} from '@/components/ui/select';
+import { ApexOptions } from 'apexcharts';
+import CardBox from '@/app/components/shared/CardBox';
 
-const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 const chartDataByRange = {
-  "Last 7 days": {
+  'Last 7 days': {
     series: [
       {
-        name: "Sent",
+        name: 'Sent',
         data: [800, 1900, 1300, 2200, 3400, 2000, 3300, 2400],
       },
       {
-        name: "Delivered",
+        name: 'Delivered',
         data: [400, 1000, 700, 1200, 2200, 1300, 2100, 1700],
       },
     ],
     categories: [
-      "May 12",
-      "May 13",
-      "May 14",
-      "May 15",
-      "May 16",
-      "May 17",
-      "May 18",
+      'May 12',
+      'May 13',
+      'May 14',
+      'May 15',
+      'May 16',
+      'May 17',
+      'May 18',
     ],
   },
 };
 
 const baseChartOptions: ApexOptions = {
   chart: {
-    type: "line",
+    type: 'line',
     toolbar: { show: false },
-    foreColor: "#AAB4C5",
-    fontFamily: "inherit",
+    foreColor: '#AAB4C5',
+    fontFamily: 'inherit',
     height: 320,
   },
   stroke: {
-    curve: "smooth",
+    curve: 'smooth',
     width: 3,
   },
-  colors: ["#3B82F6", "#22C55E"], // blue & green
+  colors: ['#3B82F6', '#22C55E'], // blue & green
   markers: {
     size: 5,
     strokeWidth: 0,
     hover: { size: 7 },
   },
   grid: {
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: 'rgba(255,255,255,0.08)',
     strokeDashArray: 4,
   },
   legend: {
     show: true,
-    position: "top",
-    horizontalAlign: "left",
+    position: 'top',
+    horizontalAlign: 'left',
   },
   dataLabels: { enabled: false },
   xaxis: {
@@ -79,7 +79,7 @@ const baseChartOptions: ApexOptions = {
     },
   },
   tooltip: {
-    theme: "dark",
+    theme: 'dark',
     y: {
       formatter: (val) => `${val}`,
     },
@@ -87,7 +87,7 @@ const baseChartOptions: ApexOptions = {
 };
 type Range = keyof typeof chartDataByRange;
 const Activities: React.FC = () => {
-  const [range, setRange] = useState<Range>("Last 7 days");
+  const [range, setRange] = useState<Range>('Last 7 days');
 
   const chartOptions: ApexOptions = {
     ...baseChartOptions,

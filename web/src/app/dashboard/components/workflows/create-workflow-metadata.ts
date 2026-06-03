@@ -1,13 +1,13 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const workflowSetupSchema = z.object({
-  key: z.string().trim().min(1, "Workflow key is required"),
-  name: z.string().trim().min(1, "Workflow name is required"),
+  key: z.string().trim().min(1, 'Workflow key is required'),
+  name: z.string().trim().min(1, 'Workflow name is required'),
   description: z
     .string()
     .trim()
     .optional()
-    .transform((value) => value || ""),
+    .transform((value) => value || ''),
 });
 
 export type WorkflowSetupValues = z.infer<typeof workflowSetupSchema>;
@@ -17,14 +17,14 @@ type SearchParamsReader = {
 };
 
 const firstSearchParamValue = (value: string | string[] | null | undefined) =>
-  Array.isArray(value) ? value[0] || "" : value || "";
+  Array.isArray(value) ? value[0] || '' : value || '';
 
 export const workflowSetupValuesFromSearchParams = (
   searchParams: SearchParamsReader,
 ): WorkflowSetupValues => ({
-  key: searchParams.get("key") || "",
-  name: searchParams.get("name") || "",
-  description: searchParams.get("description") || "",
+  key: searchParams.get('key') || '',
+  name: searchParams.get('name') || '',
+  description: searchParams.get('description') || '',
 });
 
 export const workflowSetupValuesFromRecord = (
@@ -40,29 +40,29 @@ export const workflowIdFromRecord = (
 ) => firstSearchParamValue(searchParams.workflowId);
 
 export const workflowIdFromSearchParams = (searchParams: SearchParamsReader) =>
-  searchParams.get("workflowId") || "";
+  searchParams.get('workflowId') || '';
 
 export const buildWorkflowBuilderHref = (
   values?: Partial<WorkflowSetupValues> & { workflowId?: string },
 ) => {
   const params = new URLSearchParams();
   if (values?.workflowId?.trim()) {
-    params.set("workflowId", values.workflowId.trim());
+    params.set('workflowId', values.workflowId.trim());
   }
   if (values?.key?.trim()) {
-    params.set("key", values.key.trim());
+    params.set('key', values.key.trim());
   }
   if (values?.name?.trim()) {
-    params.set("name", values.name.trim());
+    params.set('name', values.name.trim());
   }
   if (values?.description?.trim()) {
-    params.set("description", values.description.trim());
+    params.set('description', values.description.trim());
   }
 
   const query = params.toString();
   return query
     ? `/dashboard/workflows/new/builder?${params.toString()}`
-    : "/dashboard/workflows/new/builder";
+    : '/dashboard/workflows/new/builder';
 };
 
 export const buildWorkflowSetupHref = (
@@ -70,19 +70,19 @@ export const buildWorkflowSetupHref = (
 ) => {
   const params = new URLSearchParams();
   if (values.key?.trim()) {
-    params.set("key", values.key.trim());
+    params.set('key', values.key.trim());
   }
   if (values.name?.trim()) {
-    params.set("name", values.name.trim());
+    params.set('name', values.name.trim());
   }
   if (values.description?.trim()) {
-    params.set("description", values.description.trim());
+    params.set('description', values.description.trim());
   }
 
   const query = params.toString();
   return query
     ? `/dashboard/workflows/new?${query}`
-    : "/dashboard/workflows/new";
+    : '/dashboard/workflows/new';
 };
 
 export const buildWorkflowChannelConfigureHref = (
@@ -91,10 +91,10 @@ export const buildWorkflowChannelConfigureHref = (
   channel?: string,
 ) => {
   const params = new URLSearchParams();
-  params.set("workflowId", workflowId);
-  params.set("nodeId", nodeId);
+  params.set('workflowId', workflowId);
+  params.set('nodeId', nodeId);
   if (channel) {
-    params.set("channel", channel);
+    params.set('channel', channel);
   }
 
   return `/dashboard/workflows/new/builder/channel?${params.toString()}`;

@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import CardBox from "@/app/components/shared/CardBox";
-import BreadcrumbComp from "@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp";
-import type { SubscriberType } from "@/app/types/subscriber";
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import CardBox from '@/app/components/shared/CardBox';
+import BreadcrumbComp from '@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp';
+import type { SubscriberType } from '@/app/types/subscriber';
 
 export default function SubscriberDetailPage() {
   const params = useParams();
@@ -21,45 +21,46 @@ export default function SubscriberDetailPage() {
   const [editing, setEditing] = useState(false);
 
   // Form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [pushToken, setPushToken] = useState("");
-  const [channels, setChannels] = useState<("email" | "sms" | "push")[]>([]);
-  const [tags, setTags] = useState("");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [pushToken, setPushToken] = useState('');
+  const [channels, setChannels] = useState<('email' | 'sms' | 'push')[]>([]);
+  const [tags, setTags] = useState('');
   const [tagList, setTagList] = useState<string[]>([]);
   const [status, setStatus] = useState<
-    "subscribed" | "unsubscribed" | "bounced"
-  >("subscribed");
+    'subscribed' | 'unsubscribed' | 'bounced'
+  >('subscribed');
 
   useEffect(() => {
     const fetchSubscriber = async () => {
       try {
         const res = await fetch(`/api/subscriber/${subscriberId}`, {
-          headers: { browserrefreshed: "false" },
+          headers: { browserrefreshed: 'false' },
         });
-        const data = await res.json();
-        if (data?.data) {
-          setSubscriber(data.data);
-          setName(data.data.name);
-          setEmail(data.data.email || "");
-          setPhone(data.data.phone || "");
-          setPushToken(data.data.pushToken || "");
-          setChannels(data.data.channels);
-          setTagList(data.data.tags || []);
-          setStatus(data.data.status.email || "subscribed");
+        const data = (await res.json()) as { data?: SubscriberType };
+        const sub = data?.data;
+        if (sub) {
+          setSubscriber(sub);
+          setName(sub.name);
+          setEmail(sub.email || '');
+          setPhone(sub.phone || '');
+          setPushToken(sub.pushToken || '');
+          setChannels(sub.channels);
+          setTagList(sub.tags || []);
+          setStatus(sub.status.email || 'subscribed');
         }
       } catch (err) {
-        console.error("Error fetching subscriber:", err);
+        console.error('Error fetching subscriber:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchSubscriber();
+    void fetchSubscriber();
   }, [subscriberId]);
 
   const handleChannelChange = (
-    channel: "email" | "sms" | "push",
+    channel: 'email' | 'sms' | 'push',
     checked: boolean,
   ) => {
     if (checked) {
@@ -74,7 +75,7 @@ export default function SubscriberDetailPage() {
   const handleAddTag = () => {
     if (tags.trim() && !tagList.includes(tags.trim())) {
       setTagList([...tagList, tags.trim()]);
-      setTags("");
+      setTags('');
     }
   };
 
@@ -84,19 +85,19 @@ export default function SubscriberDetailPage() {
 
   const handleUpdate = async () => {
     if (!name) {
-      alert("Please fill out the name field.");
+      alert('Please fill out the name field.');
       return;
     }
-    if (channels.includes("email") && !email) {
-      alert("Email is required when Email channel is selected.");
+    if (channels.includes('email') && !email) {
+      alert('Email is required when Email channel is selected.');
       return;
     }
-    if (channels.includes("sms") && !phone) {
-      alert("Phone is required when SMS channel is selected.");
+    if (channels.includes('sms') && !phone) {
+      alert('Phone is required when SMS channel is selected.');
       return;
     }
-    if (channels.includes("push") && !pushToken) {
-      alert("Push token is required when Push channel is selected.");
+    if (channels.includes('push') && !pushToken) {
+      alert('Push token is required when Push channel is selected.');
       return;
     }
 
@@ -109,8 +110,8 @@ export default function SubscriberDetailPage() {
       channels,
       status: {
         email: status,
-        sms: channels.includes("sms") ? status : undefined,
-        push: channels.includes("push") ? status : undefined,
+        sms: channels.includes('sms') ? status : undefined,
+        push: channels.includes('push') ? status : undefined,
       },
       tags: tagList,
       subscriptionDate: subscriber?.subscriptionDate || new Date(),
@@ -120,45 +121,44 @@ export default function SubscriberDetailPage() {
 
     try {
       const response = await fetch(`/api/subscriber/${subscriberId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSubscriber),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update subscriber");
+        throw new Error('Failed to update subscriber');
       }
 
-      const data = await response.json();
-      const nextSubscriber = (data?.data as SubscriberType | undefined) ?? updatedSubscriber;
-
+      const data = (await response.json()) as { data?: SubscriberType };
+      const nextSubscriber = data?.data;
       setEditing(false);
       setSubscriber(nextSubscriber);
-      alert("Subscriber updated successfully");
+      alert('Subscriber updated successfully');
     } catch (error) {
-      console.error("Failed to update subscriber", error);
-      alert("Failed to update subscriber");
+      console.error('Failed to update subscriber', error);
+      alert('Failed to update subscriber');
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this subscriber?")) return;
+    if (!confirm('Are you sure you want to delete this subscriber?')) return;
 
     try {
       await fetch(`/api/subscriber/${subscriberId}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
-      router.push("/dashboard/subscribers");
+      router.push('/dashboard/subscribers');
     } catch (error) {
-      console.error("Failed to delete subscriber", error);
-      alert("Failed to delete subscriber");
+      console.error('Failed to delete subscriber', error);
+      alert('Failed to delete subscriber');
     }
   };
 
   const BCrumb = [
-    { to: "/", title: "Home" },
-    { to: "/dashboard/subscribers", title: "Subscribers" },
-    { title: name || email || "Subscriber" },
+    { to: '/', title: 'Home' },
+    { to: '/dashboard/subscribers', title: 'Subscribers' },
+    { title: name || email || 'Subscriber' },
   ];
 
   if (loading) {
@@ -191,7 +191,9 @@ export default function SubscriberDetailPage() {
                   Edit
                 </Button>
                 <Button
-                  onClick={handleDelete}
+                  onClick={() => {
+                    void handleDelete();
+                  }}
                   variant="destructive"
                   className="rounded-md"
                 >
@@ -201,7 +203,12 @@ export default function SubscriberDetailPage() {
             )}
             {editing && (
               <>
-                <Button onClick={handleUpdate} className="rounded-md">
+                <Button
+                  onClick={() => {
+                    void handleUpdate();
+                  }}
+                  className="rounded-md"
+                >
                   Save
                 </Button>
                 <Button
@@ -226,7 +233,7 @@ export default function SubscriberDetailPage() {
             <div>
               <p className="text-muted-foreground">Subscription Date</p>
               <p>
-                {format(new Date(subscriber.subscriptionDate), "MMM dd, yyyy")}
+                {format(new Date(subscriber.subscriptionDate), 'MMM dd, yyyy')}
               </p>
             </div>
             {subscriber.lastNotificationDate && (
@@ -235,7 +242,7 @@ export default function SubscriberDetailPage() {
                 <p>
                   {format(
                     new Date(subscriber.lastNotificationDate),
-                    "MMM dd, yyyy",
+                    'MMM dd, yyyy',
                   )}
                 </p>
               </div>
@@ -318,9 +325,9 @@ export default function SubscriberDetailPage() {
                     onChange={(e) =>
                       setStatus(
                         e.target.value as
-                          | "subscribed"
-                          | "unsubscribed"
-                          | "bounced",
+                          | 'subscribed'
+                          | 'unsubscribed'
+                          | 'bounced',
                       )
                     }
                     className="w-full outline-none bg-transparent"
@@ -343,9 +350,9 @@ export default function SubscriberDetailPage() {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="email-channel"
-                  checked={channels.includes("email")}
+                  checked={channels.includes('email')}
                   onCheckedChange={(checked) =>
-                    handleChannelChange("email", checked as boolean)
+                    handleChannelChange('email', checked as boolean)
                   }
                   disabled={!editing}
                 />
@@ -359,9 +366,9 @@ export default function SubscriberDetailPage() {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="sms-channel"
-                  checked={channels.includes("sms")}
+                  checked={channels.includes('sms')}
                   onCheckedChange={(checked) =>
-                    handleChannelChange("sms", checked as boolean)
+                    handleChannelChange('sms', checked as boolean)
                   }
                   disabled={!editing}
                 />
@@ -375,9 +382,9 @@ export default function SubscriberDetailPage() {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="push-channel"
-                  checked={channels.includes("push")}
+                  checked={channels.includes('push')}
                   onCheckedChange={(checked) =>
-                    handleChannelChange("push", checked as boolean)
+                    handleChannelChange('push', checked as boolean)
                   }
                   disabled={!editing}
                 />
@@ -400,7 +407,7 @@ export default function SubscriberDetailPage() {
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                   onKeyUp={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === 'Enter') {
                       e.preventDefault();
                       handleAddTag();
                     }

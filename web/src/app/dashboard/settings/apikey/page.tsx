@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../../layout/shared/breadcrumb/BreadcrumbComp";
-import ApiKeyManagement from "../../components/settings/apikey";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
+import ApiKeyManagement from '../../components/settings/apikey';
 
 export const metadata: Metadata = {
-  title: "Settings - API Keys",
+  title: 'Settings - API Keys',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    to: "/dashboard/settings",
-    title: "Settings",
+    to: '/dashboard/settings',
+    title: 'Settings',
   },
   {
-    title: "API Keys",
+    title: 'API Keys',
   },
 ];
 

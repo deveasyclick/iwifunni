@@ -4,12 +4,7 @@ import { useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
-  type Connection,
   Controls,
-  type EdgeChange,
-  type EdgeMouseHandler,
-  type NodeChange,
-  type NodeMouseHandler,
   ReactFlow,
 } from '@xyflow/react';
 import { nodeHeight } from '../utils/constants';

@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { Clock3, Mail, MessageSquare, Smartphone } from 'lucide-react';
 import {
   Popover,

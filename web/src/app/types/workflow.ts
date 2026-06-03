@@ -1,4 +1,4 @@
-export type WorkflowChannel = "email" | "sms" | "push";
+export type WorkflowChannel = 'email' | 'sms' | 'push';
 
 export interface WorkflowTrigger {
   event: string;
@@ -6,7 +6,7 @@ export interface WorkflowTrigger {
 
 export interface WorkflowNode {
   id: string;
-  type: "trigger" | "notification" | "delay" | "condition";
+  type: 'trigger' | 'notification' | 'delay' | 'condition';
   config?: Record<string, unknown>;
 }
 

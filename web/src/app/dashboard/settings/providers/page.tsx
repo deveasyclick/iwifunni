@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
-import BreadcrumbComp from "../../layout/shared/breadcrumb/BreadcrumbComp";
-import ProviderManagement from "../../components/settings/providers";
+import type { Metadata } from 'next';
+import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
+import ProviderManagement from '../../components/settings/providers';
 
 export const metadata: Metadata = {
-  title: "Settings - Providers",
+  title: 'Settings - Providers',
 };
 
 const BCrumb = [
   {
-    to: "/",
-    title: "Home",
+    to: '/',
+    title: 'Home',
   },
   {
-    to: "/dashboard/settings",
-    title: "Settings",
+    to: '/dashboard/settings',
+    title: 'Settings',
   },
   {
-    title: "Providers",
+    title: 'Providers',
   },
 ];
 

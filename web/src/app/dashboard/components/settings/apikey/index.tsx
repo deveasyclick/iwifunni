@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { Icon } from "@iconify/react";
-import CardBox from "@/app/components/shared/CardBox";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { Icon } from '@iconify/react';
+import CardBox from '@/app/components/shared/CardBox';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -24,34 +24,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import type {
   ApiKeyItem,
   ApiKeySecretResponse,
   CreateApiKeyPayload,
-} from "@/app/types/api-key";
+} from '@/app/types/api-key';
 
-const DEFAULT_SCOPE = "notifications:write";
-
-const statusVariant = (status: string):
-  | "lightSuccess"
-  | "lightWarning"
-  | "lightError"
-  | "lightInfo" => {
+const statusVariant = (
+  status: string,
+): 'lightSuccess' | 'lightWarning' | 'lightError' | 'lightInfo' => {
   switch (status) {
-    case "active":
-      return "lightSuccess";
-    case "revoked":
-      return "lightError";
-    case "rotating":
-      return "lightWarning";
+    case 'active':
+      return 'lightSuccess';
+    case 'revoked':
+      return 'lightError';
+    case 'rotating':
+      return 'lightWarning';
     default:
-      return "lightInfo";
+      return 'lightInfo';
   }
 };
 
 const parseError = async (res: Response): Promise<string> => {
-  const fallback = "Request failed";
+  const fallback = 'Request failed';
   try {
     const body = (await res.json()) as { error?: string; message?: string };
     return body.error || body.message || fallback;
@@ -62,55 +58,54 @@ const parseError = async (res: Response): Promise<string> => {
 
 const MOCK_KEYS: ApiKeyItem[] = [
   {
-    id: "key_1",
-    name: "Production API Key",
-    key_prefix: "nk_live_abc123",
-    scopes: ["notifications:write"],
-    status: "active",
+    id: 'key_1',
+    name: 'Production API Key',
+    key_prefix: 'nk_live_abc123',
+    scopes: ['notifications:write'],
+    status: 'active',
     created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "key_2",
-    name: "Development Key",
-    key_prefix: "nk_live_def456",
-    scopes: ["notifications:write"],
-    status: "active",
+    id: 'key_2',
+    name: 'Development Key',
+    key_prefix: 'nk_live_def456',
+    scopes: ['notifications:write'],
+    status: 'active',
     created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "key_3",
-    name: "Legacy Integration",
-    key_prefix: "nk_live_ghi789",
-    scopes: ["notifications:write"],
-    status: "revoked",
+    id: 'key_3',
+    name: 'Legacy Integration',
+    key_prefix: 'nk_live_ghi789',
+    scopes: ['notifications:write'],
+    status: 'revoked',
     created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
 const ApiKeyManagement = () => {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [mutatingKeyID, setMutatingKeyID] = useState<string | null>(null);
   const [togglingKeyID, setTogglingKeyID] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createdSecret, setCreatedSecret] = useState<ApiKeySecretResponse | null>(
-    null,
-  );
-  const [name, setName] = useState("");
+  const [createdSecret, setCreatedSecret] =
+    useState<ApiKeySecretResponse | null>(null);
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [copyState, setCopyState] = useState<"idle" | "done">("idle");
+  const [copyState, setCopyState] = useState<'idle' | 'done'>('idle');
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/api-keys", {
-        method: "GET",
+      const res = await fetch('/api/api-keys', {
+        method: 'GET',
         headers: {
-          browserrefreshed: "false",
+          browserrefreshed: 'false',
         },
-        cache: "no-store",
+        cache: 'no-store',
       });
 
       if (!res.ok) {
@@ -120,7 +115,7 @@ const ApiKeyManagement = () => {
       const data = (await res.json()) as ApiKeyItem[];
       setKeys(Array.isArray(data) && data.length > 0 ? data : MOCK_KEYS);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load API keys");
+      setError(err instanceof Error ? err.message : 'Failed to load API keys');
       setKeys(MOCK_KEYS);
     } finally {
       setLoading(false);
@@ -151,7 +146,7 @@ const ApiKeyManagement = () => {
 
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Name is required");
+      setError('Name is required');
       return;
     }
 
@@ -159,12 +154,12 @@ const ApiKeyManagement = () => {
       name: trimmedName,
     };
 
-    setMutatingKeyID("create");
+    setMutatingKeyID('create');
     try {
-      const res = await fetch("/api/api-keys", {
-        method: "POST",
+      const res = await fetch('/api/api-keys', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
@@ -176,17 +171,17 @@ const ApiKeyManagement = () => {
       const created = (await res.json()) as ApiKeySecretResponse;
       setCreatedSecret(created);
       setCreateOpen(false);
-      setName("");
+      setName('');
       await fetchKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create API key");
+      setError(err instanceof Error ? err.message : 'Failed to create API key');
     } finally {
       setMutatingKeyID(null);
     }
   };
 
   const rotateKey = async (keyID: string) => {
-    if (!confirm("Rotate this API key? The previous key will be revoked.")) {
+    if (!confirm('Rotate this API key? The previous key will be revoked.')) {
       return;
     }
 
@@ -194,7 +189,7 @@ const ApiKeyManagement = () => {
     setMutatingKeyID(keyID);
     try {
       const res = await fetch(`/api/api-keys/${keyID}/rotate`, {
-        method: "POST",
+        method: 'POST',
       });
 
       if (!res.ok) {
@@ -205,14 +200,14 @@ const ApiKeyManagement = () => {
       setCreatedSecret(rotated);
       await fetchKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rotate API key");
+      setError(err instanceof Error ? err.message : 'Failed to rotate API key');
     } finally {
       setMutatingKeyID(null);
     }
   };
 
   const revokeKey = async (keyID: string) => {
-    if (!confirm("Revoke this API key? This action cannot be undone.")) {
+    if (!confirm('Revoke this API key? This action cannot be undone.')) {
       return;
     }
 
@@ -220,7 +215,7 @@ const ApiKeyManagement = () => {
     setMutatingKeyID(keyID);
     try {
       const res = await fetch(`/api/api-keys/${keyID}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
       if (!res.ok && res.status !== 204) {
@@ -229,7 +224,7 @@ const ApiKeyManagement = () => {
 
       await fetchKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke API key");
+      setError(err instanceof Error ? err.message : 'Failed to revoke API key');
     } finally {
       setMutatingKeyID(null);
     }
@@ -239,11 +234,11 @@ const ApiKeyManagement = () => {
     setError(null);
     setTogglingKeyID(keyID);
     try {
-      const newStatus = currentStatus === "active" ? "disabled" : "active";
+      const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
       const res = await fetch(`/api/api-keys/${keyID}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -254,7 +249,11 @@ const ApiKeyManagement = () => {
 
       await fetchKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${currentStatus === "active" ? "disable" : "enable"} API key`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${currentStatus === 'active' ? 'disable' : 'enable'} API key`,
+      );
     } finally {
       setTogglingKeyID(null);
     }
@@ -266,10 +265,10 @@ const ApiKeyManagement = () => {
     }
     try {
       await navigator.clipboard.writeText(createdSecret.key);
-      setCopyState("done");
-      setTimeout(() => setCopyState("idle"), 1500);
+      setCopyState('done');
+      setTimeout(() => setCopyState('idle'), 1500);
     } catch {
-      setError("Unable to copy key. Please copy it manually.");
+      setError('Unable to copy key. Please copy it manually.');
     }
   };
 
@@ -296,9 +295,17 @@ const ApiKeyManagement = () => {
                 The secret key will be shown once. Copy and store it securely.
               </DialogDescription>
             </DialogHeader>
-            <form className="space-y-4" onSubmit={submitCreate}>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                void submitCreate(e);
+              }}
+            >
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="key-name">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="key-name"
+                >
                   Name
                 </label>
                 <Input
@@ -311,10 +318,12 @@ const ApiKeyManagement = () => {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={mutatingKeyID === "create"}
+                  disabled={mutatingKeyID === 'create'}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingKeyID === "create" ? "Generating..." : "Generate key"}
+                  {mutatingKeyID === 'create'
+                    ? 'Generating...'
+                    : 'Generate key'}
                 </Button>
               </DialogFooter>
             </form>
@@ -362,13 +371,19 @@ const ApiKeyManagement = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   Loading API keys...
                 </TableCell>
               </TableRow>
             ) : visibleKeys.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   No API keys found.
                 </TableCell>
               </TableRow>
@@ -377,20 +392,25 @@ const ApiKeyManagement = () => {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant(item.status)} className="rounded-md capitalize">
+                    <Badge
+                      variant={statusVariant(item.status)}
+                      className="rounded-md capitalize"
+                    >
                       {item.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Switch
-                      checked={item.status === "active"}
-                      onCheckedChange={() => void toggleKeyStatus(item.id, item.status)}
+                      checked={item.status === 'active'}
+                      onCheckedChange={() =>
+                        void toggleKeyStatus(item.id, item.status)
+                      }
                       disabled={togglingKeyID === item.id}
                       aria-label="Enable/disable API key"
                     />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {format(new Date(item.created_at), "MMM d, yyyy")}
+                    {format(new Date(item.created_at), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
@@ -425,7 +445,7 @@ const ApiKeyManagement = () => {
         onOpenChange={(open) => {
           if (!open) {
             setCreatedSecret(null);
-            setCopyState("idle");
+            setCopyState('idle');
           }
         }}
       >
@@ -442,7 +462,7 @@ const ApiKeyManagement = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => void copySecret()}>
-              {copyState === "done" ? "Copied" : "Copy key"}
+              {copyState === 'done' ? 'Copied' : 'Copy key'}
             </Button>
           </DialogFooter>
         </DialogContent>

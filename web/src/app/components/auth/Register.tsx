@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import CardBox from "../shared/CardBox";
-import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import FullLogo from "../shared/FullLogo";
-import { SocialAuthButtons } from "./SocialAuthButtons";
-import { useRouter } from "next/navigation";
+import CardBox from '../shared/CardBox';
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import FullLogo from '../shared/FullLogo';
+import { SocialAuthButtons } from './SocialAuthButtons';
+import { useRouter } from 'next/navigation';
 
 export const Register = () => {
   const router = useRouter();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,10 +25,10 @@ export const Register = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           first_name: firstName,
@@ -42,7 +42,7 @@ export const Register = () => {
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        setError(payload?.error || "Unable to create your account.");
+        setError(payload?.error || 'Unable to create your account.');
         return;
       }
 
@@ -54,7 +54,7 @@ export const Register = () => {
       router.replace(`/auth/verify?email=${encodeURIComponent(nextEmail)}`);
       router.refresh();
     } catch {
-      setError("Unable to create your account right now.");
+      setError('Unable to create your account right now.');
     } finally {
       setIsSubmitting(false);
     }
@@ -68,10 +68,15 @@ export const Register = () => {
             <FullLogo />
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Create your account, then verify your email before accessing the dashboard.
+            Create your account, then verify your email before accessing the
+            dashboard.
           </p>
           <SocialAuthButtons helperText="Or sign up with email" />
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+          >
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <div className="mb-2 block">
@@ -139,8 +144,12 @@ export const Register = () => {
                 {error}
               </p>
             ) : null}
-            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Signing Up..." : "Sign Up"}
+            <Button
+              className="w-full mt-6"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing Up...' : 'Sign Up'}
             </Button>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">

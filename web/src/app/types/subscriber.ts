@@ -1,4 +1,4 @@
-export type SubscriberStatusValue = "subscribed" | "unsubscribed" | "bounced";
+export type SubscriberStatusValue = 'subscribed' | 'unsubscribed' | 'bounced';
 
 export interface SubscriberChannelStatus {
   email?: SubscriberStatusValue;
@@ -12,7 +12,7 @@ export interface SubscriberType {
   email?: string;
   phone?: string;
   pushToken?: string;
-  channels: ("email" | "sms" | "push")[];
+  channels: ('email' | 'sms' | 'push')[];
   status: SubscriberChannelStatus;
   tags: string[];
   subscriptionDate: string | Date;

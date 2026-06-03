@@ -1,9 +1,4 @@
-import type { Connection } from '@xyflow/react';
-import type { WorkflowNode } from '@/app/types/workflow';
-import type {
-  BuilderNodeDraft,
-  WorkflowNodeType,
-} from '@/app/dashboard/components/workflows/types/draft';
+import type { WorkflowNodeType } from '@/app/dashboard/components/workflows/types/draft';
 import { createNodeDraft } from '@/app/dashboard/components/workflows/draft/create-node';
 import { normalizeNodeDraftForType } from '@/app/dashboard/components/workflows/draft/normalize';
 import {
@@ -14,8 +9,6 @@ import {
 import type {
   WorkflowBuilderStoreState,
   AddConnectedNodeOptions,
-  WorkflowCanvasNode,
-  WorkflowCanvasEdge,
 } from './types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
