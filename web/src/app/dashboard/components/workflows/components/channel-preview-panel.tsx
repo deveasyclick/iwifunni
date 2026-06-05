@@ -6,7 +6,6 @@ type ChannelPreviewPanelProps = {
   channel: WorkflowChannel;
   subject: string;
   body: string;
-  emailPreviewHtml: string;
   labels: { subject: string; body: string };
 };
 
@@ -14,7 +13,6 @@ export const ChannelPreviewPanel = ({
   channel,
   subject,
   body,
-  emailPreviewHtml,
   labels,
 }: ChannelPreviewPanelProps) => {
   const previewSubject = subject.trim() || labels.subject;
@@ -38,9 +36,9 @@ export const ChannelPreviewPanel = ({
             <p className="mt-2 text-sm font-semibold">{previewSubject}</p>
           </div>
           <div className="px-1 py-1">
-            {emailPreviewHtml ? (
+            {body ? (
               <iframe
-                srcDoc={emailPreviewHtml}
+                srcDoc={body}
                 title="Email preview"
                 className="h-[480px] w-full rounded-b-xl border-0"
                 sandbox="allow-same-origin"

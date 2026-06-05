@@ -3,16 +3,19 @@
 import dynamic from 'next/dynamic';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Loader2 } from 'lucide-react';
 import type { WorkflowChannel } from '@/app/types/workflow';
-import type { ReactEmailEditorHandle } from '../editors';
 
-const ReactEmailEditor = dynamic(
-  () => import('../editors/react-email-editor'),
+const MailyEmailEditor = dynamic(
+  () => import('../editors/maily-email-editor'),
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-border/50 text-sm text-muted-foreground">
-        Loading email editor…
+      <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-border/50">
+        <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading email editor…</span>
+        </div>
       </div>
     ),
   },
@@ -23,10 +26,8 @@ type ChannelEditorPanelProps = {
   subject: string;
   body: string;
   labels: { subject: string; body: string };
-  editorRef: React.RefObject<ReactEmailEditorHandle | null>;
   onSubjectChange: (value: string) => void;
   onBodyChange: (value: string) => void;
-  onEncodedBodyChange: (encodedBody: string) => void;
   onHtmlChange: (html: string) => void;
 };
 
@@ -35,10 +36,8 @@ export const ChannelEditorPanel = ({
   subject,
   body,
   labels,
-  editorRef,
   onSubjectChange,
   onBodyChange,
-  onEncodedBodyChange,
   onHtmlChange,
 }: ChannelEditorPanelProps) => {
   return (
@@ -51,7 +50,7 @@ export const ChannelEditorPanel = ({
       </div>
 
       <div className="space-y-4">
-        {channel !== 'sms' ? (
+        {channel === 'sms' ? null : (
           <div>
             <label
               className="mb-2 block text-sm font-medium"
@@ -68,7 +67,7 @@ export const ChannelEditorPanel = ({
               }
             />
           </div>
-        ) : null}
+        )}
 
         <div>
           <label
@@ -78,12 +77,7 @@ export const ChannelEditorPanel = ({
             {labels.body}
           </label>
           {channel === 'email' ? (
-            <ReactEmailEditor
-              ref={editorRef}
-              initialValue={body}
-              onHtmlChange={onHtmlChange}
-              onEncodedBodyChange={onEncodedBodyChange}
-            />
+            <MailyEmailEditor initialValue={body} onHtmlChange={onHtmlChange} />
           ) : (
             <Textarea
               id="channel-body"

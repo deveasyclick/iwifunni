@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { workflowApi } from '../api';
 import { zeroUUID } from '../constants';
 import type { TemplateUpdatePayload } from '../types/api';
-import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
+import type { CreateTemplatePayload } from '@/app/types/template';
 import type {
   WorkflowChannel,
   WorkflowDefinition,
@@ -14,7 +14,6 @@ import type {
 
 export type ChannelConfigState = {
   loading: boolean;
-  saving: boolean;
   error: string | null;
   workflow: WorkflowItem | null;
   node: WorkflowNode | null;
@@ -22,39 +21,43 @@ export type ChannelConfigState = {
   templateId: string;
   subject: string;
   body: string;
-  emailPreviewHtml: string;
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
 };
 
 export type ChannelConfigActions = {
   setSubject: (subject: string) => void;
   setBody: (body: string) => void;
-  setEmailPreviewHtml: (html: string) => void;
-  handleEncodedBodyChange: (encodedBody: string) => void;
-  saveChannelConfiguration: () => Promise<void>;
+  handleHtmlChange: (html: string) => void;
 };
 
 export type ChannelConfigResult = ChannelConfigState & ChannelConfigActions;
 
+const getNodeDisplayName = (
+  node: WorkflowNode | null,
+  fallbackNodeId: string,
+) => {
+  const config = node?.config || {};
+  if (typeof config.name === 'string' && config.name.trim()) {
+    return config.name.trim();
+  }
+  return node?.id || fallbackNodeId;
+};
+
 export const useChannelConfig = (
   workflowId: string,
   nodeId: string,
-  getNodeName: (node: WorkflowNode | null, fallbackNodeId: string) => string,
 ): ChannelConfigResult => {
-  const emailEditorRef = useRef<{
-    getEncodedBody: () => Promise<string>;
-  } | null>(null);
   const templateIdRef = useRef<string>('');
   const workflowRef = useRef<WorkflowItem | null>(null);
   const nodeRef = useRef<WorkflowNode | null>(null);
   const channelRef = useRef<WorkflowChannel>('email');
   const subjectRef = useRef<string>('');
-  const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const encodedBodyRef = useRef<string>('');
+  const nodeNameRef = useRef<string>('');
+  const bodyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const subjectDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
@@ -65,12 +68,107 @@ export const useChannelConfig = (
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [emailPreviewHtml, setEmailPreviewHtml] = useState('');
 
-  // Keep refs in sync with state for autosave
   useEffect(() => {
     subjectRef.current = subject;
   }, [subject]);
+
+  const performAutosave = useCallback(
+    async (html: string) => {
+      const currentWorkflow = workflowRef.current;
+      const currentNode = nodeRef.current;
+      const currentChannel = channelRef.current;
+      const currentSubject = subjectRef.current;
+      const currentTemplateId = templateIdRef.current;
+      const currentName = nodeNameRef.current;
+
+      if (!currentWorkflow || !currentNode) return;
+
+      setAutosaveStatus('saving');
+      try {
+        const templatePayload: CreateTemplatePayload = {
+          name: `${currentWorkflow.name} ${currentName} ${currentChannel}`,
+          channel: currentChannel,
+          body: html,
+          subject:
+            currentChannel === 'sms'
+              ? undefined
+              : currentSubject.trim() || undefined,
+        };
+
+        let savedTemplateId = currentTemplateId;
+        if (currentTemplateId && currentTemplateId !== zeroUUID) {
+          const updated = await workflowApi.updateTemplate(currentTemplateId, {
+            body: templatePayload.body,
+            subject: templatePayload.subject,
+          } satisfies TemplateUpdatePayload);
+          savedTemplateId = updated.id;
+        } else {
+          const created = await workflowApi.createTemplate(templatePayload);
+          savedTemplateId = created.id;
+          setTemplateId(savedTemplateId);
+          templateIdRef.current = savedTemplateId;
+
+          const currentDefinition =
+            currentWorkflow.definition as WorkflowDefinition;
+          const nextDefinition: WorkflowDefinition = {
+            ...currentDefinition,
+            nodes: currentDefinition.nodes.map((definitionNode) =>
+              definitionNode.id === currentNode.id
+                ? {
+                    ...definitionNode,
+                    config: {
+                      ...definitionNode.config,
+                      template_id: savedTemplateId,
+                      channels: [currentChannel],
+                    },
+                  }
+                : definitionNode,
+            ),
+          };
+          await workflowApi.updateWorkflow(currentWorkflow.id, {
+            key: currentWorkflow.key,
+            name: currentWorkflow.name,
+            description: currentWorkflow.description || undefined,
+            definition: nextDefinition,
+          });
+        }
+
+        setAutosaveStatus('saved');
+      } catch {
+        setAutosaveStatus('error');
+      }
+    },
+    [nodeId],
+  );
+
+  // Autosave on HTML content change (from Maily editor)
+  const handleHtmlChange = useCallback(
+    (html: string) => {
+      setBody(html);
+      encodedBodyRef.current = html;
+      if (bodyDebounceRef.current) clearTimeout(bodyDebounceRef.current);
+      bodyDebounceRef.current = setTimeout(() => {
+        void performAutosave(html);
+      }, 1500);
+    },
+    [performAutosave],
+  );
+
+  // Autosave on subject change
+  const handleSubjectChange = useCallback(
+    (value: string) => {
+      setSubject(value);
+      if (subjectDebounceRef.current) clearTimeout(subjectDebounceRef.current);
+      subjectDebounceRef.current = setTimeout(() => {
+        const lastBody = encodedBodyRef.current;
+        if (lastBody) {
+          void performAutosave(lastBody);
+        }
+      }, 1500);
+    },
+    [performAutosave],
+  );
 
   // Load initial data
   useEffect(() => {
@@ -114,6 +212,7 @@ export const useChannelConfig = (
         nodeRef.current = nextNode;
         channelRef.current = nextChannel;
         templateIdRef.current = nextTemplateId;
+        nodeNameRef.current = getNodeDisplayName(nextNode, nodeId);
 
         if (nextTemplateId && nextTemplateId !== zeroUUID) {
           const template = await workflowApi.getTemplate(nextTemplateId);
@@ -147,167 +246,8 @@ export const useChannelConfig = (
     };
   }, [nodeId, workflowId]);
 
-  const performAutosave = useCallback(
-    async (encodedBody: string) => {
-      const currentWorkflow = workflowRef.current;
-      const currentNode = nodeRef.current;
-      const currentChannel = channelRef.current;
-      const currentSubject = subjectRef.current;
-      const currentTemplateId = templateIdRef.current;
-
-      if (!currentWorkflow || !currentNode) return;
-
-      setAutosaveStatus('saving');
-      try {
-        const templatePayload: CreateTemplatePayload = {
-          name: `${currentWorkflow.name} ${getNodeName(currentNode, nodeId)} ${currentChannel}`,
-          channel: currentChannel,
-          body: encodedBody,
-          subject:
-            currentChannel === 'sms'
-              ? undefined
-              : currentSubject.trim() || undefined,
-        };
-
-        let savedTemplateId = currentTemplateId;
-        if (currentTemplateId && currentTemplateId !== zeroUUID) {
-          const updated = await workflowApi.updateTemplate(currentTemplateId, {
-            body: templatePayload.body,
-            subject: templatePayload.subject,
-          } satisfies TemplateUpdatePayload);
-          savedTemplateId = updated.id;
-        } else {
-          const created = await workflowApi.createTemplate(templatePayload);
-          savedTemplateId = created.id;
-          setTemplateId(savedTemplateId);
-          templateIdRef.current = savedTemplateId;
-
-          const currentDefinition =
-            currentWorkflow.definition as WorkflowDefinition;
-          const nextDefinition: WorkflowDefinition = {
-            ...currentDefinition,
-            nodes: currentDefinition.nodes.map((definitionNode) =>
-              definitionNode.id !== currentNode.id
-                ? definitionNode
-                : {
-                    ...definitionNode,
-                    config: {
-                      ...(definitionNode.config || {}),
-                      template_id: savedTemplateId,
-                      channels: [currentChannel],
-                    },
-                  },
-            ),
-          };
-          await workflowApi.updateWorkflow(currentWorkflow.id, {
-            key: currentWorkflow.key,
-            name: currentWorkflow.name,
-            description: currentWorkflow.description || undefined,
-            definition: nextDefinition,
-          });
-        }
-
-        setAutosaveStatus('saved');
-      } catch {
-        setAutosaveStatus('error');
-      }
-    },
-    [getNodeName, nodeId],
-  );
-
-  const handleEncodedBodyChange = useCallback(
-    (encodedBody: string) => {
-      if (autosaveDebounceRef.current)
-        clearTimeout(autosaveDebounceRef.current);
-      autosaveDebounceRef.current = setTimeout(() => {
-        void performAutosave(encodedBody);
-      }, 1500);
-    },
-    [performAutosave],
-  );
-
-  const saveChannelConfiguration = useCallback(async () => {
-    if (!workflow || !node) {
-      setError('Workflow draft is not ready');
-      return;
-    }
-
-    let resolvedBody = body;
-    if (channel === 'email') {
-      if (!emailEditorRef.current) {
-        setError('Email editor is not ready');
-        return;
-      }
-      resolvedBody = await emailEditorRef.current.getEncodedBody();
-    } else if (!body.trim()) {
-      setError(`${channel === 'sms' ? 'SMS body' : 'Email body'} is required`);
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const templatePayload: CreateTemplatePayload = {
-        name: `${workflow.name} ${getNodeName(node, nodeId)} ${channel}`,
-        channel,
-        body: resolvedBody,
-        subject: channel === 'sms' ? undefined : subject.trim() || undefined,
-      };
-
-      let savedTemplateId = templateId;
-      if (templateId && templateId !== zeroUUID) {
-        const updatedTemplate = await workflowApi.updateTemplate(templateId, {
-          body: templatePayload.body,
-          subject: templatePayload.subject,
-        } satisfies TemplateUpdatePayload);
-        savedTemplateId = updatedTemplate.id;
-      } else {
-        const createdTemplate =
-          await workflowApi.createTemplate(templatePayload);
-        savedTemplateId = createdTemplate.id;
-      }
-
-      const currentDefinition = workflow.definition as WorkflowDefinition;
-      const nextDefinition: WorkflowDefinition = {
-        ...currentDefinition,
-        nodes: currentDefinition.nodes.map((definitionNode) => {
-          if (definitionNode.id !== node.id) {
-            return definitionNode;
-          }
-
-          return {
-            ...definitionNode,
-            config: {
-              ...(definitionNode.config || {}),
-              template_id: savedTemplateId,
-              channels: [channel],
-            },
-          };
-        }),
-      };
-
-      await workflowApi.updateWorkflow(workflow.id, {
-        key: workflow.key,
-        name: workflow.name,
-        description: workflow.description || undefined,
-        definition: nextDefinition,
-      });
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to save channel configuration',
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [body, channel, getNodeName, node, nodeId, subject, templateId, workflow]);
-
   return {
-    // State
     loading,
-    saving,
     error,
     workflow,
     node,
@@ -315,13 +255,9 @@ export const useChannelConfig = (
     templateId,
     subject,
     body,
-    emailPreviewHtml,
     autosaveStatus,
-    // Actions
-    setSubject,
+    setSubject: handleSubjectChange,
     setBody,
-    setEmailPreviewHtml,
-    handleEncodedBodyChange,
-    saveChannelConfiguration,
+    handleHtmlChange,
   };
 };
