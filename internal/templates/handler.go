@@ -2,11 +2,13 @@ package templates
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Handler struct {
@@ -93,6 +95,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Body:          req.Body,
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			http.Error(w, "a template with this name and channel already exists", http.StatusConflict)
+			return
+		}
 		http.Error(w, "failed to create template", http.StatusInternalServerError)
 		return
 	}
