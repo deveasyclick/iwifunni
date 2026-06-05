@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
-import WebhookManagement from '../../components/settings/webhooks';
+import WebhookManagement from '../../../../features/settings/webhooks';
 
 export const metadata: Metadata = {
   title: 'Settings - Webhooks',

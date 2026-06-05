@@ -1,4 +1,4 @@
-import { VerifyEmail } from '@/app/components/auth/VerifyEmail';
+import { VerifyEmail } from '@/features/auth/components/VerifyEmail';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 

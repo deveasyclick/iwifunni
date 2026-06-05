@@ -1,4 +1,4 @@
-import { Onboarding } from '@/app/components/auth/Onboarding';
+import { Onboarding } from '@/features/auth/components/Onboarding';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 

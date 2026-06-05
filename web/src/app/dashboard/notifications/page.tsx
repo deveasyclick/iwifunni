@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../layout/shared/breadcrumb/BreadcrumbComp';
-import NotificationList from '../components/notifications';
+import NotificationList from '../../../features/notifications';
 
 export const metadata: Metadata = {
   title: 'Notifications',

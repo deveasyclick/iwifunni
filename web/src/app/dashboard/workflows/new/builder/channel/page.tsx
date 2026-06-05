@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import ConfigureWorkflowChannel from '../../../../components/workflows/configure-workflow-channel';
-import { workflowIdFromRecord } from '../../../../components/workflows/utils/search-params';
+import ConfigureWorkflowChannel from '../../../../../../features/workflows/components/ConfigureWorkflowChannel';
+import { workflowIdFromRecord } from '../../../../../../features/workflows/utils/search-params';
 
 export const metadata: Metadata = {
   title: 'Configure Channel',

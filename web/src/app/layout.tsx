@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import './css/globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
-import ServiceWorkerRegister from '@/app/components/service-worker/ServiceWorkerRegister';
+import ServiceWorkerRegister from '@/ServiceWorkerRegister';
 
 const geist = Geist({
   subsets: ['latin'],

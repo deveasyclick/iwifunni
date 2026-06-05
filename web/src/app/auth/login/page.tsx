@@ -1,4 +1,4 @@
-import { Login } from '@/app/components/auth/Login';
+import { Login } from '@/features/auth/components/Login';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 

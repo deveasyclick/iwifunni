@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
-import TemplateManagement from '../../components/settings/templates';
+import TemplateManagement from '../../../../features/settings/templates';
 
 export const metadata: Metadata = {
   title: 'Settings - Templates',

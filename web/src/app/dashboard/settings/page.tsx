@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../layout/shared/breadcrumb/BreadcrumbComp';
-import CardBox from '@/app/components/shared/CardBox';
+import CardBox from '@/components/card/CardBox';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {

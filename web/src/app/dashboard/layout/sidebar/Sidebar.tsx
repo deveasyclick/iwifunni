@@ -14,7 +14,7 @@ import {
 } from 'tailwind-sidebar';
 import 'tailwind-sidebar/styles.css';
 import { Button } from '@/components/ui/button';
-import FullLogo from '@/app/components/shared/FullLogo';
+import FullLogo from '@/components/shared/FullLogo';
 import { useTheme } from '@/components/theme-provider';
 
 interface SidebarItemType {

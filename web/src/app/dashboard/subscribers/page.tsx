@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../layout/shared/breadcrumb/BreadcrumbComp';
-import SubscriberList from '../components/subscribers';
+import SubscriberList from '../../../features/subscribers';
 
 export const metadata: Metadata = {
   title: 'Subscribers',

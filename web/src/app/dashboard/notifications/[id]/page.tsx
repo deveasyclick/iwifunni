@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import CardBox from '@/app/components/shared/CardBox';
+import CardBox from '@/components/card/CardBox';
 import BreadcrumbComp from '@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp';
 import type { NotificationType } from '@/app/types/notification';
 

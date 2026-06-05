@@ -1,6 +1,6 @@
 'use client';
 
-import CardBox from '@/app/components/shared/CardBox';
+import CardBox from '@/components/card/CardBox';
 import Image from 'next/image';
 import Link from 'next/link';
 

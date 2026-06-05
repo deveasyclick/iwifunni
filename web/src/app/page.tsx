@@ -1,10 +1,10 @@
 'use client';
 
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import Hero from './components/sections/Hero';
-import Channels from './components/sections/Channels';
-import HowItWorks from './components/sections/HowItWorks';
+import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
+import Hero from '../components/sections/Hero';
+import Channels from '../components/sections/Channels';
+import HowItWorks from '../components/sections/HowItWorks';
 
 export default function Home() {
   return (

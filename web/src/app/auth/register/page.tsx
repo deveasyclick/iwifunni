@@ -1,4 +1,4 @@
-import { Register } from '@/app/components/auth/Register';
+import { Register } from '@/features/auth/components/Register';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import WorkflowManagement from '../components/workflows/WorkflowManagement';
+import WorkflowManagement from '../../../features/workflows/components/WorkflowManagement';
 
 export const metadata: Metadata = {
   title: 'Workflows',

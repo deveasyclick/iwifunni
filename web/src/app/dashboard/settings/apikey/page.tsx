@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
-import ApiKeyManagement from '../../components/settings/apikey';
+import ApiKeyManagement from '../../../../features/settings/apikey';
 
 export const metadata: Metadata = {
   title: 'Settings - API Keys',

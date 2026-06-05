@@ -7,7 +7,7 @@ import Notifications from './Notifications';
 import SidebarLayout from '../sidebar/Sidebar';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import Search from './Search';
-import FullLogo from '@/app/components/shared/FullLogo';
+import FullLogo from '@/components/shared/FullLogo';
 import { useTheme } from '@/components/theme-provider';
 
 const Header = () => {
