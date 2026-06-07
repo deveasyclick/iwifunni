@@ -69,6 +69,13 @@ func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Subsc
 	return s.repo.List(ctx, environmentID)
 }
 
+func (s *Service) Search(ctx context.Context, environmentID uuid.UUID, query string) ([]db.Subscriber, error) {
+	if query == "" {
+		return s.repo.List(ctx, environmentID)
+	}
+	return s.repo.Search(ctx, environmentID, query)
+}
+
 func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Subscriber, error) {
 	return s.repo.GetByID(ctx, id, environmentID)
 }

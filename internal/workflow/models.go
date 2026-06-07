@@ -26,9 +26,10 @@ const (
 )
 
 type Definition struct {
-	Trigger Trigger `json:"trigger"`
-	Nodes   []Node  `json:"nodes"`
-	Edges   []Edge  `json:"edges"`
+	Trigger     Trigger          `json:"trigger"`
+	Nodes       []Node           `json:"nodes"`
+	Edges       []Edge           `json:"edges"`
+	Payload     json.RawMessage  `json:"payload,omitempty"`
 }
 
 type Trigger struct {

@@ -82,6 +82,7 @@ func (a *App) Router() http.Handler {
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(auth.NewJWTMiddleware(a.jwtManager, a.queries))
+		r.Get("/auth/me", a.authHandler().me)
 		r.Post("/auth/onboarding", a.authHandler().completeOnboarding)
 
 		// API Keys management (dashboard)

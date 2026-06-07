@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/google/uuid"
@@ -21,6 +22,14 @@ func (r *Repository) Create(ctx context.Context, arg db.CreateSubscriberParams) 
 
 func (r *Repository) List(ctx context.Context, environmentID uuid.UUID) ([]db.Subscriber, error) {
 	return r.q.ListSubscribersByEnvironment(ctx, environmentID)
+}
+
+func (r *Repository) Search(ctx context.Context, environmentID uuid.UUID, query string) ([]db.Subscriber, error) {
+	pattern := "%" + strings.TrimSpace(query) + "%"
+	return r.q.SearchSubscribers(ctx, db.SearchSubscribersParams{
+		EnvironmentID: environmentID,
+		Lower:         pattern,
+	})
 }
 
 func (r *Repository) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Subscriber, error) {

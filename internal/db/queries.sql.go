@@ -2410,6 +2410,54 @@ func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID 
 	return items, nil
 }
 
+const searchSubscribers = `-- name: SearchSubscribers :many
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+WHERE environment_id = $1 AND deleted_at IS NULL
+  AND (LOWER(name) LIKE LOWER($2) OR LOWER(COALESCE(email, '')) LIKE LOWER($2))
+ORDER BY subscription_date DESC
+`
+
+type SearchSubscribersParams struct {
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Lower         string    `db:"lower" json:"lower"`
+}
+
+func (q *Queries) SearchSubscribers(ctx context.Context, arg SearchSubscribersParams) ([]Subscriber, error) {
+	rows, err := q.db.Query(ctx, searchSubscribers, arg.EnvironmentID, arg.Lower)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscriber{}
+	for rows.Next() {
+		var i Subscriber
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.PushToken,
+			&i.Channels,
+			&i.Status,
+			&i.Tags,
+			&i.SubscriptionDate,
+			&i.LastNotificationDate,
+			&i.Metadata,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setEnvironmentDefault = `-- name: SetEnvironmentDefault :exec
 UPDATE environments
 SET is_default = $2, updated_at = $3

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/markbates/goth/gothic"
@@ -19,6 +20,7 @@ type authHandlerAdapter struct {
 	frontendBaseURL string
 	socialProviders map[string]bool
 	cookieSecure    bool
+	queries         *db.Queries
 }
 
 type authServiceFull interface {
@@ -37,6 +39,7 @@ func (a *App) authHandler() *authHandlerAdapter {
 		frontendBaseURL: a.frontendBaseURL,
 		socialProviders: a.socialProviders,
 		cookieSecure:    a.cookieSecure,
+		queries:         a.queries,
 	}
 }
 
@@ -204,6 +207,34 @@ func (h *authHandlerAdapter) completeOnboarding(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)
+}
+
+func (h *authHandlerAdapter) me(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetJWTClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.queries.GetUserByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"id":         user.ID,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+	})
 }
 
 func (h *authHandlerAdapter) refresh(w http.ResponseWriter, r *http.Request) {

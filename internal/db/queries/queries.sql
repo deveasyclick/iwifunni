@@ -291,6 +291,12 @@ UPDATE subscribers
 SET deleted_at = now(), updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL;
 
+-- name: SearchSubscribers :many
+SELECT * FROM subscribers
+WHERE environment_id = $1 AND deleted_at IS NULL
+  AND (LOWER(name) LIKE LOWER($2) OR LOWER(COALESCE(email, '')) LIKE LOWER($2))
+ORDER BY subscription_date DESC;
+
 -- name: CreateWorkflow :one
 INSERT INTO workflows (
 	id,

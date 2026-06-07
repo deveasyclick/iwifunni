@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/auth"
@@ -90,7 +91,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items, err := h.service.List(r.Context(), environmentID)
+
+	searchQuery := strings.TrimSpace(r.URL.Query().Get("search"))
+
+	var items []db.Subscriber
+	var err error
+	if searchQuery != "" {
+		items, err = h.service.Search(r.Context(), environmentID, searchQuery)
+	} else {
+		items, err = h.service.List(r.Context(), environmentID)
+	}
 	if err != nil {
 		http.Error(w, "failed to list subscribers", http.StatusInternalServerError)
 		return
