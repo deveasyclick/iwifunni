@@ -1,4 +1,5 @@
 import { Icon } from '@iconify/react';
+import { CardContent } from '@/components/ui/card';
 import StatCard from '../card/stat-card/StatCard';
 import CardBox from '../card/CardBox';
 
