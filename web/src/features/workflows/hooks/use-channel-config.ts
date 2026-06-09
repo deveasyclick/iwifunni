@@ -22,12 +22,14 @@ export type ChannelConfigState = {
   subject: string;
   body: string;
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  payload: string;
 };
 
 export type ChannelConfigActions = {
   setSubject: (subject: string) => void;
   setBody: (body: string) => void;
   handleHtmlChange: (html: string) => void;
+  setPayload: (payload: string) => void;
 };
 
 export type ChannelConfigResult = ChannelConfigState & ChannelConfigActions;
@@ -53,6 +55,7 @@ export const useChannelConfig = (
   const channelRef = useRef<WorkflowChannel>('email');
   const subjectRef = useRef<string>('');
   const encodedBodyRef = useRef<string>('');
+  const payloadRef = useRef<string>('');
   const nodeNameRef = useRef<string>('');
   const bodyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const subjectDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,10 +71,15 @@ export const useChannelConfig = (
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [payload, setPayload] = useState('{}');
 
   useEffect(() => {
     subjectRef.current = subject;
   }, [subject]);
+
+  useEffect(() => {
+    payloadRef.current = payload;
+  }, [payload]);
 
   const performAutosave = useCallback(
     async (html: string) => {
@@ -104,38 +112,52 @@ export const useChannelConfig = (
           } satisfies TemplateUpdatePayload);
           savedTemplateId = updated.id;
         } else {
-          const created = await workflowApi.createTemplate(templatePayload);
+          const created = await workflowApi.upsertTemplate(templatePayload);
           savedTemplateId = created.id;
           setTemplateId(savedTemplateId);
           templateIdRef.current = savedTemplateId;
-
-          const currentDefinition =
-            currentWorkflow.definition as WorkflowDefinition;
-          const nextDefinition: WorkflowDefinition = {
-            ...currentDefinition,
-            nodes: currentDefinition.nodes.map((definitionNode) =>
-              definitionNode.id === currentNode.id
-                ? {
-                    ...definitionNode,
-                    config: {
-                      ...definitionNode.config,
-                      template_id: savedTemplateId,
-                      channels: [currentChannel],
-                    },
-                  }
-                : definitionNode,
-            ),
-          };
-          await workflowApi.updateWorkflow(currentWorkflow.id, {
-            key: currentWorkflow.key,
-            name: currentWorkflow.name,
-            description: currentWorkflow.description || undefined,
-            definition: nextDefinition,
-          });
         }
 
+        // Build definition with template_id + payload in one pass
+        const currentDef = workflowRef.current?.definition;
+        const rawPayload = payloadRef.current;
+        let parsedPayload: Record<string, unknown> | undefined;
+        if (rawPayload) {
+          try {
+            parsedPayload = JSON.parse(rawPayload) as Record<string, unknown>;
+          } catch {
+            parsedPayload = undefined;
+          }
+        }
+
+        const updatedDefinition: WorkflowDefinition = {
+          trigger: currentDef?.trigger || { event: '' },
+          nodes: (currentDef?.nodes || []).map((n) =>
+            n.id === currentNode.id
+              ? {
+                  ...n,
+                  config: {
+                    ...n.config,
+                    template_id: savedTemplateId,
+                    channels: [currentChannel],
+                  },
+                }
+              : n,
+          ),
+          edges: currentDef?.edges || [],
+          ...(parsedPayload ? { payload: parsedPayload } : {}),
+        };
+
+        await workflowApi.updateWorkflow(currentWorkflow.id, {
+          key: currentWorkflow.key,
+          name: currentWorkflow.name,
+          description: currentWorkflow.description || undefined,
+          definition: updatedDefinition,
+        });
+
         setAutosaveStatus('saved');
-      } catch {
+      } catch (err) {
+        console.error('Autosave failed:', err);
         setAutosaveStatus('error');
       }
     },
@@ -224,6 +246,17 @@ export const useChannelConfig = (
           setSubject('');
           setBody('');
         }
+
+        // Load payload from definition if present
+        const currentDefinition = nextWorkflow.definition;
+        const payloadRaw = currentDefinition?.payload;
+        if (payloadRaw) {
+          setPayload(
+            typeof payloadRaw === 'string'
+              ? payloadRaw
+              : JSON.stringify(payloadRaw, null, 2),
+          );
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -255,9 +288,11 @@ export const useChannelConfig = (
     templateId,
     subject,
     body,
+    payload,
     autosaveStatus,
     setSubject: handleSubjectChange,
     setBody,
+    setPayload,
     handleHtmlChange,
   };
 };
