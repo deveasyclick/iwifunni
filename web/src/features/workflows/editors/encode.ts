@@ -1,11 +1,18 @@
 import type { VariableDefinition } from '../types/data-panel';
 
 /**
- * Regex to match Maily's variable span in HTML output.
- * Maily's VariableExtension renders as:
- *   <span data-id="subscriber.firstName" data-label="First Name" data-required="false">First Name</span>
+ * Regex to match Maily's variable elements in HTML output.
+ *
+ * Maily's VariableExtension.renderHTML produces:
+ *   <div data-type="variable" data-id="subscriber.firstName" …>label</div>
+ *
+ * Our textToMailyVariables helper also injects spans during editor load:
+ *   <span data-id="subscriber.firstName" data-required="false">label</span>
+ *
+ * Both formats carry a data-id attribute we need to extract.
  */
-const MAILY_VARIABLE_RE = /<span[^>]*data-id="([^"]*)"[^>]*>[^<]*<\/span>/g;
+const MAILY_VARIABLE_RE =
+  /<(?:span|div)\b[^>]*\bdata-id="([^"]*)"[^>]*>[^<]*<\/(?:span|div)>/g;
 
 /**
  * Regex to match {{path}} template syntax.
@@ -13,8 +20,10 @@ const MAILY_VARIABLE_RE = /<span[^>]*data-id="([^"]*)"[^>]*>[^<]*<\/span>/g;
 const TEMPLATE_VARIABLE_RE = /\{\{([^}]+)\}\}/g;
 
 /**
- * Converts Maily's HTML variable format (`<span data-id="path">label</span>`)
- * back to `{{path}}` for backend persistence.
+ * Converts Maily's HTML variable elements back to `{{path}}` for backend
+ * persistence.  Handles both formats:
+ * - `<span data-id="path">label</span>` (produced by textToMailyVariables)
+ * - `<div  data-type="variable" data-id="path">label</div>` (Maily's own renderHTML)
  *
  * Call this before saving editor HTML to the backend.
  */

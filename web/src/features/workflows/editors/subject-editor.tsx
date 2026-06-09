@@ -9,6 +9,7 @@ import { textToMailyVariables } from './encode';
 import { Editor as MailyEditor } from '@maily-to/core';
 
 import { Editor } from '@tiptap/react';
+import type { VariableDefinition } from '../types/data-panel';
 
 /** Small inline chip for variables in the subject line. */
 function SubjectChip({ variable }: Readonly<{ variable: Variable }>) {
