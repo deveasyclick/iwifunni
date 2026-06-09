@@ -5,69 +5,8 @@ import type {
   WorkflowExecutionItem,
   WorkflowItem,
 } from '@/app/types/workflow';
-
-import type {
-  TemplateUpdatePayload,
-  WorkflowEventPayload,
-  WorkflowRequestInit,
-} from './types/api';
-
-const parseError = async (response: Response): Promise<string> => {
-  const fallback = 'Request failed';
-
-  const text = await response.text().catch(() => '');
-  if (!text) return fallback;
-
-  try {
-    const body = JSON.parse(text) as { error?: string; message?: string };
-    return body.error || body.message || fallback;
-  } catch {
-    return text.trim() || fallback;
-  }
-};
-
-const buildRequestInit = (init?: WorkflowRequestInit): RequestInit => {
-  const headers = new Headers(init?.headers);
-  const method = init?.method || 'GET';
-  const hasObjectBody =
-    init?.body != null &&
-    typeof init.body === 'object' &&
-    !(init.body instanceof FormData);
-
-  if (method === 'GET') {
-    headers.set('browserrefreshed', 'false');
-  }
-
-  if (hasObjectBody) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  return {
-    ...init,
-    headers,
-    body: hasObjectBody
-      ? JSON.stringify(init?.body)
-      : (init?.body as BodyInit | undefined),
-    cache: init?.cache ?? 'no-store',
-  };
-};
-
-async function request<T>(
-  path: string,
-  init?: WorkflowRequestInit,
-): Promise<T> {
-  const response = await fetch(path, buildRequestInit(init));
-
-  if (!response.ok) {
-    throw new Error(await parseError(response));
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
-}
+import type { TemplateUpdatePayload, WorkflowEventPayload } from './types/api';
+import { request } from '@/lib/api-client';
 
 export const workflowApi = {
   archiveWorkflow(id: string) {
@@ -92,12 +31,9 @@ export const workflowApi = {
       workflowID && workflowID !== 'all'
         ? `?workflow_id=${encodeURIComponent(workflowID)}`
         : '';
-
     return request<WorkflowExecutionItem[]>(
       `/api/workflow-executions${search}`,
-      {
-        method: 'GET',
-      },
+      { method: 'GET' },
     );
   },
   getWorkflows() {
@@ -118,21 +54,18 @@ export const workflowApi = {
       body: payload,
     });
   },
-
-  // ─── Template API ────────────────────────────────────────────────────────
-
   getTemplate(id: string) {
     return request<TemplateItem>(`/api/templates/${id}`, { method: 'GET' });
-  },
-  createTemplate(payload: CreateTemplatePayload) {
-    return request<TemplateItem>('/api/templates', {
-      method: 'POST',
-      body: payload,
-    });
   },
   updateTemplate(id: string, payload: TemplateUpdatePayload) {
     return request<TemplateItem>(`/api/templates/${id}`, {
       method: 'PATCH',
+      body: payload,
+    });
+  },
+  upsertTemplate(payload: CreateTemplatePayload) {
+    return request<TemplateItem>('/api/templates/upsert', {
+      method: 'POST',
       body: payload,
     });
   },

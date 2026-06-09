@@ -20,6 +20,7 @@ export interface WorkflowDefinition {
   trigger: WorkflowTrigger;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  payload?: Record<string, unknown>;
 }
 
 export interface WorkflowItem {
