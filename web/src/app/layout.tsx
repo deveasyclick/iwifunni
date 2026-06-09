@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import './css/globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
+import { Providers } from '@/components/providers';
 import ServiceWorkerRegister from '@/ServiceWorkerRegister';
 
 const geist = Geist({
@@ -27,15 +28,17 @@ export default function RootLayout({
         <meta name="theme-color" content="#5d87ff" />
       </head>
       <body className={`${geist.className}`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ServiceWorkerRegister />
-          {children}
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ServiceWorkerRegister />
+            {children}
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
