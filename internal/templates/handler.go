@@ -26,6 +26,7 @@ func (h *Handler) Register(r chi.Router) {
 
 func (h *Handler) RegisterDashboardRoutes(r chi.Router) {
 	r.Post("/templates", h.create)
+	r.Post("/templates/upsert", h.upsert)
 	r.Get("/templates", h.list)
 	r.Get("/templates/{templateID}", h.get)
 	r.Patch("/templates/{templateID}", h.update)
@@ -105,6 +106,45 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(templateResponse{
+		ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
+		Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,
+		CreatedAt: t.CreatedAt.Time.String(), UpdatedAt: t.UpdatedAt.Time.String(),
+	})
+}
+
+func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req createRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" || req.Body == "" || req.Channel == "" {
+		http.Error(w, "name, body, and channel are required", http.StatusBadRequest)
+		return
+	}
+	if req.Channel != "email" && req.Channel != "sms" && req.Channel != "push" {
+		http.Error(w, "channel must be email, sms, or push", http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.service.Upsert(r.Context(), CreateInput{
+		EnvironmentID: environmentID,
+		Name:          req.Name,
+		Channel:       req.Channel,
+		Subject:       req.Subject,
+		Body:          req.Body,
+	})
+	if err != nil {
+		http.Error(w, "failed to upsert template", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(templateResponse{
 		ID: t.ID, EnvironmentID: t.EnvironmentID, Name: t.Name, Channel: t.Channel,
 		Subject: t.Subject, Body: t.Body, Version: t.Version, IsActive: t.IsActive,

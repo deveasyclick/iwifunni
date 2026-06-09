@@ -19,6 +19,10 @@ func (r *Repository) Create(ctx context.Context, arg db.CreateTemplateParams) (d
 	return r.q.CreateTemplate(ctx, arg)
 }
 
+func (r *Repository) Upsert(ctx context.Context, arg db.UpsertTemplateParams) (db.Template, error) {
+	return r.q.UpsertTemplate(ctx, arg)
+}
+
 func (r *Repository) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Template, error) {
 	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: environmentID})
 }

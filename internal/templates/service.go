@@ -59,6 +59,18 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Template, erro
 	})
 }
 
+// Upsert creates a new template or updates the existing one with the same name + channel.
+func (s *Service) Upsert(ctx context.Context, in CreateInput) (db.Template, error) {
+	return s.repo.Upsert(ctx, db.UpsertTemplateParams{
+		ID:            uuid.New(),
+		EnvironmentID: in.EnvironmentID,
+		Name:          in.Name,
+		Channel:       in.Channel,
+		Subject:       in.Subject,
+		Body:          in.Body,
+	})
+}
+
 func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
 	return s.repo.Delete(ctx, id, environmentID)
 }

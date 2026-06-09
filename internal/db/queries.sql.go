@@ -3183,3 +3183,45 @@ func (q *Queries) UpsertNotificationByServiceJob(ctx context.Context, arg Upsert
 	)
 	return i, err
 }
+
+const upsertTemplate = `-- name: UpsertTemplate :one
+INSERT INTO templates (id, environment_id, name, channel, subject, body)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (environment_id, name, channel)
+DO UPDATE SET subject = $5, body = $6, version = templates.version + 1, updated_at = NOW()
+RETURNING id, environment_id, name, channel, subject, body, version, is_active, created_at, updated_at
+`
+
+type UpsertTemplateParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Subject       *string   `db:"subject" json:"subject"`
+	Body          string    `db:"body" json:"body"`
+}
+
+func (q *Queries) UpsertTemplate(ctx context.Context, arg UpsertTemplateParams) (Template, error) {
+	row := q.db.QueryRow(ctx, upsertTemplate,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Name,
+		arg.Channel,
+		arg.Subject,
+		arg.Body,
+	)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Channel,
+		&i.Subject,
+		&i.Body,
+		&i.Version,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

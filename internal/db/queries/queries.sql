@@ -221,6 +221,13 @@ INSERT INTO templates (id, environment_id, name, channel, subject, body)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
+-- name: UpsertTemplate :one
+INSERT INTO templates (id, environment_id, name, channel, subject, body)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (environment_id, name, channel)
+DO UPDATE SET subject = $5, body = $6, version = templates.version + 1, updated_at = NOW()
+RETURNING *;
+
 -- name: GetTemplateByID :one
 SELECT * FROM templates
 WHERE id = $1 AND environment_id = $2;
