@@ -1,116 +1,16 @@
 'use client';
 
-import Link from 'next/link';
-import { format } from 'date-fns';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import CardBox from '@/components/card/CardBox';
 import { useWorkflowList } from '../hooks/use-workflow-list';
 import { DeleteWorkflowDialog } from './dialogs/DeleteWorkflowDialog';
+import WorkflowTableBody from './WorkflowTableBody';
 import CreateWorkflow from './CreateWorkflow';
-import type { WorkflowItem } from '@/app/types/workflow';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-
-const formatCreatedAt = (value?: string) => {
-  if (!value) return '-';
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '-';
-
-  return format(parsed, 'MMM d, yyyy');
-};
-
-const renderTableBody = (
-  loading: boolean,
-  visibleItems: WorkflowItem[],
-  mutatingID: string | null,
-  requestDelete: (item: WorkflowItem) => void,
-) => {
-  if (loading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center text-muted-foreground">
-          Loading workflows...
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (visibleItems.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center text-muted-foreground">
-          No workflows configured yet.
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  return visibleItems.map((item) => {
-    const statusBadgeVariant =
-      item.status === 'active'
-        ? ('lightSuccess' as const)
-        : ('secondary' as const);
-    const statusLabel = item.status || (item.isActive ? 'active' : 'archived');
-    const isDeleting = mutatingID === item.id;
-
-    return (
-      <TableRow key={item.id}>
-        <TableCell>
-          <div>
-            <p className="font-medium">{item.name}</p>
-            {item.description && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {item.description}
-              </p>
-            )}
-          </div>
-        </TableCell>
-        <TableCell className="font-mono text-xs">{item.key}</TableCell>
-        <TableCell>
-          <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
-        </TableCell>
-        <TableCell>{formatCreatedAt(item.createdAt)}</TableCell>
-        <TableCell>
-          <div className="flex gap-1">
-            <Button asChild variant="ghost" size="icon">
-              <Link
-                href={`/dashboard/workflows/new/builder?workflowId=${item.id}`}
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit</span>
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={isDeleting}
-              onClick={() => requestDelete(item)}
-            >
-              {isDeleting ? (
-                <span className="text-xs">...</span>
-              ) : (
-                <Trash2 className="h-4 w-4 text-destructive" />
-              )}
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  });
-};
+import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const WorkflowManagement = () => {
   const {
@@ -172,9 +72,12 @@ const WorkflowManagement = () => {
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {renderTableBody(loading, visibleItems, mutatingID, requestDelete)}
-          </TableBody>
+          <WorkflowTableBody
+            loading={loading}
+            visibleItems={visibleItems}
+            mutatingID={mutatingID}
+            onRequestDelete={requestDelete}
+          />
         </Table>
       </div>
 

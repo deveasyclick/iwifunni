@@ -26,7 +26,6 @@ const CreateWorkflow = ({ onClose }: CreateWorkflowProps) => {
     setName,
     setDescription,
     continueToBuilder,
-    reset,
   } = useWorkflowCreate();
 
   return (

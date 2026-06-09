@@ -14,6 +14,7 @@ import type {
 } from './draft';
 import type { WorkflowCanvasNode, WorkflowCanvasEdge } from './canvas';
 import type { AddConnectedNodeOptions } from './actions';
+import type { WorkflowItem } from '@/app/types/workflow';
 
 export type WorkflowDefinitionBuilderProps = {
   value: WorkflowBuilderDraft;
@@ -115,6 +116,13 @@ export type WorkflowSetupPanelProps = {
 
 export type CreateWorkflowBuilderProps = {
   workflowId: string;
+};
+
+export type WorkflowTableBodyProps = {
+  loading: boolean;
+  visibleItems: WorkflowItem[];
+  mutatingID: string | null;
+  onRequestDelete: (item: WorkflowItem) => void;
 };
 
 export type ConfigureWorkflowChannelProps = {
