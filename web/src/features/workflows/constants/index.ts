@@ -21,3 +21,6 @@ export const durationPattern = /^(\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h))+$/;
 export const zeroUUID = '00000000-0000-0000-0000-000000000000';
 export const nodeWidth = 288;
 export const nodeHeight = 156;
+
+export const DEFAULT_SENDER_NAME = 'Yusuf';
+export const DEFAULT_SENDER_EMAIL = 'yusuf@eayclick.com';
