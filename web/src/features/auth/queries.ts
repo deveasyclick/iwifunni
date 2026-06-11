@@ -6,7 +6,7 @@ import { authApi } from './api';
 export function useUserProfile() {
   return useQuery({
     queryKey: ['user-profile'],
-    queryFn: authApi.getUserProfile,
+    queryFn: () => authApi.getUserProfile(),
     staleTime: 60_000,
   });
 }

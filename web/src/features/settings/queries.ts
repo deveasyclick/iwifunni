@@ -6,7 +6,7 @@ import { providerApi, type ProviderConfig } from './api';
 export function useEmailProvider() {
   const query = useQuery({
     queryKey: ['providers'],
-    queryFn: providerApi.listProviders,
+    queryFn: () => providerApi.listProviders(),
     staleTime: 60_000,
   });
 
