@@ -1,20 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { proxyBackend } from '@/lib/backend-api';
+import { wrapData } from '@/lib/wrap-data';
 
 type RouteContext = {
   params: Promise<{
     id: string;
   }>;
 };
-
-async function wrapData(response: NextResponse) {
-  if (!response.ok || response.status === 204) {
-    return response;
-  }
-
-  const payload = await response.json();
-  return NextResponse.json({ data: payload }, { status: response.status });
-}
 
 export async function GET(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;

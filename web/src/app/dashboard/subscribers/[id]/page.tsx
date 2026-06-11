@@ -1,199 +1,112 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form';
 import CardBox from '@/components/card/CardBox';
 import BreadcrumbComp from '@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp';
-import type { SubscriberType } from '@/app/types/subscriber';
+import {
+  useSubscriberDetail,
+  useSubscriberUpdate,
+  useSubscriberDelete,
+} from '@/features/subscribers/queries';
+import { DeleteSubscriberDialog } from '@/features/subscribers/components/DeleteSubscriberDialog';
+import { SubscriberMetadata } from '@/features/subscribers/components/SubscriberMetadata';
+import { SubscriberChannelsSection } from '@/features/subscribers/components/SubscriberChannelsSection';
+import { SubscriberTagsSection } from '@/features/subscribers/components/SubscriberTagsSection';
+import { useSubscriberEditForm } from '@/features/subscribers/hooks/use-subscriber-edit-form';
 
 export default function SubscriberDetailPage() {
   const params = useParams();
   const router = useRouter();
   const subscriberId = params.id as string;
 
-  const [subscriber, setSubscriber] = useState<SubscriberType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const {
+    data: subscriber,
+    isLoading,
+    isError,
+  } = useSubscriberDetail(subscriberId);
+  const updateMutation = useSubscriberUpdate();
+  const deleteMutation = useSubscriberDelete();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
-  // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [pushToken, setPushToken] = useState('');
-  const [channels, setChannels] = useState<('email' | 'sms' | 'push')[]>([]);
-  const [tags, setTags] = useState('');
-  const [tagList, setTagList] = useState<string[]>([]);
-  const [status, setStatus] = useState<
-    'subscribed' | 'unsubscribed' | 'bounced'
-  >('subscribed');
+  const form = useSubscriberEditForm({
+    subscriber: subscriber!,
+    onUpdate: (payload) =>
+      updateMutation.mutate(payload, {
+        onSuccess: () => {
+          form.setEditing(false);
+          setUpdateError(null);
+        },
+        onError: (err) =>
+          setUpdateError(err.message || 'Failed to update subscriber'),
+      }),
+    isPending: updateMutation.isPending,
+    onError: setUpdateError,
+  });
 
-  useEffect(() => {
-    const fetchSubscriber = async () => {
-      try {
-        const res = await fetch(`/api/subscriber/${subscriberId}`, {
-          headers: { browserrefreshed: 'false' },
-        });
-        const data = (await res.json()) as { data?: SubscriberType };
-        const sub = data?.data;
-        if (sub) {
-          setSubscriber(sub);
-          setName(sub.name);
-          setEmail(sub.email || '');
-          setPhone(sub.phone || '');
-          setPushToken(sub.pushToken || '');
-          setChannels(sub.channels);
-          setTagList(sub.tags || []);
-          setStatus(sub.status.email || 'subscribed');
-        }
-      } catch (err) {
-        console.error('Error fetching subscriber:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void fetchSubscriber();
-  }, [subscriberId]);
-
-  const handleChannelChange = (
-    channel: 'email' | 'sms' | 'push',
-    checked: boolean,
-  ) => {
-    if (checked) {
-      setChannels((current) =>
-        current.includes(channel) ? current : [...current, channel],
-      );
-    } else {
-      setChannels(channels.filter((c) => c !== channel));
-    }
-  };
-
-  const handleAddTag = () => {
-    if (tags.trim() && !tagList.includes(tags.trim())) {
-      setTagList([...tagList, tags.trim()]);
-      setTags('');
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setTagList(tagList.filter((t) => t !== tag));
-  };
-
-  const handleUpdate = async () => {
-    if (!name) {
-      alert('Please fill out the name field.');
-      return;
-    }
-    if (channels.includes('email') && !email) {
-      alert('Email is required when Email channel is selected.');
-      return;
-    }
-    if (channels.includes('sms') && !phone) {
-      alert('Phone is required when SMS channel is selected.');
-      return;
-    }
-    if (channels.includes('push') && !pushToken) {
-      alert('Push token is required when Push channel is selected.');
-      return;
-    }
-
-    const updatedSubscriber: SubscriberType = {
-      id: subscriberId,
-      name,
-      email: email || undefined,
-      phone: phone || undefined,
-      pushToken: pushToken || undefined,
-      channels,
-      status: {
-        email: status,
-        sms: channels.includes('sms') ? status : undefined,
-        push: channels.includes('push') ? status : undefined,
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(subscriberId, {
+      onSettled: () => {
+        setShowDeleteDialog(false);
+        router.push('/dashboard/subscribers');
       },
-      tags: tagList,
-      subscriptionDate: subscriber?.subscriptionDate || new Date(),
-      lastNotificationDate: subscriber?.lastNotificationDate,
-      deleted: false,
-    };
-
-    try {
-      const response = await fetch(`/api/subscriber/${subscriberId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedSubscriber),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update subscriber');
-      }
-
-      const data = (await response.json()) as { data?: SubscriberType };
-      const nextSubscriber = data?.data;
-      setEditing(false);
-      setSubscriber(nextSubscriber);
-      alert('Subscriber updated successfully');
-    } catch (error) {
-      console.error('Failed to update subscriber', error);
-      alert('Failed to update subscriber');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this subscriber?')) return;
-
-    try {
-      await fetch(`/api/subscriber/${subscriberId}`, {
-        method: 'DELETE',
-      });
-      router.push('/dashboard/subscribers');
-    } catch (error) {
-      console.error('Failed to delete subscriber', error);
-      alert('Failed to delete subscriber');
-    }
+    });
   };
 
   const BCrumb = [
     { to: '/', title: 'Home' },
     { to: '/dashboard/subscribers', title: 'Subscribers' },
-    { title: name || email || 'Subscriber' },
+    { title: subscriber?.name || subscriber?.email || 'Subscriber' },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
-  if (!subscriber) {
+  if (isError || !subscriber) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-red-600">Subscriber not found</div>
+        <div className="text-lg text-error">Subscriber not found</div>
       </div>
     );
   }
 
   return (
     <>
-      <BreadcrumbComp title={`Subscriber: ${email}`} items={BCrumb} />
+      <BreadcrumbComp
+        title={`Subscriber: ${subscriber.email || subscriber.name}`}
+        items={BCrumb}
+      />
 
       <CardBox>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold">Subscriber Details</h2>
           <div className="flex gap-2">
-            {!editing && (
+            {!form.editing && (
               <>
-                <Button onClick={() => setEditing(true)} className="rounded-md">
+                <Button
+                  onClick={() => form.setEditing(true)}
+                  className="rounded-md"
+                >
                   Edit
                 </Button>
                 <Button
-                  onClick={() => {
-                    void handleDelete();
-                  }}
+                  onClick={() => setShowDeleteDialog(true)}
                   variant="destructive"
                   className="rounded-md"
                 >
@@ -201,18 +114,17 @@ export default function SubscriberDetailPage() {
                 </Button>
               </>
             )}
-            {editing && (
+            {form.editing && (
               <>
                 <Button
-                  onClick={() => {
-                    void handleUpdate();
-                  }}
+                  onClick={form.handleUpdate}
+                  disabled={updateMutation.isPending}
                   className="rounded-md"
                 >
-                  Save
+                  {updateMutation.isPending ? 'Saving...' : 'Save'}
                 </Button>
                 <Button
-                  onClick={() => setEditing(false)}
+                  onClick={() => form.setEditing(false)}
                   variant="outline"
                   className="rounded-md"
                 >
@@ -223,226 +135,143 @@ export default function SubscriberDetailPage() {
           </div>
         </div>
 
-        {/* Metadata */}
-        <div className="bg-muted p-4 rounded-md mb-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">ID</p>
-              <p className="font-mono">{subscriberId}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Subscription Date</p>
-              <p>
-                {format(new Date(subscriber.subscriptionDate), 'MMM dd, yyyy')}
-              </p>
-            </div>
-            {subscriber.lastNotificationDate && (
-              <div>
-                <p className="text-muted-foreground">Last Notification</p>
-                <p>
-                  {format(
-                    new Date(subscriber.lastNotificationDate),
-                    'MMM dd, yyyy',
-                  )}
-                </p>
-              </div>
-            )}
+        {updateError && (
+          <div className="mb-4 p-3 rounded-md bg-lighterror text-error text-sm">
+            {updateError}
           </div>
-        </div>
+        )}
 
-        {/* Form */}
-        <div className="bg-background p-6 rounded-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Name */}
-            <div>
-              <Label htmlFor="name" className="mb-2 block">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Subscriber name"
-                disabled={!editing}
-                className="w-full"
-              />
-            </div>
+        <SubscriberMetadata
+          subscriberId={subscriberId}
+          subscriptionDate={subscriber.subscriptionDate}
+          lastNotificationDate={subscriber.lastNotificationDate}
+        />
 
-            {/* Email */}
-            <div>
-              <Label htmlFor="email" className="mb-2 block">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="subscriber@example.com"
-                disabled={!editing}
-                className="w-full"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <Label htmlFor="phone" className="mb-2 block">
-                Phone
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 (555) 000-0000"
-                disabled={!editing}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="pushToken" className="mb-2 block">
-                Push Token
-              </Label>
-              <Input
-                id="pushToken"
-                value={pushToken}
-                onChange={(e) => setPushToken(e.target.value)}
-                placeholder="Push token"
-                disabled={!editing}
-                className="w-full"
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <Label className="mb-2 block">Email Status</Label>
-              <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
-                {editing ? (
-                  <select
-                    aria-label="email status"
-                    value={status}
-                    onChange={(e) =>
-                      setStatus(
-                        e.target.value as
-                          | 'subscribed'
-                          | 'unsubscribed'
-                          | 'bounced',
-                      )
-                    }
-                    className="w-full outline-none bg-transparent"
-                  >
-                    <option value="subscribed">Subscribed</option>
-                    <option value="unsubscribed">Unsubscribed</option>
-                    <option value="bounced">Bounced</option>
-                  </select>
-                ) : (
-                  <span className="capitalize">{status}</span>
+        <Form {...form.form}>
+          <div className="bg-background p-6 rounded-md">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Subscriber name"
+                        disabled={!form.editing}
+                        className="w-full"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
+
+              <FormField
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="subscriber@example.com"
+                        disabled={!form.editing}
+                        className="w-full"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        disabled={!form.editing}
+                        className="w-full"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                name="pushToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Push Token</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Push token"
+                        disabled={!form.editing}
+                        className="w-full"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div>
+                <FormLabel className="mb-2 block">Email Status</FormLabel>
+                <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
+                  {form.editing ? (
+                    <select
+                      aria-label="email status"
+                      value={form.status}
+                      onChange={(e) =>
+                        form.setStatus(e.target.value as typeof form.status)
+                      }
+                      className="w-full outline-none bg-transparent"
+                    >
+                      <option value="subscribed">Subscribed</option>
+                      <option value="unsubscribed">Unsubscribed</option>
+                      <option value="bounced">Bounced</option>
+                    </select>
+                  ) : (
+                    <span className="capitalize">{form.status}</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Channels */}
-          <div className="mt-6">
-            <Label className="mb-3 block">Notification Channels</Label>
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="email-channel"
-                  checked={channels.includes('email')}
-                  onCheckedChange={(checked) =>
-                    handleChannelChange('email', checked as boolean)
-                  }
-                  disabled={!editing}
-                />
-                <Label
-                  htmlFor="email-channel"
-                  className="font-normal cursor-pointer"
-                >
-                  Email
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="sms-channel"
-                  checked={channels.includes('sms')}
-                  onCheckedChange={(checked) =>
-                    handleChannelChange('sms', checked as boolean)
-                  }
-                  disabled={!editing}
-                />
-                <Label
-                  htmlFor="sms-channel"
-                  className="font-normal cursor-pointer"
-                >
-                  SMS
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="push-channel"
-                  checked={channels.includes('push')}
-                  onCheckedChange={(checked) =>
-                    handleChannelChange('push', checked as boolean)
-                  }
-                  disabled={!editing}
-                />
-                <Label
-                  htmlFor="push-channel"
-                  className="font-normal cursor-pointer"
-                >
-                  Push
-                </Label>
-              </div>
-            </div>
-          </div>
+            <SubscriberChannelsSection
+              channels={form.channels}
+              editing={form.editing}
+              onChannelChange={form.handleChannelChange}
+            />
 
-          {/* Tags */}
-          <div className="mt-6">
-            <Label className="mb-2 block">Tags</Label>
-            {editing ? (
-              <div className="flex gap-2 mb-3">
-                <Input
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  onKeyUp={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddTag();
-                    }
-                  }}
-                  placeholder="Add tag and press Enter"
-                  className="w-full"
-                />
-                <Button onClick={handleAddTag} variant="outline">
-                  Add
-                </Button>
-              </div>
-            ) : null}
-            {tagList.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {tagList.map((tag) => (
-                  <div
-                    key={tag}
-                    className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                  >
-                    {tag}
-                    {editing && (
-                      <button
-                        onClick={() => handleRemoveTag(tag)}
-                        className="hover:bg-primary-foreground hover:text-primary rounded-full w-5 h-5 flex items-center justify-center text-lg"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <SubscriberTagsSection
+              tagList={form.channels ? form.form.watch('tags') : []}
+              editing={form.editing}
+              tags={form.tagInput}
+              onTagsChange={form.setTagInput}
+              onAddTag={form.handleAddTag}
+              onRemoveTag={form.handleRemoveTag}
+            />
           </div>
-        </div>
+        </Form>
       </CardBox>
+
+      <DeleteSubscriberDialog
+        open={showDeleteDialog}
+        deletingItem={subscriber}
+        isDeleting={deleteMutation.isPending}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </>
   );
 }

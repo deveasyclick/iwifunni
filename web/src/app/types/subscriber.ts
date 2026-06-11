@@ -19,3 +19,21 @@ export interface SubscriberType {
   lastNotificationDate?: string | Date;
   deleted: boolean;
 }
+
+export interface CreateSubscriberPayload {
+  name: string;
+  email?: string;
+  phone?: string;
+  pushToken?: string;
+  channels: ('email' | 'sms' | 'push')[];
+  status: SubscriberChannelStatus;
+  tags: string[];
+}
+
+export interface UpdateSubscriberPayload extends CreateSubscriberPayload {
+  id: string;
+}
+
+export interface SubscriberApiResponse<T> {
+  data: T;
+}

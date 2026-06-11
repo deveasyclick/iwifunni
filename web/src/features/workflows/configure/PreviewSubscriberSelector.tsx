@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { subscriberApi } from '@/features/subscribers/api';
-import { useDebounce } from '@/hooks/use-debounce';
+import { useSubscriberSearch } from '@/features/subscribers/queries';
 import type { PreviewSubscriber } from '../types/data-panel';
 
 interface PreviewSubscriberSelectorProps {
@@ -14,6 +13,19 @@ interface PreviewSubscriberSelectorProps {
   hasDefault: boolean;
 }
 
+const toPreviewSubscriber = (s: {
+  id: string;
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+}): PreviewSubscriber => ({
+  id: s.id,
+  firstName: s.name?.split(' ')[0] || s.name || '',
+  lastName: s.name?.split(' ').slice(1).join(' ') || '',
+  email: s.email,
+  phone: s.phone,
+});
+
 export const PreviewSubscriberSelector = ({
   previewSubscriber,
   onSelect,
@@ -22,37 +34,17 @@ export const PreviewSubscriberSelector = ({
 }: PreviewSubscriberSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<PreviewSubscriber[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search
-  useDebounce(
-    async () => {
-      if (!query.trim()) {
-        setResults([]);
-        return;
-      }
-      setSearching(true);
-      try {
-        const data = await subscriberApi.searchSubscribers(query);
-        const subs = data.map((s) => ({
-          id: s.id,
-          firstName: s.name?.split(' ')[0] || s.name,
-          lastName: s.name?.split(' ').slice(1).join(' ') || '',
-          email: s.email,
-          phone: s.phone,
-        }));
-        setResults(subs);
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    },
-    300,
-    [query],
-  );
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const { data: results = [], isFetching: searching } =
+    useSubscriberSearch(debouncedQuery);
 
   // Close on click outside
   useEffect(() => {
@@ -73,7 +65,6 @@ export const PreviewSubscriberSelector = ({
       onSelect(subscriber);
       setOpen(false);
       setQuery('');
-      setResults([]);
     },
     [onSelect],
   );
@@ -83,6 +74,8 @@ export const PreviewSubscriberSelector = ({
     if (!open) setQuery('');
   }, [open]);
 
+  const previewResults = results.map(toPreviewSubscriber);
+
   // Dropdown content
   let dropdownContent: React.ReactNode;
   if (searching) {
@@ -91,8 +84,8 @@ export const PreviewSubscriberSelector = ({
         Searching…
       </div>
     );
-  } else if (results.length > 0) {
-    dropdownContent = results.map((sub) => (
+  } else if (previewResults.length > 0) {
+    dropdownContent = previewResults.map((sub) => (
       <button
         key={sub.id}
         type="button"

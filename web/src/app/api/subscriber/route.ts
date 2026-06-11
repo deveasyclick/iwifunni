@@ -1,14 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { proxyBackend } from '@/lib/backend-api';
-
-async function wrapData(response: NextResponse) {
-  if (!response.ok || response.status === 204) {
-    return response;
-  }
-
-  const payload = await response.json();
-  return NextResponse.json({ data: payload }, { status: response.status });
-}
+import { wrapData } from '@/lib/wrap-data';
 
 export async function GET(req: NextRequest) {
   const response = await proxyBackend(req, '/subscribers', {
@@ -26,22 +18,4 @@ export async function POST(req: NextRequest) {
   });
 
   return wrapData(response);
-}
-
-export async function DELETE(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
-  const id = typeof body?.id === 'string' ? body.id : '';
-  if (!id) {
-    return NextResponse.json(
-      { error: 'Subscriber id is required' },
-      { status: 400 },
-    );
-  }
-
-  return proxyBackend(req, `/subscribers/${id}`, {
-    method: 'DELETE',
-  });
 }
