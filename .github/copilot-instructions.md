@@ -25,6 +25,10 @@
 - Use [Taskfile.yml](../Taskfile.yml) commands when possible for backend validation, especially `task build`, `task lint`, and `task sqlc` when relevant.
 - For frontend work, validate with the available `pnpm` scripts in [web/package.json](../web/package.json) that match the files you touched.
 
+## Frontend Component Conventions
+
+- **Prefer shadcn components.** Always use shadcn components (from `web/src/components/ui/`) when available — `Button`, `Input`, `Label`, `Dialog`, `Sheet`, `Badge`, `Card`, `Checkbox`, `Select`, `Table`, `Tooltip`, etc. Avoid raw HTML elements (`<button>`, `<input>`, `<label>`) or custom-styled divs when a shadcn equivalent exists. This ensures consistent styling, accessibility, and theming across the app.
+
 ## Workflow Builder Frontend Conventions
 
 The workflow builder lives in `web/src/app/dashboard/components/workflows/`. It follows a strict domain-separated structure:
@@ -79,11 +83,14 @@ workflows/
 - **Dialogs and overlays go in `components/`.** Do not inline `Dialog`, `Sheet`, or other overlay components inside parent components. Extract them into separate component files under `components/`.
 - **Constants go in `constants/`.** Do not scatter literal constants across files. All shared constants (UUID patterns, sizes, channel lists, etc.) belong in `constants/index.ts`.
 - **Zod schemas go in `schema/`.** Do not define validation schemas inside component or utility files. Place them in `schema/` and import where needed.
+- **Shared helpers go in `lib/` or their own module.** Do not duplicate utility functions (like `wrapData`) across API route files. Extract shared logic into `lib/` and import where needed.
 - **No god utility files.** Split utilities by domain into sub-directories under `utils/` (e.g., `utils/canvas/`, `utils/duration/`, `utils/display/`, `utils/validation/`). A single file should not mix duration parsing, canvas layout, node display, and draft conversion logic.
 - **No empty re-export barrels.** Do not create files that only re-export from another module. Import directly from the source file.
+- **Component names use PascalCase.** All React component files must be named in PascalCase (e.g., `CreateSubscriberForm.tsx`, `SubscriberMetadata.tsx`). Non-component files (utilities, hooks, types, constants, schemas) use kebab-case.
 - **No `.tsx` without JSX.** Files that contain no JSX must be `.ts`, not `.tsx`. Utility functions, pure business logic, and type definitions are `.ts`.
 - **Store actions are separated.** The Zustand store in `store/builder/` has three files: `store.ts` (store creation), `actions.ts` (pure action factories), and `selectors.ts` (derived computations). Keep them separated, not inlined into the store.
 - **Draft logic is separated.** All draft creation, normalization, and conversion logic belongs in `draft/`, not in utility files or components.
+- **React Query hooks go in `queries.ts`.** Each feature folder has a single `queries.ts` that exports all `useQuery`/`useMutation` hooks. Do not create a `hooks/` directory for React Query hooks; they belong in `queries.ts`.
 
 # Commit Message Rules
 Follow Conventional Commit format for all commits.
