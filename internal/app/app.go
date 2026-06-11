@@ -79,7 +79,7 @@ func (a *App) Router() http.Handler {
 	r.Get("/auth/social/{provider}", a.authHandler().socialStart)
 	r.Get("/auth/social/{provider}/callback", a.authHandler().socialCallback)
 
-	// Protected routes
+	// JWT Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(auth.NewJWTMiddleware(a.jwtManager, a.queries))
 		r.Get("/auth/me", a.authHandler().me)
@@ -119,7 +119,7 @@ func (a *App) Router() http.Handler {
 		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
 		webhooks.NewHandler(webhookSvc).Register(r)
 	})
-
+	// API key protected group
 	r.Group(func(r chi.Router) {
 		r.Use(auth.NewAuthMiddleware(a.queries, a.rateLimiter))
 
@@ -132,11 +132,6 @@ func (a *App) Router() http.Handler {
 		tplRepo := templates.NewRepository(a.queries)
 		tplSvc := templates.NewService(tplRepo)
 		templates.NewHandler(tplSvc).RegisterAPIRoutes(r)
-
-		// Subscribers
-		subscriberRepo := subscriber.NewRepository(a.queries)
-		subscriberSvc := subscriber.NewService(subscriberRepo)
-		subscriber.NewHandler(subscriberSvc).Register(r)
 
 		// Workflows
 		workflowRepo := workflow.NewRepository(a.queries)
