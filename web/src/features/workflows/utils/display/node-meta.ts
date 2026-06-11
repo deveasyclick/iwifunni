@@ -8,7 +8,6 @@ import {
   Smartphone,
 } from 'lucide-react';
 import type { BuilderNodeDraft } from '@/features/workflows/types/draft';
-import { hasConfiguredTemplateId } from './node-subtitle';
 
 const getNodeMeta = (node: BuilderNodeDraft) => {
   switch (node.type) {

@@ -69,10 +69,13 @@ export function renderPreview(
     TEMPLATE_VARIABLE_RE,
     (_match: string, path: string): string => {
       const value = context[path];
-      if (value === undefined || value === null || typeof value === 'object') {
-        return `<strong>{{${path}}}</strong>`;
+      if (typeof value === 'string') {
+        return value;
       }
-      return String(value);
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+      }
+      return `<strong>{{${path}}}</strong>`;
     },
   );
 }
