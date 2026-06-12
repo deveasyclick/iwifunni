@@ -1,5 +1,6 @@
 'use client';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -32,11 +33,6 @@ const CreateSubscriberForm = ({
   const {
     form,
     channels,
-    tagInput,
-    setTagInput,
-    handleAddTag,
-    handleRemoveTag,
-    handleKeyDown,
     onSubmit,
     isPending,
     isError,
@@ -76,7 +72,7 @@ const CreateSubscriberForm = ({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email *</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -99,23 +95,6 @@ const CreateSubscriberForm = ({
                   <Input
                     type="tel"
                     placeholder="+1 (555) 000-0000"
-                    className="w-full bg-background"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            name="pushToken"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Push Token (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="expo-token-or-device-token"
                     className="w-full bg-background"
                     {...field}
                   />
@@ -155,49 +134,23 @@ const CreateSubscriberForm = ({
         </div>
 
         <div className="mt-6">
-          <FormLabel className="mb-2 block text-foreground">Tags</FormLabel>
-          <div className="flex gap-2 mb-3">
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Add tag and press Enter"
-              className="w-full bg-background"
-            />
-            <Button
-              type="button"
-              onClick={handleAddTag}
-              variant="outline"
-              className="border-border"
-            >
-              Add
-            </Button>
-          </div>
-          {form.formState.errors.tags && (
-            <p className="mt-1 text-xs text-destructive">
-              {form.formState.errors.tags.message}
-            </p>
-          )}
-
-          {form.watch('tags').length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {form.watch('tags').map((tag) => (
-                <div
-                  key={tag}
-                  className="bg-lightprimary text-primary px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="hover:bg-primary hover:text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-lg"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <FormField
+            name="metadata"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Metadata (JSON)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder='{"key": "value", "preferences": {...}}'
+                    className="w-full bg-background min-h-[100px] font-mono text-sm"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <div className="flex gap-3 mt-6 justify-end">

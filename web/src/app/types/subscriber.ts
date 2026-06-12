@@ -15,9 +15,12 @@ export interface SubscriberType {
   channels: ('email' | 'sms' | 'push')[];
   status: SubscriberChannelStatus;
   tags: string[];
+  metadata?: Record<string, unknown>;
   subscriptionDate: string | Date;
   lastNotificationDate?: string | Date;
   deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateSubscriberPayload {
@@ -28,6 +31,7 @@ export interface CreateSubscriberPayload {
   channels: ('email' | 'sms' | 'push')[];
   status: SubscriberChannelStatus;
   tags: string[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateSubscriberPayload extends CreateSubscriberPayload {

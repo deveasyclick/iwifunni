@@ -32,29 +32,31 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type subscriberRequest struct {
-	Name      string        `json:"name"`
-	Email     *string       `json:"email"`
-	Phone     *string       `json:"phone"`
-	PushToken *string       `json:"pushToken"`
-	Channels  []string      `json:"channels"`
-	Status    ChannelStatus `json:"status"`
-	Tags      []string      `json:"tags"`
+	Name      string                 `json:"name"`
+	Email     *string                `json:"email"`
+	Phone     *string                `json:"phone"`
+	PushToken *string                `json:"pushToken"`
+	Channels  []string               `json:"channels"`
+	Status    ChannelStatus          `json:"status"`
+	Tags      []string               `json:"tags"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 type subscriberResponse struct {
-	ID                   uuid.UUID     `json:"id"`
-	Name                 string        `json:"name"`
-	Email                *string       `json:"email,omitempty"`
-	Phone                *string       `json:"phone,omitempty"`
-	PushToken            *string       `json:"pushToken,omitempty"`
-	Channels             []string      `json:"channels"`
-	Status               ChannelStatus `json:"status"`
-	Tags                 []string      `json:"tags"`
-	SubscriptionDate     string        `json:"subscriptionDate"`
-	LastNotificationDate *string       `json:"lastNotificationDate,omitempty"`
-	Deleted              bool          `json:"deleted"`
-	CreatedAt            string        `json:"createdAt"`
-	UpdatedAt            string        `json:"updatedAt"`
+	ID                   uuid.UUID              `json:"id"`
+	Name                 string                 `json:"name"`
+	Email                *string                `json:"email,omitempty"`
+	Phone                *string                `json:"phone,omitempty"`
+	PushToken            *string                `json:"pushToken,omitempty"`
+	Channels             []string               `json:"channels"`
+	Status               ChannelStatus          `json:"status"`
+	Tags                 []string               `json:"tags"`
+	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	SubscriptionDate     string                 `json:"subscriptionDate"`
+	LastNotificationDate *string                `json:"lastNotificationDate,omitempty"`
+	Deleted              bool                   `json:"deleted"`
+	CreatedAt            string                 `json:"createdAt"`
+	UpdatedAt            string                 `json:"updatedAt"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +79,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Channels:      req.Channels,
 		Status:        req.Status,
 		Tags:          req.Tags,
+		Metadata:      req.Metadata,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -157,6 +160,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		Channels:      req.Channels,
 		Status:        req.Status,
 		Tags:          req.Tags,
+		Metadata:      req.Metadata,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -205,6 +209,10 @@ func subscriberFromRecord(item db.Subscriber) subscriberResponse {
 	if len(item.Status) > 0 {
 		_ = json.Unmarshal(item.Status, &status)
 	}
+	metadata := make(map[string]interface{})
+	if len(item.Metadata) > 0 {
+		_ = json.Unmarshal(item.Metadata, &metadata)
+	}
 	return subscriberResponse{
 		ID:                   item.ID,
 		Name:                 item.Name,
@@ -214,6 +222,7 @@ func subscriberFromRecord(item db.Subscriber) subscriberResponse {
 		Channels:             item.Channels,
 		Status:               status,
 		Tags:                 item.Tags,
+		Metadata:             metadata,
 		SubscriptionDate:     formatTime(item.SubscriptionDate),
 		LastNotificationDate: optionalTime(item.LastNotificationDate),
 		Deleted:              item.DeletedAt.Valid,

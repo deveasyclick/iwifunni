@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -22,7 +23,6 @@ import {
 import { DeleteSubscriberDialog } from '@/features/subscribers/components/DeleteSubscriberDialog';
 import { SubscriberMetadata } from '@/features/subscribers/components/SubscriberMetadata';
 import { SubscriberChannelsSection } from '@/features/subscribers/components/SubscriberChannelsSection';
-import { SubscriberTagsSection } from '@/features/subscribers/components/SubscriberTagsSection';
 import { useSubscriberEditForm } from '@/features/subscribers/hooks/use-subscriber-edit-form';
 
 export default function SubscriberDetailPage() {
@@ -206,24 +206,6 @@ export default function SubscriberDetailPage() {
                 )}
               />
 
-              <FormField
-                name="pushToken"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Push Token</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Push token"
-                        disabled={!form.editing}
-                        className="w-full"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div>
                 <FormLabel className="mb-2 block">Email Status</FormLabel>
                 <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
@@ -253,14 +235,26 @@ export default function SubscriberDetailPage() {
               onChannelChange={form.handleChannelChange}
             />
 
-            <SubscriberTagsSection
-              tagList={form.channels ? form.form.watch('tags') : []}
-              editing={form.editing}
-              tags={form.tagInput}
-              onTagsChange={form.setTagInput}
-              onAddTag={form.handleAddTag}
-              onRemoveTag={form.handleRemoveTag}
-            />
+            <div className="mt-6">
+              <FormField
+                name="metadata"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Metadata (JSON)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder='{"key": "value", "preferences": {...}}'
+                        className="w-full bg-background min-h-[100px] font-mono text-sm"
+                        disabled={!form.editing}
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
         </Form>
       </CardBox>

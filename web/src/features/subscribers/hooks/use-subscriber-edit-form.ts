@@ -26,7 +26,6 @@ export function useSubscriberEditForm({
   onError,
 }: UseSubscriberEditFormOptions) {
   const [editing, setEditing] = useState(false);
-  const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<SubscriberStatus>(
     subscriber.status.email || 'subscribed',
   );
@@ -37,9 +36,10 @@ export function useSubscriberEditForm({
       name: subscriber.name,
       email: subscriber.email || '',
       phone: subscriber.phone || '',
-      pushToken: subscriber.pushToken || '',
       channels: subscriber.channels,
-      tags: subscriber.tags || [],
+      metadata: subscriber.metadata
+        ? JSON.stringify(subscriber.metadata, null, 2)
+        : '',
     },
   });
 
@@ -55,33 +55,21 @@ export function useSubscriberEditForm({
     form.setValue('channels', updated, { shouldValidate: true });
   };
 
-  const handleAddTag = () => {
-    const trimmed = tagInput.trim();
-    if (!trimmed) return;
-    const currentTags = form.getValues('tags');
-    if (!currentTags.includes(trimmed)) {
-      form.setValue('tags', [...currentTags, trimmed], {
-        shouldValidate: true,
-      });
-    }
-    setTagInput('');
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    const currentTags = form.getValues('tags');
-    form.setValue(
-      'tags',
-      currentTags.filter((t) => t !== tag),
-      { shouldValidate: true },
-    );
-  };
-
   const handleUpdate = () => {
     const values = form.getValues();
     const result = subscriberFormSchema.safeParse(values);
     if (!result.success) {
       onError(result.error.issues[0]?.message || 'Validation failed');
       return;
+    }
+
+    let metadata: Record<string, unknown> | undefined;
+    if (result.data.metadata && result.data.metadata.trim() !== '') {
+      try {
+        metadata = JSON.parse(result.data.metadata) as Record<string, unknown>;
+      } catch {
+        // invalid JSON, schema already validated
+      }
     }
 
     onError(null);
@@ -91,14 +79,14 @@ export function useSubscriberEditForm({
         name: result.data.name,
         email: result.data.email || undefined,
         phone: result.data.phone || undefined,
-        pushToken: result.data.pushToken || undefined,
         channels: result.data.channels,
         status: {
           email: status,
           sms: result.data.channels.includes('sms') ? status : undefined,
           push: result.data.channels.includes('push') ? status : undefined,
         },
-        tags: result.data.tags,
+        tags: [],
+        metadata,
       },
     });
   };
@@ -116,10 +104,6 @@ export function useSubscriberEditForm({
     },
     form,
     channels,
-    tagInput,
-    setTagInput,
-    handleAddTag,
-    handleRemoveTag,
     handleChannelChange,
     handleUpdate,
     resetForm,

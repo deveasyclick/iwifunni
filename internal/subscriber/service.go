@@ -28,25 +28,27 @@ type ChannelStatus struct {
 
 type CreateInput struct {
 	EnvironmentID uuid.UUID
-	Name      string
-	Email     *string
-	Phone     *string
-	PushToken *string
-	Channels  []string
-	Status    ChannelStatus
-	Tags      []string
+	Name          string
+	Email         *string
+	Phone         *string
+	PushToken     *string
+	Channels      []string
+	Status        ChannelStatus
+	Tags          []string
+	Metadata      map[string]interface{}
 }
 
 type UpdateInput struct {
-	ID        uuid.UUID
+	ID            uuid.UUID
 	EnvironmentID uuid.UUID
-	Name      string
-	Email     *string
-	Phone     *string
-	PushToken *string
-	Channels  []string
-	Status    ChannelStatus
-	Tags      []string
+	Name          string
+	Email         *string
+	Phone         *string
+	PushToken     *string
+	Channels      []string
+	Status        ChannelStatus
+	Tags          []string
+	Metadata      map[string]interface{}
 }
 
 type Service struct {
@@ -108,6 +110,10 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 	if err != nil {
 		return db.CreateSubscriberParams{}, err
 	}
+	metadataJSON, err := buildMetadataJSON(in.Metadata)
+	if err != nil {
+		return db.CreateSubscriberParams{}, err
+	}
 	return db.CreateSubscriberParams{
 		ID:            uuid.New(),
 		EnvironmentID: in.EnvironmentID,
@@ -118,7 +124,7 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 		Channels:      channels,
 		Status:        statusJSON,
 		Tags:          normalizeTags(in.Tags),
-		Metadata:      []byte(`{}`),
+		Metadata:      metadataJSON,
 	}, validateName(name)
 }
 
@@ -138,6 +144,10 @@ func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 	if err != nil {
 		return db.UpdateSubscriberParams{}, err
 	}
+	metadataJSON, err := buildMetadataJSON(in.Metadata)
+	if err != nil {
+		return db.UpdateSubscriberParams{}, err
+	}
 	return db.UpdateSubscriberParams{
 		ID:            in.ID,
 		EnvironmentID: in.EnvironmentID,
@@ -148,7 +158,7 @@ func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 		Channels:      channels,
 		Status:        statusJSON,
 		Tags:          normalizeTags(in.Tags),
-		Metadata:      []byte(`{}`),
+		Metadata:      metadataJSON,
 	}, validateName(name)
 }
 
@@ -276,4 +286,15 @@ func isValidStatus(status ChannelStatusValue) bool {
 	default:
 		return false
 	}
+}
+
+func buildMetadataJSON(metadata map[string]interface{}) ([]byte, error) {
+	if metadata == nil {
+		return []byte(`{}`), nil
+	}
+	data, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, ErrInvalidSubscriber
+	}
+	return data, nil
 }
