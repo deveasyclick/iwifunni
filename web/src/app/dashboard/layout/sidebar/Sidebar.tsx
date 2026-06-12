@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarContent from './sidebaritems';
 import SimpleBar from 'simplebar-react';
@@ -81,28 +82,29 @@ const renderSidebarItems = (
       : `mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground`;
 
     return (
-      <Button
-        onClick={onClose}
-        key={item.id}
-        variant="ghost"
-        className="p-0 w-full [&_svg]:size-auto"
-      >
-        <AMMenuItem
-          icon={iconElement}
-          isSelected={isSelected}
-          link={item.url || undefined}
-          target={linkTarget}
-          badge={!!item.isPro}
-          badgeColor="bg-lightsecondary"
-          badgeTextColor="text-secondary"
-          disabled={item.disabled}
-          badgeContent={item.isPro ? 'Pro' : undefined}
-          component={Link}
-          className={`${itemClassNames} shrink-0`}
+      <div key={item.id} className="contents">
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          className="p-0 w-full [&_svg]:size-auto"
         >
-          <span className="truncate flex-1">{item.title || item.name}</span>
-        </AMMenuItem>
-      </Button>
+          <AMMenuItem
+            icon={iconElement}
+            isSelected={isSelected}
+            link={item.url || undefined}
+            target={linkTarget}
+            badge={!!item.isPro}
+            badgeColor="bg-lightsecondary"
+            badgeTextColor="text-secondary"
+            disabled={item.disabled}
+            badgeContent={item.isPro ? 'Pro' : undefined}
+            component={Link}
+            className={`${itemClassNames} shrink-0`}
+          >
+            <span className="truncate flex-1">{item.title || item.name}</span>
+          </AMMenuItem>
+        </Button>
+      </div>
     );
   });
 };

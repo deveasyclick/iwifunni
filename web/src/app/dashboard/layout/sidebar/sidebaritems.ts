@@ -34,6 +34,7 @@ export interface MenuItem {
 const SidebarContent: MenuItem[] = [
   {
     heading: '',
+    id: uniqueId(),
     children: [
       {
         name: 'Overview',
