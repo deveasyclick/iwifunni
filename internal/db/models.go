@@ -148,6 +148,7 @@ type Subscriber struct {
 	SubscriptionDate     pgtype.Timestamptz `db:"subscription_date" json:"subscription_date"`
 	LastNotificationDate pgtype.Timestamptz `db:"last_notification_date" json:"last_notification_date"`
 	Metadata             []byte             `db:"metadata" json:"metadata"`
+	Preferences          []byte             `db:"preferences" json:"preferences"`
 	DeletedAt            pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
 	CreatedAt            pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `db:"updated_at" json:"updated_at"`

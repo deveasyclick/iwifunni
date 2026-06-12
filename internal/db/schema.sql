@@ -196,6 +196,7 @@ CREATE TABLE subscribers (
     subscription_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_notification_date TIMESTAMPTZ,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
     deleted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

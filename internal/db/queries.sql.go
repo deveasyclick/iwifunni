@@ -333,10 +333,11 @@ INSERT INTO subscribers (
 	channels,
 	status,
 	tags,
-	metadata
+	metadata,
+	preferences
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at
 `
 
 type CreateSubscriberParams struct {
@@ -350,6 +351,7 @@ type CreateSubscriberParams struct {
 	Status        []byte    `db:"status" json:"status"`
 	Tags          []string  `db:"tags" json:"tags"`
 	Metadata      []byte    `db:"metadata" json:"metadata"`
+	Preferences   []byte    `db:"preferences" json:"preferences"`
 }
 
 func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberParams) (Subscriber, error) {
@@ -364,6 +366,7 @@ func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberPara
 		arg.Status,
 		arg.Tags,
 		arg.Metadata,
+		arg.Preferences,
 	)
 	var i Subscriber
 	err := row.Scan(
@@ -379,6 +382,7 @@ func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberPara
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
+		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1399,7 +1403,7 @@ func (q *Queries) GetServiceChannelConfig(ctx context.Context, arg GetServiceCha
 }
 
 const getSubscriberByID = `-- name: GetSubscriberByID :one
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
 `
 
@@ -1424,6 +1428,7 @@ func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDPa
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
+		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -2089,7 +2094,7 @@ func (q *Queries) ListProvidersByChannel(ctx context.Context, arg ListProvidersB
 }
 
 const listSubscribersByEnvironment = `-- name: ListSubscribersByEnvironment :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
 ORDER BY subscription_date DESC
 `
@@ -2116,6 +2121,7 @@ func (q *Queries) ListSubscribersByEnvironment(ctx context.Context, environmentI
 			&i.SubscriptionDate,
 			&i.LastNotificationDate,
 			&i.Metadata,
+			&i.Preferences,
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -2411,7 +2417,7 @@ func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID 
 }
 
 const searchSubscribers = `-- name: SearchSubscribers :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
   AND (LOWER(name) LIKE LOWER($2) OR LOWER(COALESCE(email, '')) LIKE LOWER($2))
 ORDER BY subscription_date DESC
@@ -2444,6 +2450,7 @@ func (q *Queries) SearchSubscribers(ctx context.Context, arg SearchSubscribersPa
 			&i.SubscriptionDate,
 			&i.LastNotificationDate,
 			&i.Metadata,
+			&i.Preferences,
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -2654,9 +2661,10 @@ SET name = $3,
 	status = $8,
 	tags = $9,
 	metadata = $10,
+	preferences = $11,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at
 `
 
 type UpdateSubscriberParams struct {
@@ -2670,6 +2678,7 @@ type UpdateSubscriberParams struct {
 	Status        []byte    `db:"status" json:"status"`
 	Tags          []string  `db:"tags" json:"tags"`
 	Metadata      []byte    `db:"metadata" json:"metadata"`
+	Preferences   []byte    `db:"preferences" json:"preferences"`
 }
 
 func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberParams) (Subscriber, error) {
@@ -2684,6 +2693,7 @@ func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberPara
 		arg.Status,
 		arg.Tags,
 		arg.Metadata,
+		arg.Preferences,
 	)
 	var i Subscriber
 	err := row.Scan(
@@ -2699,6 +2709,7 @@ func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberPara
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
+		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,

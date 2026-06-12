@@ -265,9 +265,10 @@ INSERT INTO subscribers (
 	channels,
 	status,
 	tags,
-	metadata
+	metadata,
+	preferences
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: ListSubscribersByEnvironment :many
@@ -289,6 +290,7 @@ SET name = $3,
 	status = $8,
 	tags = $9,
 	metadata = $10,
+	preferences = $11,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
 RETURNING *;
