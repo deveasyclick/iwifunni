@@ -21,13 +21,11 @@ export function useCreateSubscriberForm({
       name: '',
       email: '',
       phone: '',
-      channels: ['email', 'sms', 'push'],
       metadata: undefined,
     },
   });
 
   const createMutation = useSubscriberCreate();
-  const channels = form.watch('channels');
 
   const submitHandler: SubmitHandler<SubscriberFormValues> = (data) => {
     let metadata: Record<string, unknown> | undefined;
@@ -44,12 +42,6 @@ export function useCreateSubscriberForm({
         name: data.name,
         email: data.email || undefined,
         phone: data.phone || undefined,
-        channels: data.channels,
-        status: {
-          email: 'subscribed',
-          sms: data.channels.includes('sms') ? 'subscribed' : undefined,
-          push: data.channels.includes('push') ? 'subscribed' : undefined,
-        },
         tags: [],
         metadata,
       },
@@ -73,7 +65,6 @@ export function useCreateSubscriberForm({
 
   return {
     form,
-    channels,
     onSubmit,
     onCancel,
     isPending: createMutation.isPending,

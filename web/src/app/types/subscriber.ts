@@ -16,6 +16,7 @@ export interface SubscriberType {
   status: SubscriberChannelStatus;
   tags: string[];
   metadata?: Record<string, unknown>;
+  preferences?: Record<string, unknown>;
   subscriptionDate: string | Date;
   lastNotificationDate?: string | Date;
   deleted: boolean;
@@ -28,10 +29,11 @@ export interface CreateSubscriberPayload {
   email?: string;
   phone?: string;
   pushToken?: string;
-  channels: ('email' | 'sms' | 'push')[];
-  status: SubscriberChannelStatus;
+  channels?: ('email' | 'sms' | 'push')[];
+  status?: SubscriberChannelStatus;
   tags: string[];
   metadata?: Record<string, unknown>;
+  preferences?: Record<string, unknown>;
 }
 
 export interface UpdateSubscriberPayload extends CreateSubscriberPayload {
