@@ -2,7 +2,6 @@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormField,
@@ -12,18 +11,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useCreateSubscriberForm } from '../hooks/use-create-subscriber-form';
+import { PhoneInput } from '../components/PhoneInput';
 
 type CreateSubscriberFormProps = {
   onCreated?: () => void;
   onCancel?: () => void;
   compact?: boolean;
 };
-
-const CHANNEL_OPTIONS = [
-  { value: 'email' as const, label: 'Email' },
-  { value: 'sms' as const, label: 'SMS' },
-  { value: 'push' as const, label: 'Push' },
-];
 
 const CreateSubscriberForm = ({
   onCreated,
@@ -32,20 +26,11 @@ const CreateSubscriberForm = ({
 }: CreateSubscriberFormProps) => {
   const {
     form,
-    channels,
     onSubmit,
     isPending,
     isError,
     error,
   } = useCreateSubscriberForm({ onCreated, onCancel });
-
-  const toggleChannel = (channel: 'email' | 'sms' | 'push') => {
-    const current = form.getValues('channels');
-    const updated = current.includes(channel)
-      ? current.filter((c) => c !== channel)
-      : [...current, channel];
-    form.setValue('channels', updated, { shouldValidate: true });
-  };
 
   const formBody = (
     <Form {...form}>
@@ -92,45 +77,16 @@ const CreateSubscriberForm = ({
               <FormItem>
                 <FormLabel>Phone (Optional)</FormLabel>
                 <FormControl>
-                  <Input
-                    type="tel"
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full bg-background"
-                    {...field}
+                  <PhoneInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="(555) 000-0000"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
-          <div>
-            <FormLabel className="mb-2 block text-foreground">
-              Notification Channels
-            </FormLabel>
-            <div className="flex flex-wrap gap-4 rounded-md border border-border bg-muted/40 p-3">
-              {CHANNEL_OPTIONS.map(({ value, label }) => (
-                <div key={value} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`channel-${value}`}
-                    checked={channels.includes(value)}
-                    onCheckedChange={() => toggleChannel(value)}
-                  />
-                  <label
-                    htmlFor={`channel-${value}`}
-                    className="font-normal cursor-pointer text-foreground text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {label}
-                  </label>
-                </div>
-              ))}
-            </div>
-            {form.formState.errors.channels && (
-              <p className="mt-2 text-xs text-destructive">
-                {form.formState.errors.channels.message}
-              </p>
-            )}
-          </div>
         </div>
 
         <div className="mt-6">
