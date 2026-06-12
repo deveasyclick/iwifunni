@@ -32,14 +32,14 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type subscriberRequest struct {
-	Name      string                 `json:"name"`
-	Email     *string                `json:"email"`
-	Phone     *string                `json:"phone"`
-	PushToken *string                `json:"pushToken"`
-	Channels  []string               `json:"channels"`
-	Status    ChannelStatus          `json:"status"`
-	Tags      []string               `json:"tags"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Name        string                 `json:"name"`
+	Email       *string                `json:"email"`
+	Phone       *string                `json:"phone"`
+	PushToken   *string                `json:"pushToken"`
+	Channels    []string               `json:"channels,omitempty"`
+	Tags        []string               `json:"tags"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Preferences map[string]interface{} `json:"preferences,omitempty"`
 }
 
 type subscriberResponse struct {
@@ -52,6 +52,7 @@ type subscriberResponse struct {
 	Status               ChannelStatus          `json:"status"`
 	Tags                 []string               `json:"tags"`
 	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	Preferences          map[string]interface{} `json:"preferences,omitempty"`
 	SubscriptionDate     string                 `json:"subscriptionDate"`
 	LastNotificationDate *string                `json:"lastNotificationDate,omitempty"`
 	Deleted              bool                   `json:"deleted"`
@@ -77,9 +78,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Phone:         req.Phone,
 		PushToken:     req.PushToken,
 		Channels:      req.Channels,
-		Status:        req.Status,
 		Tags:          req.Tags,
 		Metadata:      req.Metadata,
+		Preferences:   req.Preferences,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -158,9 +159,9 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		Phone:         req.Phone,
 		PushToken:     req.PushToken,
 		Channels:      req.Channels,
-		Status:        req.Status,
 		Tags:          req.Tags,
 		Metadata:      req.Metadata,
+		Preferences:   req.Preferences,
 	})
 	if err != nil {
 		h.respondError(w, err)
@@ -213,6 +214,10 @@ func subscriberFromRecord(item db.Subscriber) subscriberResponse {
 	if len(item.Metadata) > 0 {
 		_ = json.Unmarshal(item.Metadata, &metadata)
 	}
+	preferences := make(map[string]interface{})
+	if len(item.Preferences) > 0 {
+		_ = json.Unmarshal(item.Preferences, &preferences)
+	}
 	return subscriberResponse{
 		ID:                   item.ID,
 		Name:                 item.Name,
@@ -223,6 +228,7 @@ func subscriberFromRecord(item db.Subscriber) subscriberResponse {
 		Status:               status,
 		Tags:                 item.Tags,
 		Metadata:             metadata,
+		Preferences:          preferences,
 		SubscriptionDate:     formatTime(item.SubscriptionDate),
 		LastNotificationDate: optionalTime(item.LastNotificationDate),
 		Deleted:              item.DeletedAt.Valid,

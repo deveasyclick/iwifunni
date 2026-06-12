@@ -33,9 +33,9 @@ type CreateInput struct {
 	Phone         *string
 	PushToken     *string
 	Channels      []string
-	Status        ChannelStatus
 	Tags          []string
 	Metadata      map[string]interface{}
+	Preferences   map[string]interface{}
 }
 
 type UpdateInput struct {
@@ -46,9 +46,9 @@ type UpdateInput struct {
 	Phone         *string
 	PushToken     *string
 	Channels      []string
-	Status        ChannelStatus
 	Tags          []string
 	Metadata      map[string]interface{}
+	Preferences   map[string]interface{}
 }
 
 type Service struct {
@@ -96,21 +96,19 @@ func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error
 
 func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 	name := strings.TrimSpace(in.Name)
-	channels, err := normalizeChannels(in.Channels)
-	if err != nil {
-		return db.CreateSubscriberParams{}, err
-	}
 	email := trimOptional(in.Email)
 	phone := trimOptional(in.Phone)
 	pushToken := trimOptional(in.PushToken)
-	if err := validateChannelTargets(channels, email, phone, pushToken); err != nil {
-		return db.CreateSubscriberParams{}, err
+	if phone != nil && !phoneHasCountryCode(*phone) {
+		return db.CreateSubscriberParams{}, ErrInvalidSubscriber
 	}
-	statusJSON, err := buildStatusJSON(channels, in.Status)
+	channels := deriveChannels(email, phone, pushToken)
+	statusJSON := buildDefaultStatusJSON(channels)
+	metadataJSON, err := buildMetadataJSON(in.Metadata)
 	if err != nil {
 		return db.CreateSubscriberParams{}, err
 	}
-	metadataJSON, err := buildMetadataJSON(in.Metadata)
+	preferencesJSON, err := buildMetadataJSON(in.Preferences)
 	if err != nil {
 		return db.CreateSubscriberParams{}, err
 	}
@@ -125,26 +123,25 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 		Status:        statusJSON,
 		Tags:          normalizeTags(in.Tags),
 		Metadata:      metadataJSON,
+		Preferences:   preferencesJSON,
 	}, validateName(name)
 }
 
 func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 	name := strings.TrimSpace(in.Name)
-	channels, err := normalizeChannels(in.Channels)
-	if err != nil {
-		return db.UpdateSubscriberParams{}, err
-	}
 	email := trimOptional(in.Email)
 	phone := trimOptional(in.Phone)
 	pushToken := trimOptional(in.PushToken)
-	if err := validateChannelTargets(channels, email, phone, pushToken); err != nil {
-		return db.UpdateSubscriberParams{}, err
+	if phone != nil && !phoneHasCountryCode(*phone) {
+		return db.UpdateSubscriberParams{}, ErrInvalidSubscriber
 	}
-	statusJSON, err := buildStatusJSON(channels, in.Status)
+	channels := deriveChannels(email, phone, pushToken)
+	statusJSON := buildDefaultStatusJSON(channels)
+	metadataJSON, err := buildMetadataJSON(in.Metadata)
 	if err != nil {
 		return db.UpdateSubscriberParams{}, err
 	}
-	metadataJSON, err := buildMetadataJSON(in.Metadata)
+	preferencesJSON, err := buildMetadataJSON(in.Preferences)
 	if err != nil {
 		return db.UpdateSubscriberParams{}, err
 	}
@@ -159,6 +156,7 @@ func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 		Status:        statusJSON,
 		Tags:          normalizeTags(in.Tags),
 		Metadata:      metadataJSON,
+		Preferences:   preferencesJSON,
 	}, validateName(name)
 }
 
@@ -180,29 +178,22 @@ func trimOptional(value *string) *string {
 	return &trimmed
 }
 
-func normalizeChannels(channels []string) ([]string, error) {
-	if len(channels) == 0 {
-		return nil, ErrInvalidSubscriber
+func phoneHasCountryCode(phone string) bool {
+	return len(phone) > 0 && phone[0] == '+'
+}
+
+func deriveChannels(email, phone, pushToken *string) []string {
+	channels := make([]string, 0, 3)
+	if email != nil {
+		channels = append(channels, "email")
 	}
-	seen := make(map[string]struct{}, len(channels))
-	result := make([]string, 0, len(channels))
-	for _, channel := range channels {
-		normalized := strings.ToLower(strings.TrimSpace(channel))
-		switch normalized {
-		case "email", "sms", "push":
-		default:
-			return nil, ErrInvalidSubscriber
-		}
-		if _, ok := seen[normalized]; ok {
-			continue
-		}
-		seen[normalized] = struct{}{}
-		result = append(result, normalized)
+	if phone != nil {
+		channels = append(channels, "sms")
 	}
-	if len(result) == 0 {
-		return nil, ErrInvalidSubscriber
+	if pushToken != nil {
+		channels = append(channels, "push")
 	}
-	return result, nil
+	return channels
 }
 
 func normalizeTags(tags []string) []string {
@@ -222,33 +213,12 @@ func normalizeTags(tags []string) []string {
 	return result
 }
 
-func validateChannelTargets(channels []string, email, phone, pushToken *string) error {
-	for _, channel := range channels {
-		switch channel {
-		case "email":
-			if email == nil {
-				return ErrInvalidSubscriber
-			}
-		case "sms":
-			if phone == nil {
-				return ErrInvalidSubscriber
-			}
-		case "push":
-			if pushToken == nil {
-				return ErrInvalidSubscriber
-			}
-		}
-	}
-	return nil
-}
 
-func buildStatusJSON(channels []string, status ChannelStatus) ([]byte, error) {
+
+func buildDefaultStatusJSON(channels []string) []byte {
 	normalized := ChannelStatus{}
 	for _, channel := range channels {
-		value := statusForChannel(channel, status)
-		if !isValidStatus(value) {
-			return nil, ErrInvalidSubscriber
-		}
+		value := StatusSubscribed
 		switch channel {
 		case "email":
 			normalized.Email = &value
@@ -258,34 +228,8 @@ func buildStatusJSON(channels []string, status ChannelStatus) ([]byte, error) {
 			normalized.Push = &value
 		}
 	}
-	return json.Marshal(normalized)
-}
-
-func statusForChannel(channel string, status ChannelStatus) ChannelStatusValue {
-	switch channel {
-	case "email":
-		if status.Email != nil {
-			return *status.Email
-		}
-	case "sms":
-		if status.SMS != nil {
-			return *status.SMS
-		}
-	case "push":
-		if status.Push != nil {
-			return *status.Push
-		}
-	}
-	return StatusSubscribed
-}
-
-func isValidStatus(status ChannelStatusValue) bool {
-	switch status {
-	case StatusSubscribed, StatusUnsubscribed, StatusBounced:
-		return true
-	default:
-		return false
-	}
+	data, _ := json.Marshal(normalized)
+	return data
 }
 
 func buildMetadataJSON(metadata map[string]interface{}) ([]byte, error) {
