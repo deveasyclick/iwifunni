@@ -7,6 +7,7 @@ import { useSubscriberList, useSubscriberDelete } from '../queries';
 import { filterSubscribers } from '../utils/filter-subscribers';
 import { countSubscribers } from '../utils/count-subscribers';
 import { DeleteSubscriberDialog } from '../components/DeleteSubscriberDialog';
+import { EditSubscriberSheet } from '../components/EditSubscriberSheet';
 
 const SubscriberList = () => {
   const {
@@ -19,6 +20,9 @@ const SubscriberList = () => {
   const deleteMutation = useSubscriberDelete();
   const [filter, setFilter] = useState<string>('total_subscribers');
   const [subscriberSearch, setSubscriberSearch] = useState<string>('');
+  const [editingSubscriber, setEditingSubscriber] = useState<
+    (typeof subscribers)[number] | null
+  >(null);
   const [deletingItem, setDeletingItem] = useState<
     (typeof subscribers)[number] | null
   >(null);
@@ -79,7 +83,13 @@ const SubscriberList = () => {
         isEmpty={subscribers.length === 0}
         search={subscriberSearch}
         onSearch={setSubscriberSearch}
+        onEditClick={(sub) => setEditingSubscriber(sub)}
         onDeleteClick={(sub) => setDeletingItem(sub)}
+      />
+      <EditSubscriberSheet
+        subscriber={editingSubscriber}
+        open={editingSubscriber !== null}
+        onClose={() => setEditingSubscriber(null)}
       />
       <DeleteSubscriberDialog
         open={deletingItem !== null}

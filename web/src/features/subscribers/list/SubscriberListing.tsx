@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Icon } from '@iconify/react';
 import type { SubscriberType } from '@/app/types/subscriber';
@@ -42,6 +41,7 @@ interface SubscriberListingProps {
   isEmpty: boolean;
   search: string;
   onSearch: (term: string) => void;
+  onEditClick?: (subscriber: SubscriberType) => void;
   onDeleteClick: (subscriber: SubscriberType) => void;
 }
 
@@ -50,9 +50,9 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
   isEmpty,
   search,
   onSearch,
+  onEditClick,
   onDeleteClick,
 }) => {
-  const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -211,11 +211,7 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="min-w-[140px]">
                           <DropdownMenuItem
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/subscribers/${subscriber.id}`,
-                              )
-                            }
+                            onClick={() => onEditClick?.(subscriber)}
                           >
                             <Icon
                               icon="tabler:edit"
