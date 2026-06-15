@@ -1,4 +1,5 @@
 import type { FilterCardConfig } from '../types/filter';
+import type { Channel } from '../types/channels';
 
 const filterCards: FilterCardConfig[] = [
   {
@@ -26,5 +27,13 @@ const filterCards: FilterCardConfig[] = [
     ringColor: 'ring-error',
   },
 ];
+
+export const CHANNELS: { key: Channel; label: string }[] = [
+  { key: 'email', label: 'Email' },
+  { key: 'sms', label: 'SMS' },
+  { key: 'push', label: 'Push' },
+];
+
+export const DEFAULT_CHANNELS: Channel[] = ['email', 'sms', 'push'];
 
 export { filterCards };
