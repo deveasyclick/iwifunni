@@ -25,8 +25,7 @@ import { useWorkflowListQuery } from '@/features/workflows/queries';
 import { useState } from 'react';
 import { useSubscriberEditForm } from '../hooks/use-subscriber-edit-form';
 import { useSubscriberPreferences } from '../hooks/use-subscriber-preferences';
-import { useSubscriberDelete, useSubscriberUpdate } from '../queries';
-import { DeleteSubscriberDialog } from './DeleteSubscriberDialog';
+import { useSubscriberUpdate } from '../queries';
 import { PhoneInput } from './PhoneInput';
 import { WorkflowPreferencesPanel } from './WorkflowPreferencesPanel';
 
@@ -42,8 +41,6 @@ export function EditSubscriberSheet({
   onClose,
 }: Readonly<EditSubscriberSheetProps>) {
   const updateMutation = useSubscriberUpdate();
-  const deleteMutation = useSubscriberDelete();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Fetch workflows for the workflow preferences section
@@ -73,36 +70,26 @@ export function EditSubscriberSheet({
     },
   });
 
-  const handleDeleteConfirm = () => {
-    if (!subscriber) return;
-    deleteMutation.mutate(subscriber.id, {
-      onSettled: () => {
-        setShowDeleteDialog(false);
-        onClose();
-      },
-    });
-  };
-
   return (
-    <>
-      <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-lg overflow-y-auto"
-        >
-          <SheetHeader className="mb-6">
-            <SheetTitle>Edit Subscriber</SheetTitle>
-            <SheetDescription>
-              Update subscriber details and notification preferences.
-            </SheetDescription>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-lg flex flex-col h-full p-3"
+      >
+        <SheetHeader className="mb-6 shrink-0">
+          <SheetTitle>Edit Subscriber</SheetTitle>
+          <SheetDescription>
+            Update subscriber details and notification preferences.
+          </SheetDescription>
+        </SheetHeader>
 
-          {updateError && (
-            <div className="mb-4 p-3 rounded-md bg-lighterror text-error text-sm">
-              {updateError}
-            </div>
-          )}
+        {updateError && (
+          <div className="mb-4 p-3 rounded-md bg-lighterror text-error text-sm shrink-0">
+            {updateError}
+          </div>
+        )}
 
+        <div className="flex-1 overflow-y-auto min-h-0">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -200,37 +187,22 @@ export function EditSubscriberSheet({
               />
             </TabsContent>
           </Tabs>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-card pt-4 border-t flex items-center gap-3">
-            <Button
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-              className="rounded-md flex-1"
-            >
-              {updateMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
-            <Button onClick={onClose} variant="outline" className="rounded-md">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => setShowDeleteDialog(true)}
-              variant="destructive"
-              className="rounded-md"
-            >
-              Delete
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <DeleteSubscriberDialog
-        open={showDeleteDialog}
-        deletingItem={subscriber}
-        isDeleting={deleteMutation.isPending}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setShowDeleteDialog(false)}
-      />
-    </>
+        {/* Footer Actions */}
+        <div className="pt-4 border-t flex items-center gap-3 mt-6 shrink-0">
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="rounded-md flex-1"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
+          <Button onClick={onClose} variant="outline" className="rounded-md">
+            Cancel
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
