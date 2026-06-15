@@ -1,6 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import type {
+  CreateProviderPayload,
+  UpdateProviderStatePayload,
+} from '@/app/types/provider';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { providerApi, type ProviderConfig } from './api';
 
 export function useProviders() {
@@ -24,4 +28,41 @@ export function useEmailProvider() {
     loading: query.isLoading,
     error: query.error,
   };
+}
+
+export function useCreateProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateProviderPayload) =>
+      providerApi.createProvider(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
+  });
+}
+
+export function useUpdateProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: CreateProviderPayload;
+    }) => providerApi.updateProvider(id, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
+  });
+}
+
+export function useUpdateProviderState() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdateProviderStatePayload;
+    }) => providerApi.updateProviderState(id, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
+  });
 }

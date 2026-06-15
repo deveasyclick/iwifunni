@@ -1,3 +1,8 @@
+import type {
+  CreateProviderPayload,
+  ProviderItem,
+  UpdateProviderStatePayload,
+} from '@/app/types/provider';
 import { request } from '@/lib/api-client';
 
 export interface ProviderConfig {
@@ -11,6 +16,27 @@ export interface ProviderConfig {
 
 export const providerApi = {
   listProviders() {
-    return request<ProviderConfig[]>('/api/providers', { method: 'GET' });
+    return request<ProviderItem[]>('/api/providers', { method: 'GET' });
+  },
+
+  createProvider(payload: CreateProviderPayload) {
+    return request<ProviderItem>('/api/providers', {
+      method: 'POST',
+      body: payload,
+    });
+  },
+
+  updateProvider(id: string, payload: CreateProviderPayload) {
+    return request<ProviderItem>(`/api/providers/${id}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  },
+
+  updateProviderState(id: string, payload: UpdateProviderStatePayload) {
+    return request<ProviderItem>(`/api/providers/${id}`, {
+      method: 'PATCH',
+      body: payload,
+    });
   },
 };
