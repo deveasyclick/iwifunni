@@ -160,10 +160,7 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
                                     className="text-lightSuccess"
                                   />
                                 ) : (
-                                  <Icon
-                                    icon="tabler:copy"
-                                    height={14}
-                                  />
+                                  <Icon icon="tabler:copy" height={14} />
                                 )}
                               </button>
                             </TooltipTrigger>
@@ -185,13 +182,19 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
 
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       {subscriber.createdAt
-                        ? format(new Date(subscriber.createdAt), 'MMM dd, yyyy HH:mm')
+                        ? format(
+                            new Date(subscriber.createdAt),
+                            'MMM dd, yyyy HH:mm',
+                          )
                         : 'N/A'}
                     </TableCell>
 
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       {subscriber.updatedAt
-                        ? format(new Date(subscriber.updatedAt), 'MMM dd, yyyy HH:mm')
+                        ? format(
+                            new Date(subscriber.updatedAt),
+                            'MMM dd, yyyy HH:mm',
+                          )
                         : 'N/A'}
                     </TableCell>
 
@@ -203,13 +206,13 @@ const SubscriberListing: React.FC<SubscriberListingProps> = ({
                             size="icon"
                             className="h-8 w-8"
                           >
-                            <Icon
-                              icon="tabler:dots-vertical"
-                              height={18}
-                            />
+                            <Icon icon="tabler:dots-vertical" height={18} />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-[140px]">
+                        <DropdownMenuContent
+                          align="end"
+                          className="min-w-[140px]"
+                        >
                           <DropdownMenuItem
                             onClick={() => onEditClick?.(subscriber)}
                           >

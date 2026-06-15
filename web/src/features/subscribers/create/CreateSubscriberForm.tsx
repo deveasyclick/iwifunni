@@ -24,13 +24,9 @@ const CreateSubscriberForm = ({
   onCancel,
   compact = false,
 }: CreateSubscriberFormProps) => {
-  const {
-    form,
-    onSubmit,
-    isPending,
-    isError,
-    error,
-  } = useCreateSubscriberForm({ onCreated, onCancel });
+  const { form, onSubmit, isPending, isError, error } = useCreateSubscriberForm(
+    { onCreated, onCancel },
+  );
 
   const formBody = (
     <Form {...form}>

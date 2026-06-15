@@ -6,7 +6,7 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --fix --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest"
   },

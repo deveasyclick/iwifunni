@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarContent from './sidebaritems';
 import SimpleBar from 'simplebar-react';
