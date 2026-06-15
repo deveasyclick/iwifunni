@@ -1,26 +1,38 @@
 'use client';
 
+import type { SubscriberType } from '@/app/types/subscriber';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { subscriberFormSchema, type SubscriberFormValues } from '../schema';
-import type {
-  SubscriberType,
-  CreateSubscriberPayload,
-} from '@/app/types/subscriber';
+import type { BuildPreferencesPayloadResult } from './use-subscriber-preferences';
+
+type SavePayload = {
+  id: string;
+  payload: {
+    name: string;
+    email?: string;
+    phone?: string;
+    tags: string[];
+    metadata?: Record<string, unknown>;
+    preferences?: Record<string, unknown>;
+  };
+};
 
 type UseSubscriberEditFormOptions = {
   subscriber?: SubscriberType;
-  onUpdate: (payload: { id: string; payload: CreateSubscriberPayload }) => void;
   isPending: boolean;
   onError: (message: string | null) => void;
+  buildPreferencesPayload?: () => BuildPreferencesPayloadResult;
+  onSave: (payload: SavePayload) => void;
 };
 
 export function useSubscriberEditForm({
   subscriber,
-  onUpdate,
   isPending,
   onError,
+  buildPreferencesPayload,
+  onSave,
 }: UseSubscriberEditFormOptions) {
   const [editing, setEditing] = useState(false);
 
@@ -36,7 +48,7 @@ export function useSubscriberEditForm({
     },
   });
 
-  const handleUpdate = () => {
+  const handleSave = () => {
     const values = form.getValues();
     const result = subscriberFormSchema.safeParse(values);
     if (!result.success) {
@@ -49,13 +61,19 @@ export function useSubscriberEditForm({
       try {
         metadata = JSON.parse(result.data.metadata) as Record<string, unknown>;
       } catch {
-        // invalid JSON, schema already validated
+        onError('Invalid JSON in metadata field');
+        return;
       }
     }
 
     if (!subscriber) return;
     onError(null);
-    onUpdate({
+
+    const preferences = buildPreferencesPayload
+      ? (buildPreferencesPayload() as Record<string, unknown>)
+      : undefined;
+
+    onSave({
       id: subscriber.id,
       payload: {
         name: result.data.name,
@@ -63,6 +81,7 @@ export function useSubscriberEditForm({
         phone: result.data.phone || undefined,
         tags: [],
         metadata,
+        preferences,
       },
     });
   };
@@ -78,7 +97,7 @@ export function useSubscriberEditForm({
       setEditing(v);
     },
     form,
-    handleUpdate,
+    handleSave,
     resetForm,
     isPending,
   };
