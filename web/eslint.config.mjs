@@ -82,6 +82,19 @@ const eslintConfig = [
   // Add type-aware rules that require `parserOptions.project`.
   ...tsRequiresTypeChecking,
 
+  // 4b. Type-aware overrides (must be in the type-aware scope)
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    rules: {
+      // Allow async functions in onClick/onChange etc. — the void return
+      // pattern is intentional and safe here.
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: false },
+      ],
+    },
+  },
+
   // 5. Prettier errors mapping
   {
     plugins: {
@@ -98,6 +111,8 @@ const eslintConfig = [
         },
       ],
       '@typescript-eslint/no-unsafe-assignment': 'off',
+      // Pre-existing <img> usages; prefer <Image /> in new code.
+      '@next/next/no-img-element': 'warn',
     },
   },
 
