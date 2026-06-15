@@ -3,12 +3,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { providerApi, type ProviderConfig } from './api';
 
-export function useEmailProvider() {
-  const query = useQuery({
+export function useProviders() {
+  return useQuery({
     queryKey: ['providers'],
     queryFn: () => providerApi.listProviders(),
     staleTime: 60_000,
   });
+}
+
+export function useEmailProvider() {
+  const query = useProviders();
 
   const emailProvider: ProviderConfig | null =
     query.data?.find((p) => p.channel === 'email') ||

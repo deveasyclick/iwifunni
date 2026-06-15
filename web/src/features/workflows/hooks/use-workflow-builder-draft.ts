@@ -1,20 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CreateWorkflowPayload, WorkflowItem } from '@/app/types/workflow';
+import { useProviders } from '@/features/settings/queries';
 import { workflowApi } from '@/features/workflows/api';
 import {
   builderDraftFromDefinition,
   createDefaultWorkflowBuilderDraft,
   workflowDefinitionFromBuilderDraft,
 } from '@/features/workflows/draft';
+import { useWorkflowQuery } from '@/features/workflows/queries';
 import type {
   WorkflowBuilderDraft,
   WorkflowDefinitionIssue,
 } from '@/features/workflows/types/draft';
 import type { WorkflowAutosaveState } from '@/features/workflows/types/ui';
-import { buildSaveSignature } from '@/features/workflows/utils/signature';
 import { validateWorkflowDefinitionDraft } from '@/features/workflows/utils';
+import { buildSaveSignature } from '@/features/workflows/utils/signature';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type UseWorkflowBuilderDraftResult = {
   workflow: WorkflowItem | null;
@@ -33,8 +35,6 @@ export type UseWorkflowBuilderDraftResult = {
 export const useWorkflowBuilderDraft = (
   workflowId: string,
 ): UseWorkflowBuilderDraftResult => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowItem | null>(null);
   const [definitionDraft, setDefinitionDraft] = useState<WorkflowBuilderDraft>(
     createDefaultWorkflowBuilderDraft,
@@ -45,60 +45,83 @@ export const useWorkflowBuilderDraft = (
   });
 
   const lastSavedSignatureRef = useRef<string | null>(null);
+  const initialQuerySyncRef = useRef<string | null>(null);
 
-  // Fetch workflow on mount
+  const workflowQuery = useWorkflowQuery(workflowId);
+  const loading = workflowQuery.isLoading && !workflowQuery.data;
+  const error = workflowQuery.error
+    ? workflowQuery.error instanceof Error
+      ? workflowQuery.error.message
+      : 'Failed to load workflow draft'
+    : null;
+
+  // Sync query data into local state on initial load (per workflow ID)
   useEffect(() => {
-    let cancelled = false;
+    if (!workflowQuery.data) return;
+    if (initialQuerySyncRef.current === workflowId) return;
+    initialQuerySyncRef.current = workflowId;
 
-    const loadWorkflow = async () => {
-      setLoading(true);
-      setError(null);
+    const nextDraft = workflowQuery.data.definition
+      ? builderDraftFromDefinition(workflowQuery.data.definition)
+      : createDefaultWorkflowBuilderDraft();
+
+    lastSavedSignatureRef.current = buildSaveSignature(
+      JSON.stringify(nextDraft),
+      workflowQuery.data.name,
+      workflowQuery.data.description || '',
+    );
+    setWorkflow(workflowQuery.data);
+    setDefinitionDraft(nextDraft);
+    setAutosaveState({ status: 'saved', message: 'Draft ready' });
+  }, [workflowQuery.data, workflowId]);
+
+  // Reflect query loading/error in autosave state
+  useEffect(() => {
+    if (workflowQuery.isLoading) {
       setAutosaveState({ status: 'loading', message: 'Loading draft...' });
-
-      try {
-        const nextWorkflow = await workflowApi.getWorkflow(workflowId);
-        if (cancelled) return;
-
-        const nextDraft = nextWorkflow.definition
-          ? builderDraftFromDefinition(nextWorkflow.definition)
-          : createDefaultWorkflowBuilderDraft();
-
-        lastSavedSignatureRef.current = buildSaveSignature(
-          JSON.stringify(nextDraft),
-          nextWorkflow.name,
-          nextWorkflow.description || '',
-        );
-        setWorkflow(nextWorkflow);
-        setDefinitionDraft(nextDraft);
-        setAutosaveState({ status: 'saved', message: 'Draft ready' });
-      } catch (err) {
-        if (cancelled) return;
-        setError(
-          err instanceof Error ? err.message : 'Failed to load workflow draft',
-        );
-        setAutosaveState({
-          status: 'error',
-          message: 'Failed to load workflow draft',
-        });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void loadWorkflow();
-    return () => {
-      cancelled = true;
-    };
-  }, [workflowId]);
+    } else if (workflowQuery.error) {
+      setAutosaveState({
+        status: 'error',
+        message: 'Failed to load workflow draft',
+      });
+    }
+  }, [workflowQuery.isLoading, workflowQuery.error]);
 
   const definition = useMemo(
     () => workflowDefinitionFromBuilderDraft(definitionDraft),
     [definitionDraft],
   );
-  const definitionIssues = useMemo(
-    () => validateWorkflowDefinitionDraft(definition),
-    [definition],
-  );
+
+  // Fetch providers to check active provider availability per channel
+  const providersQuery = useProviders();
+
+  const definitionIssues = useMemo(() => {
+    const base = validateWorkflowDefinitionDraft(definition);
+
+    // Provider-aware validation: notification nodes need an active provider
+    // for their configured channel. Skip when data is still loading.
+    if (providersQuery.data) {
+      const activeChannels = new Set(
+        providersQuery.data.filter((p) => p.is_active).map((p) => p.channel),
+      );
+
+      for (let i = 0; i < definitionDraft.nodes.length; i++) {
+        const node = definitionDraft.nodes[i];
+        if (
+          node.type === 'notification' &&
+          node.channel &&
+          !activeChannels.has(node.channel)
+        ) {
+          base.push({
+            path: `nodes.${i}.channels`,
+            message: `No active ${node.channel.toUpperCase()} provider configured. Set one up in Settings → Providers.`,
+          });
+        }
+      }
+    }
+
+    return base;
+  }, [definition, providersQuery.data, definitionDraft.nodes]);
   const draftSignature = useMemo(
     () => JSON.stringify(definitionDraft),
     [definitionDraft],

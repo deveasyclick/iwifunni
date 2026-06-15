@@ -6,6 +6,7 @@ export interface ProviderConfig {
   channel: string;
   config?: { sender_name?: string; from_email?: string };
   is_primary: boolean;
+  is_active: boolean;
 }
 
 export const providerApi = {
