@@ -1,11 +1,12 @@
 'use client';
 
 import CardBox from '@/components/card/CardBox';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@iconify/react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useProviders } from '../queries';
+import { AvailableProvidersSheet } from './components/AvailableProvidersSheet';
 import { ConnectedProviderCard } from './components/ConnectedProviderCard';
-import { DisconnectedProviderCard } from './components/DisconnectedProviderCard';
 import { ProviderConnectDialog } from './components/ProviderConnectDialog';
 import { CHANNEL_GROUPS, SUPPORTED_PROVIDERS } from './constants';
 import { useProviderForm } from './hooks/use-provider-form';
@@ -14,10 +15,16 @@ import type { ProviderCard } from './types';
 const ProviderManagement = () => {
   const providersQuery = useProviders();
   const form = useProviderForm();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const providerCards = useMemo<ProviderCard[]>(() => {
+  const { connectedCards, unconnectedCards } = useMemo<{
+    connectedCards: (ProviderCard & {
+      item: NonNullable<ProviderCard['item']>;
+    })[];
+    unconnectedCards: ProviderCard[];
+  }>(() => {
     const items = providersQuery.data ?? [];
-    return SUPPORTED_PROVIDERS.map((definition) => {
+    const cards = SUPPORTED_PROVIDERS.map((definition) => {
       const item = items.find((p) => p.name === definition.key) ?? null;
       const fallbackExists =
         items.filter(
@@ -28,19 +35,37 @@ const ProviderManagement = () => {
         ).length > 0;
       return { definition, item, fallbackExists };
     });
+    return {
+      connectedCards: cards.filter(
+        (c): c is ProviderCard & { item: NonNullable<ProviderCard['item']> } =>
+          c.item !== null,
+      ),
+      unconnectedCards: cards.filter((c) => !c.item),
+    };
   }, [providersQuery.data]);
-
-  const connectedCount = providerCards.filter((c) => c.item).length;
 
   return (
     <>
       <CardBox className="p-6">
-        <div className="flex flex-col gap-2 border-b border-border pb-5">
-          <h5 className="card-title">Providers</h5>
-          <p className="text-sm text-muted-foreground">
-            Connect notification providers and control which one is primary for
-            each channel.
-          </p>
+        <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
+          <div className="flex flex-col gap-2">
+            <h5 className="card-title">Providers</h5>
+            <p className="text-sm text-muted-foreground">
+              Connect notification providers and control which one is primary
+              for each channel.
+            </p>
+          </div>
+          {unconnectedCards.length > 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => setSheetOpen(true)}
+            >
+              <Icon icon="mdi:plus" className="text-sm" />
+              Connect provider
+            </Button>
+          ) : null}
         </div>
 
         {form.error ? (
@@ -55,7 +80,7 @@ const ProviderManagement = () => {
           </div>
         ) : (
           <>
-            {connectedCount === 0 ? (
+            {connectedCards.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-2xl">
                   <Icon icon="mdi:connection" />
@@ -66,14 +91,24 @@ const ProviderManagement = () => {
                 <p className="mt-1 text-sm text-muted-foreground">
                   Connect a provider to start sending notifications.
                 </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="mt-4 gap-1.5"
+                  onClick={() => setSheetOpen(true)}
+                >
+                  <Icon icon="mdi:plus" className="text-sm" />
+                  Connect provider
+                </Button>
               </div>
             ) : null}
 
             <div className="mt-6 space-y-8">
               {CHANNEL_GROUPS.map(({ channel, label, icon }) => {
-                const channelCards = providerCards.filter(
+                const channelCards = connectedCards.filter(
                   (c) => c.definition.channel === channel,
                 );
+                if (channelCards.length === 0) return null;
                 return (
                   <div key={channel}>
                     <div className="mb-3 flex items-center gap-2">
@@ -84,26 +119,19 @@ const ProviderManagement = () => {
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {channelCards.map(
-                        ({ definition, item, fallbackExists }) =>
-                          item ? (
-                            <ConnectedProviderCard
-                              key={definition.key}
-                              definition={definition}
-                              item={item}
-                              fallbackExists={fallbackExists}
-                              isMutating={Boolean(
-                                form.mutatingKey?.endsWith(item.id),
-                              )}
-                              onEdit={form.openConnectDialog}
-                              onStateChange={form.handleStateChange}
-                            />
-                          ) : (
-                            <DisconnectedProviderCard
-                              key={definition.key}
-                              definition={definition}
-                              onConnect={form.openConnectDialog}
-                            />
-                          ),
+                        ({ definition, item, fallbackExists }) => (
+                          <ConnectedProviderCard
+                            key={definition.key}
+                            definition={definition}
+                            item={item}
+                            fallbackExists={fallbackExists}
+                            isMutating={Boolean(
+                              form.mutatingKey?.endsWith(item.id),
+                            )}
+                            onEdit={form.openConnectDialog}
+                            onStateChange={form.handleStateChange}
+                          />
+                        ),
                       )}
                     </div>
                   </div>
@@ -113,6 +141,13 @@ const ProviderManagement = () => {
           </>
         )}
       </CardBox>
+
+      <AvailableProvidersSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        unconnectedCards={unconnectedCards}
+        onConnect={form.openConnectDialog}
+      />
 
       <ProviderConnectDialog
         open={form.dialogOpen}
