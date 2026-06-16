@@ -29,11 +29,11 @@ func newBrevoDefinition() catalog.Definition {
 		name:    "brevo",
 		channel: "email",
 		normalize: func(credentials, config map[string]any, current *catalog.StoredInput) (catalog.NormalizedInput, error) {
-			login, apiKey, credentialsJSON, err := normalizeBrevoCredentials(credentials, current)
+			credentialsJSON, err := normalizeBrevoCredentials(credentials, current)
 			if err != nil {
 				return catalog.NormalizedInput{}, err
 			}
-			configJSON, err := normalizeBrevoConfig(config, login, apiKey, current)
+			configJSON, err := normalizeBrevoConfig(config, current)
 			if err != nil {
 				return catalog.NormalizedInput{}, err
 			}
@@ -200,37 +200,31 @@ func newSMSDefinition(name string) catalog.Definition {
 	}
 }
 
-func normalizeBrevoCredentials(credentials map[string]any, current *catalog.StoredInput) (string, string, []byte, error) {
+func normalizeBrevoCredentials(credentials map[string]any, current *catalog.StoredInput) ([]byte, error) {
 	if len(credentials) == 0 {
 		if current != nil && len(current.Credentials) > 0 {
-			var stored map[string]string
-			if err := json.Unmarshal(current.Credentials, &stored); err == nil {
-				return stored["username"], stored["password"], nil, nil
+			if valid, err := validateStoredConfig(current.Credentials, []string{"username", "password"}); err == nil {
+				return valid, nil
 			}
-			return "", "", nil, catalog.NewValidationError("valid brevo login and api_key are required")
 		}
-		return "", "", nil, catalog.NewValidationError("valid brevo login and api_key are required")
+		return nil, catalog.NewValidationError("a valid brevo api_key is required")
 	}
 
-	login, err := requiredString(credentials, "login")
-	if err != nil {
-		return "", "", nil, catalog.NewValidationError("valid brevo login and api_key are required")
-	}
 	apiKey, err := requiredString(credentials, "api_key")
 	if err != nil {
-		return "", "", nil, catalog.NewValidationError("valid brevo login and api_key are required")
+		return nil, catalog.NewValidationError("a valid brevo api_key is required")
 	}
 	credentialsJSON, marshalErr := json.Marshal(map[string]string{
-		"username": login,
+		"username": "apikey",
 		"password": apiKey,
 	})
 	if marshalErr != nil {
-		return "", "", nil, marshalErr
+		return nil, marshalErr
 	}
-	return login, apiKey, credentialsJSON, nil
+	return credentialsJSON, nil
 }
 
-func normalizeBrevoConfig(config map[string]any, _, _ string, current *catalog.StoredInput) ([]byte, error) {
+func normalizeBrevoConfig(config map[string]any, current *catalog.StoredInput) ([]byte, error) {
 	fromEmail, err := requiredString(config, "from_email")
 	if err != nil {
 		if current != nil && len(current.Config) > 0 {
