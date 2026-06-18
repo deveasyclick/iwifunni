@@ -90,10 +90,12 @@ func (a *App) Router() http.Handler {
 		apikeySvc := apikey.NewService(apikeyRepo)
 		apikey.NewHandler(apikeySvc).Register(r)
 
-		// Notification reads (dashboard)
+		// Notification reads + test sends (dashboard)
 		notifRepo := notification.NewRepository(a.queries)
 		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
-		notification.NewHandler(notifSvc, a.producer).RegisterReadRoutes(r)
+		notifHandler := notification.NewHandler(notifSvc, a.producer)
+		notifHandler.RegisterReadRoutes(r)
+		notifHandler.RegisterDashboardSendRoutes(r)
 
 		// Provider management (dashboard)
 		providerRepo := provider.NewRepository(a.queries, a.dbPool)

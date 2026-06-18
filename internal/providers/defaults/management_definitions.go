@@ -203,7 +203,7 @@ func newSMSDefinition(name string) catalog.Definition {
 func normalizeBrevoCredentials(credentials map[string]any, current *catalog.StoredInput) ([]byte, error) {
 	if len(credentials) == 0 {
 		if current != nil && len(current.Credentials) > 0 {
-			if valid, err := validateStoredConfig(current.Credentials, []string{"username", "password"}); err == nil {
+			if valid, err := validateStoredConfig(current.Credentials, []string{"api_key"}); err == nil {
 				return valid, nil
 			}
 		}
@@ -215,8 +215,7 @@ func normalizeBrevoCredentials(credentials map[string]any, current *catalog.Stor
 		return nil, catalog.NewValidationError("a valid brevo api_key is required")
 	}
 	credentialsJSON, marshalErr := json.Marshal(map[string]string{
-		"username": "apikey",
-		"password": apiKey,
+		"api_key": apiKey,
 	})
 	if marshalErr != nil {
 		return nil, marshalErr
@@ -228,7 +227,7 @@ func normalizeBrevoConfig(config map[string]any, current *catalog.StoredInput) (
 	fromEmail, err := requiredString(config, "from_email")
 	if err != nil {
 		if current != nil && len(current.Config) > 0 {
-			return validateStoredConfig(current.Config, []string{"host", "port", "from"})
+			return validateStoredConfig(current.Config, []string{"from_email"})
 		}
 		return nil, catalog.NewValidationError("a valid brevo from_email is required")
 	}
@@ -236,9 +235,7 @@ func normalizeBrevoConfig(config map[string]any, current *catalog.StoredInput) (
 		return nil, catalog.NewValidationError("a valid brevo from_email is required")
 	}
 	configJSON, marshalErr := json.Marshal(map[string]any{
-		"host": "smtp-relay.brevo.com",
-		"port": 587,
-		"from": fromEmail,
+		"from_email": fromEmail,
 	})
 	if marshalErr != nil {
 		return nil, marshalErr

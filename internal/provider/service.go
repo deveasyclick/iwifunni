@@ -58,6 +58,21 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 		credentials = []byte(`"` + encCreds + `"`)
 	}
 
+	// Only set active+primary if no other active provider exists for this channel yet.
+	existing, err := s.repo.ListByChannel(ctx, in.EnvironmentID, channel)
+	if err != nil {
+		return db.Provider{}, err
+	}
+	hasActive := false
+	for _, p := range existing {
+		if p.IsActive {
+			hasActive = true
+			break
+		}
+	}
+	isActive := !hasActive
+	isPrimary := !hasActive
+
 	return s.repo.Create(ctx, db.CreateProviderParams{
 		ID:            uuid.New(),
 		EnvironmentID: in.EnvironmentID,
@@ -65,6 +80,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 		Channel:       channel,
 		Credentials:   credentials,
 		Config:        configJSON,
+		IsActive:      isActive,
+		IsPrimary:     isPrimary,
 	})
 }
 

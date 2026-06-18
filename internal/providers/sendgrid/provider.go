@@ -7,7 +7,9 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/channels"
+	"github.com/sendgrid/sendgrid-go"
+	sgmail "github.com/sendgrid/sendgrid-go/helpers/mail"
+
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
 	"github.com/deveasyclick/iwifunni/internal/types"
 )
@@ -127,17 +129,37 @@ func NewRuntimeProvider() RuntimeProvider { return RuntimeProvider{} }
 func (RuntimeProvider) Name() string    { return Name }
 func (RuntimeProvider) Channel() string { return Channel }
 
+type sendGridConfig struct {
+	APIKey    string `json:"api_key"`
+	FromEmail string `json:"from_email"`
+}
+
 func (RuntimeProvider) Send(ctx context.Context, job *types.NotificationJob, configJSON []byte) ([]catalog.DeliveryAttempt, error) {
 	content := job.ContentForChannel(Channel)
 
-	var cfg channels.SendGridConfig
+	var cfg sendGridConfig
 	if err := json.Unmarshal(configJSON, &cfg); err != nil {
 		return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email, Err: fmt.Errorf("invalid sendgrid config: %w", err)}}, err
 	}
 
-	err := channels.SendSendGridEmail(ctx, cfg, job.Recipient.Email, content.Title, content.Message, job.Metadata)
+	if cfg.APIKey == "" {
+		return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email, Err: fmt.Errorf("sendgrid api_key is required")}}, fmt.Errorf("sendgrid api_key is required")
+	}
+	if cfg.FromEmail == "" {
+		return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email, Err: fmt.Errorf("sendgrid from_email is required")}}, fmt.Errorf("sendgrid from_email is required")
+	}
+
+	from := sgmail.NewEmail("", cfg.FromEmail)
+	to := sgmail.NewEmail("", job.Recipient.Email)
+	message := sgmail.NewSingleEmail(from, content.Title, to, "", content.Message)
+	client := sendgrid.NewSendClient(cfg.APIKey)
+
+	resp, err := client.SendWithContext(ctx, message)
 	if err != nil {
 		return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email, Err: err}}, err
+	}
+	if resp.StatusCode >= 400 {
+		return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email, Err: fmt.Errorf("sendgrid returned status %d: %s", resp.StatusCode, resp.Body)}}, fmt.Errorf("sendgrid returned status %d: %s", resp.StatusCode, resp.Body)
 	}
 
 	return []catalog.DeliveryAttempt{{Destination: job.Recipient.Email}}, nil

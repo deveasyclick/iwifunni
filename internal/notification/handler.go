@@ -8,6 +8,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -36,6 +37,12 @@ func (h *Handler) RegisterReadRoutes(r chi.Router) {
 	r.Get("/notifications/{notificationID}", h.get)
 }
 
+// RegisterDashboardSendRoutes registers notification send endpoints
+// under JWT-protected dashboard routes (e.g. for test sends).
+func (h *Handler) RegisterDashboardSendRoutes(r chi.Router) {
+	r.Post("/notifications/test-send", h.testSend)
+}
+
 type createRequest struct {
 	WorkflowID   string            `json:"workflow_id,omitempty"`
 	SubscriberID string            `json:"subscriber_id,omitempty"`
@@ -44,6 +51,89 @@ type createRequest struct {
 	Channels     []string          `json:"channels,omitempty"`
 	Recipient    types.Recipient   `json:"recipient"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
+}
+
+type testSendRequest struct {
+	RecipientEmail string `json:"recipient_email"`
+	Subject        string `json:"subject"`
+	Body           string `json:"body"`
+	SenderName     string `json:"sender_name,omitempty"`
+	SenderEmail    string `json:"sender_email,omitempty"`
+}
+
+func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
+	log := logger.Get()
+
+	var payload testSendRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		log.Warn().Err(err).Msg("test-send: invalid payload")
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	if payload.RecipientEmail == "" || payload.Body == "" {
+		log.Warn().Str("recipient_email", payload.RecipientEmail).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields")
+		http.Error(w, "recipient_email and body are required", http.StatusBadRequest)
+		return
+	}
+
+	environmentID, ok := notificationProjectIDFromContext(r)
+	if !ok {
+		log.Warn().Msg("test-send: unauthorized — no environment in context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	subject := payload.Subject
+	if subject == "" {
+		subject = "(no subject)"
+	}
+
+	job := &types.NotificationJob{
+		ProjectID: environmentID.String(),
+		Title:     subject,
+		Message:   payload.Body,
+		Channels:  []string{"email"},
+		Recipient: types.Recipient{
+			Email: payload.RecipientEmail,
+		},
+		Metadata: map[string]string{
+			"sender_name":  payload.SenderName,
+			"sender_email": payload.SenderEmail,
+		},
+	}
+
+	log.Info().
+		Str("recipient", payload.RecipientEmail).
+		Str("subject", subject).
+		Str("environment_id", environmentID.String()).
+		Msg("test-send: preparing job")
+
+	preparedJob, err := h.service.PrepareJob(r.Context(), job)
+	if err != nil {
+		log.Error().Err(err).Str("recipient", payload.RecipientEmail).Msg("test-send: prepare job failed")
+		h.respondSendError(w, err)
+		return
+	}
+
+	log.Info().
+		Str("job_id", preparedJob.JobID).
+		Str("recipient", payload.RecipientEmail).
+		Msg("test-send: enqueuing job")
+
+	if err := h.producer.Enqueue(r.Context(), preparedJob); err != nil {
+		log.Error().Err(err).Str("recipient", payload.RecipientEmail).Msg("test-send: enqueue failed")
+		http.Error(w, "failed to enqueue test notification", http.StatusInternalServerError)
+		return
+	}
+
+	log.Info().
+		Str("job_id", preparedJob.JobID).
+		Str("recipient", payload.RecipientEmail).
+		Msg("test-send: successfully queued")
+
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "queued"})
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {

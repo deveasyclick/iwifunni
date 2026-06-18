@@ -70,7 +70,7 @@ func main() {
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 	notifRepo := notification.NewRepository(store.Queries)
-	notifSvc := notification.NewServiceWithWebhooks(notifRepo, dispatcher)
+	notifSvc := notification.NewServiceWithWebhooks(notifRepo, dispatcher, cfg.EncryptionKey)
 	workflowRepo := workflow.NewRepository(store.Queries)
 	workflowSvc := workflow.NewService(workflowRepo).WithProducer(producer)
 	notificationWorker := notification.NewWorker(asynqServer, notifSvc)
@@ -82,8 +82,7 @@ func main() {
 	webhookWorker.Register(mux)
 
 	l.Info().Msg("starting notification worker")
-	if err := asynqServer.Start(mux); err != nil {
+	if err := asynqServer.Run(mux); err != nil {
 		l.Error().Err(err).Msg("worker stopped")
 	}
-	asynqServer.Stop()
 }
