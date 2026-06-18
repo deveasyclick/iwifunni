@@ -1,12 +1,3 @@
--- name: GetServiceByAPIKey :one
-SELECT id, name, api_key, description, created_at
-FROM services
-WHERE api_key = $1;
-
--- name: InsertService :exec
-INSERT INTO services (id, name, api_key, description)
-VALUES ($1, $2, $3, $4);
-
 -- name: UpsertNotificationByEnvironmentJob :one
 INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
@@ -17,7 +8,7 @@ SET title = EXCLUDED.title,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
 	updated_at = EXCLUDED.updated_at
-RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at;
+RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at;
 
 -- name: GetActiveEnvironmentProvidersByChannel :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
@@ -25,36 +16,19 @@ FROM providers
 WHERE environment_id = $1 AND channel = $2 AND is_active = true
 ORDER BY is_primary DESC, created_at ASC;
 
--- name: GetServiceChannelConfig :one
-SELECT id, service_id, channel, enabled, provider, config_json, created_at, updated_at
-FROM service_channel_configs
-WHERE service_id = $1 AND channel = $2;
-
--- name: UpsertNotificationByServiceJob :one
-INSERT INTO notifications (id, job_id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
-SET title = EXCLUDED.title,
-	message = EXCLUDED.message,
-	channels = EXCLUDED.channels,
-	recipient = EXCLUDED.recipient,
-	metadata = EXCLUDED.metadata,
-	updated_at = EXCLUDED.updated_at
-RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at;
-
 -- name: ListEnvironmentNotifications :many
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE environment_id = $1
 ORDER BY created_at DESC;
 
 -- name: GetEnvironmentNotificationByID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND environment_id = $2;
 
 -- name: GetNotificationByJobID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE job_id = $1;
 
@@ -551,7 +525,7 @@ WHERE id = $1 AND environment_id = $2;
 -- name: ListActiveWebhooksForEvent :many
 SELECT id, environment_id, url, secret, events, is_active, created_at, updated_at
 FROM webhooks
-WHERE environment_id = $1 AND is_active = true AND $2 = ANY(events);
+WHERE environment_id = $1 AND is_active = true AND $2::text = ANY(events);
 
 -- name: InsertWebhookDelivery :exec
 INSERT INTO webhook_deliveries (id, webhook_id, event, payload, status, response_code, error_message, attempted_at)

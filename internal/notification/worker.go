@@ -34,15 +34,30 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 func (w *Worker) handle(ctx context.Context, t *asynq.Task) error {
+	log := logger.Get()
 	var job types.NotificationJob
 	if err := json.Unmarshal(t.Payload(), &job); err != nil {
-		logger.Get().Error().Err(err).Msg("invalid notification job payload")
+		log.Error().Err(err).Msg("invalid notification job payload")
 		return errors.Join(asynq.SkipRetry, fmt.Errorf("invalid notification job payload: %w", err))
 	}
+
+	log.Info().
+		Str("job_id", job.JobID).
+		Str("channel", fmt.Sprintf("%v", job.Channels)).
+		Str("recipient_email", job.Recipient.Email).
+		Str("project_id", job.ProjectID).
+		Msg("worker: processing notification job")
+
 	err := w.service.Send(ctx, &job)
-	if err != nil && errors.Is(err, ErrInvalidSendRequest) {
-		logger.Get().Warn().Err(err).Str("job_id", job.JobID).Msg("notification job is invalid and will not be retried")
-		return errors.Join(asynq.SkipRetry, err)
+	if err != nil {
+		if errors.Is(err, ErrInvalidSendRequest) {
+			log.Warn().Err(err).Str("job_id", job.JobID).Msg("worker: notification job is invalid and will not be retried")
+			return errors.Join(asynq.SkipRetry, err)
+		}
+		log.Error().Err(err).Str("job_id", job.JobID).Msg("worker: notification delivery failed, will retry")
+		return err
 	}
-	return err
+
+	log.Info().Str("job_id", job.JobID).Msg("worker: notification delivered successfully")
+	return nil
 }

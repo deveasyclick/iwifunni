@@ -16,14 +16,12 @@ import (
 type contextKey string
 
 const (
-	ServiceContextKey contextKey = "service"
 	ProjectContextKey contextKey = "project_auth"
 )
 
 type authQueries interface {
 	GetAPIKeyByPrefix(context.Context, string) (db.ApiKey, error)
 	TouchAPIKeyLastUsed(context.Context, db.TouchAPIKeyLastUsedParams) error
-	GetServiceByAPIKey(context.Context, string) (db.Service, error)
 }
 
 type requestLimiter interface {
@@ -61,39 +59,13 @@ func newAuthMiddleware(queries authQueries, limiter requestLimiter, now func() t
 				return
 			}
 
-			switch {
-			case strings.HasPrefix(header, "Bearer "):
-				handleEnvironmentAPIKey(w, r, next, queries, limiter, now)
-			case strings.HasPrefix(header, "ApiKey "):
-				handleLegacyServiceAPIKey(w, r, next, queries, limiter)
-			default:
-				http.Error(w, "missing api key", http.StatusUnauthorized)
+			if !strings.HasPrefix(header, "Bearer ") {
+				http.Error(w, "invalid authorization header", http.StatusUnauthorized)
+				return
 			}
+			handleEnvironmentAPIKey(w, r, next, queries, limiter, now)
 		})
 	}
-}
-
-func handleLegacyServiceAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, queries authQueries, limiter requestLimiter) {
-	apiKey := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "ApiKey "))
-	svc, err := queries.GetServiceByAPIKey(r.Context(), HashAPIKey(apiKey))
-	if err != nil {
-		http.Error(w, "invalid service api key", http.StatusUnauthorized)
-		return
-	}
-
-	ok, err := limiter.Allow(r.Context(), svc.ID.String())
-	if err != nil {
-		logger.Get().Error().Err(err).Msg("rate limiter error")
-		http.Error(w, "rate limiter unavailable", http.StatusInternalServerError)
-		return
-	}
-	if !ok {
-		http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
-		return
-	}
-
-	ctx := context.WithValue(r.Context(), ServiceContextKey, &svc)
-	next.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, queries authQueries, limiter requestLimiter, now func() time.Time) {
@@ -168,13 +140,6 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 func GetAuthenticatedEnvironment(ctx context.Context) *AuthenticatedEnvironment {
 	if environment, ok := ctx.Value(ProjectContextKey).(*AuthenticatedEnvironment); ok {
 		return environment
-	}
-	return nil
-}
-
-func GetService(ctx context.Context) *db.Service {
-	if svc, ok := ctx.Value(ServiceContextKey).(*db.Service); ok {
-		return svc
 	}
 	return nil
 }

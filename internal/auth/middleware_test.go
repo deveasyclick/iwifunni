@@ -16,11 +16,8 @@ import (
 type fakeAuthQueries struct {
 	apiKey               db.ApiKey
 	apiKeyErr            error
-	service              db.Service
-	serviceErr           error
 	touchedLastUsed      *db.TouchAPIKeyLastUsedParams
 	getAPIKeyByPrefixArg string
-	getServiceByAPIKey   string
 }
 
 func (f *fakeAuthQueries) GetAPIKeyByPrefix(_ context.Context, prefix string) (db.ApiKey, error) {
@@ -31,11 +28,6 @@ func (f *fakeAuthQueries) GetAPIKeyByPrefix(_ context.Context, prefix string) (d
 func (f *fakeAuthQueries) TouchAPIKeyLastUsed(_ context.Context, arg db.TouchAPIKeyLastUsedParams) error {
 	f.touchedLastUsed = &arg
 	return nil
-}
-
-func (f *fakeAuthQueries) GetServiceByAPIKey(_ context.Context, apiKey string) (db.Service, error) {
-	f.getServiceByAPIKey = apiKey
-	return f.service, f.serviceErr
 }
 
 type fakeLimiter struct {
@@ -155,43 +147,6 @@ func TestAuthMiddlewareRejectsProjectAPIKeyWithoutScope(t *testing.T) {
 
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d", res.Code, http.StatusForbidden)
-	}
-}
-
-func TestAuthMiddlewareAuthenticatesLegacyServiceKey(t *testing.T) {
-	t.Parallel()
-
-	rawKey := "legacy-service-key"
-	serviceID := uuid.New()
-	queries := &fakeAuthQueries{service: db.Service{ID: serviceID, Name: "legacy-service"}}
-	limiter := &fakeLimiter{allowed: true}
-	middleware := newAuthMiddleware(queries, limiter, func() time.Time { return time.Now().UTC() })
-
-	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		service := GetService(r.Context())
-		if service == nil {
-			t.Fatal("GetService() returned nil")
-		}
-		if service.ID != serviceID {
-			t.Fatalf("ServiceID = %s, want %s", service.ID, serviceID)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-
-	req := httptest.NewRequest(http.MethodPost, "/notifications", nil)
-	req.Header.Set("Authorization", "ApiKey "+rawKey)
-	res := httptest.NewRecorder()
-
-	handler.ServeHTTP(res, req)
-
-	if res.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want %d", res.Code, http.StatusNoContent)
-	}
-	if queries.getServiceByAPIKey != HashAPIKey(rawKey) {
-		t.Fatalf("GetServiceByAPIKey arg = %q, want %q", queries.getServiceByAPIKey, HashAPIKey(rawKey))
-	}
-	if limiter.key != serviceID.String() {
-		t.Fatalf("rate limiter key = %q, want %q", limiter.key, serviceID.String())
 	}
 }
 

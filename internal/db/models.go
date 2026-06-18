@@ -66,7 +66,6 @@ type Environment struct {
 
 type Notification struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
@@ -114,14 +113,6 @@ type RefreshToken struct {
 	ExpiresAt pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-type Service struct {
-	ID          uuid.UUID          `db:"id" json:"id"`
-	Name        string             `db:"name" json:"name"`
-	ApiKey      string             `db:"api_key" json:"api_key"`
-	Description *string            `db:"description" json:"description"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
 type ServiceChannelConfig struct {

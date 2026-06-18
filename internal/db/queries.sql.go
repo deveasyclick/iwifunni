@@ -1113,7 +1113,7 @@ func (q *Queries) GetEnvironmentByID(ctx context.Context, id uuid.UUID) (GetEnvi
 }
 
 const getEnvironmentNotificationByID = `-- name: GetEnvironmentNotificationByID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND environment_id = $2
 `
@@ -1125,7 +1125,6 @@ type GetEnvironmentNotificationByIDParams struct {
 
 type GetEnvironmentNotificationByIDRow struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
@@ -1143,7 +1142,6 @@ func (q *Queries) GetEnvironmentNotificationByID(ctx context.Context, arg GetEnv
 	var i GetEnvironmentNotificationByIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.ServiceID,
 		&i.Title,
 		&i.Message,
 		&i.Channels,
@@ -1201,14 +1199,13 @@ func (q *Queries) GetFirstOrganizationMembershipByUser(ctx context.Context, user
 }
 
 const getNotificationByJobID = `-- name: GetNotificationByJobID :one
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE job_id = $1
 `
 
 type GetNotificationByJobIDRow struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
@@ -1226,7 +1223,6 @@ func (q *Queries) GetNotificationByJobID(ctx context.Context, jobID *string) (Ge
 	var i GetNotificationByJobIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.ServiceID,
 		&i.Title,
 		&i.Message,
 		&i.Channels,
@@ -1350,52 +1346,6 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 		&i.UserID,
 		&i.TokenHash,
 		&i.ExpiresAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getServiceByAPIKey = `-- name: GetServiceByAPIKey :one
-SELECT id, name, api_key, description, created_at
-FROM services
-WHERE api_key = $1
-`
-
-func (q *Queries) GetServiceByAPIKey(ctx context.Context, apiKey string) (Service, error) {
-	row := q.db.QueryRow(ctx, getServiceByAPIKey, apiKey)
-	var i Service
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.ApiKey,
-		&i.Description,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getServiceChannelConfig = `-- name: GetServiceChannelConfig :one
-SELECT id, service_id, channel, enabled, provider, config_json, created_at, updated_at
-FROM service_channel_configs
-WHERE service_id = $1 AND channel = $2
-`
-
-type GetServiceChannelConfigParams struct {
-	ServiceID uuid.UUID `db:"service_id" json:"service_id"`
-	Channel   string    `db:"channel" json:"channel"`
-}
-
-func (q *Queries) GetServiceChannelConfig(ctx context.Context, arg GetServiceChannelConfigParams) (ServiceChannelConfig, error) {
-	row := q.db.QueryRow(ctx, getServiceChannelConfig, arg.ServiceID, arg.Channel)
-	var i ServiceChannelConfig
-	err := row.Scan(
-		&i.ID,
-		&i.ServiceID,
-		&i.Channel,
-		&i.Enabled,
-		&i.Provider,
-		&i.ConfigJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1748,28 +1698,6 @@ func (q *Queries) InsertDeliveryAttempt(ctx context.Context, arg InsertDeliveryA
 	return err
 }
 
-const insertService = `-- name: InsertService :exec
-INSERT INTO services (id, name, api_key, description)
-VALUES ($1, $2, $3, $4)
-`
-
-type InsertServiceParams struct {
-	ID          uuid.UUID `db:"id" json:"id"`
-	Name        string    `db:"name" json:"name"`
-	ApiKey      string    `db:"api_key" json:"api_key"`
-	Description *string   `db:"description" json:"description"`
-}
-
-func (q *Queries) InsertService(ctx context.Context, arg InsertServiceParams) error {
-	_, err := q.db.Exec(ctx, insertService,
-		arg.ID,
-		arg.Name,
-		arg.ApiKey,
-		arg.Description,
-	)
-	return err
-}
-
 const insertWebhookDelivery = `-- name: InsertWebhookDelivery :exec
 INSERT INTO webhook_deliveries (id, webhook_id, event, payload, status, response_code, error_message, attempted_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -1844,16 +1772,16 @@ func (q *Queries) ListAPIKeysByEnvironment(ctx context.Context, environmentID uu
 const listActiveWebhooksForEvent = `-- name: ListActiveWebhooksForEvent :many
 SELECT id, environment_id, url, secret, events, is_active, created_at, updated_at
 FROM webhooks
-WHERE environment_id = $1 AND is_active = true AND $2 = ANY(events)
+WHERE environment_id = $1 AND is_active = true AND $2::text = ANY(events)
 `
 
 type ListActiveWebhooksForEventParams struct {
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-	Events        []string  `db:"events" json:"events"`
+	Column2       string    `db:"column_2" json:"column_2"`
 }
 
 func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActiveWebhooksForEventParams) ([]Webhook, error) {
-	rows, err := q.db.Query(ctx, listActiveWebhooksForEvent, arg.EnvironmentID, arg.Events)
+	rows, err := q.db.Query(ctx, listActiveWebhooksForEvent, arg.EnvironmentID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -1882,7 +1810,7 @@ func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActive
 }
 
 const listEnvironmentNotifications = `-- name: ListEnvironmentNotifications :many
-SELECT id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 FROM notifications
 WHERE environment_id = $1
 ORDER BY created_at DESC
@@ -1890,7 +1818,6 @@ ORDER BY created_at DESC
 
 type ListEnvironmentNotificationsRow struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
@@ -1914,7 +1841,6 @@ func (q *Queries) ListEnvironmentNotifications(ctx context.Context, environmentI
 		var i ListEnvironmentNotificationsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.ServiceID,
 			&i.Title,
 			&i.Message,
 			&i.Channels,
@@ -3057,7 +2983,7 @@ SET title = EXCLUDED.title,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
 	updated_at = EXCLUDED.updated_at
-RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
 `
 
 type UpsertNotificationByEnvironmentJobParams struct {
@@ -3076,7 +3002,6 @@ type UpsertNotificationByEnvironmentJobParams struct {
 
 type UpsertNotificationByEnvironmentJobRow struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
@@ -3106,81 +3031,6 @@ func (q *Queries) UpsertNotificationByEnvironmentJob(ctx context.Context, arg Up
 	var i UpsertNotificationByEnvironmentJobRow
 	err := row.Scan(
 		&i.ID,
-		&i.ServiceID,
-		&i.Title,
-		&i.Message,
-		&i.Channels,
-		&i.Recipient,
-		&i.Metadata,
-		&i.Status,
-		&i.EnvironmentID,
-		&i.JobID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertNotificationByServiceJob = `-- name: UpsertNotificationByServiceJob :one
-INSERT INTO notifications (id, job_id, service_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
-SET title = EXCLUDED.title,
-	message = EXCLUDED.message,
-	channels = EXCLUDED.channels,
-	recipient = EXCLUDED.recipient,
-	metadata = EXCLUDED.metadata,
-	updated_at = EXCLUDED.updated_at
-RETURNING id, service_id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
-`
-
-type UpsertNotificationByServiceJobParams struct {
-	ID        uuid.UUID          `db:"id" json:"id"`
-	JobID     *string            `db:"job_id" json:"job_id"`
-	ServiceID uuid.UUID          `db:"service_id" json:"service_id"`
-	Title     string             `db:"title" json:"title"`
-	Message   string             `db:"message" json:"message"`
-	Channels  []string           `db:"channels" json:"channels"`
-	Recipient []byte             `db:"recipient" json:"recipient"`
-	Metadata  []byte             `db:"metadata" json:"metadata"`
-	Status    string             `db:"status" json:"status"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-type UpsertNotificationByServiceJobRow struct {
-	ID            uuid.UUID          `db:"id" json:"id"`
-	ServiceID     uuid.UUID          `db:"service_id" json:"service_id"`
-	Title         string             `db:"title" json:"title"`
-	Message       string             `db:"message" json:"message"`
-	Channels      []string           `db:"channels" json:"channels"`
-	Recipient     []byte             `db:"recipient" json:"recipient"`
-	Metadata      []byte             `db:"metadata" json:"metadata"`
-	Status        string             `db:"status" json:"status"`
-	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
-	JobID         *string            `db:"job_id" json:"job_id"`
-	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) UpsertNotificationByServiceJob(ctx context.Context, arg UpsertNotificationByServiceJobParams) (UpsertNotificationByServiceJobRow, error) {
-	row := q.db.QueryRow(ctx, upsertNotificationByServiceJob,
-		arg.ID,
-		arg.JobID,
-		arg.ServiceID,
-		arg.Title,
-		arg.Message,
-		arg.Channels,
-		arg.Recipient,
-		arg.Metadata,
-		arg.Status,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	var i UpsertNotificationByServiceJobRow
-	err := row.Scan(
-		&i.ID,
-		&i.ServiceID,
 		&i.Title,
 		&i.Message,
 		&i.Channels,

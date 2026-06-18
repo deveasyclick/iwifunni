@@ -25,14 +25,6 @@ func (r *Repository) UpsertByProjectJob(ctx context.Context, arg db.UpsertNotifi
 	return notificationFromProjectUpsertRow(row), nil
 }
 
-func (r *Repository) UpsertByServiceJob(ctx context.Context, arg db.UpsertNotificationByServiceJobParams) (db.Notification, error) {
-	row, err := r.q.UpsertNotificationByServiceJob(ctx, arg)
-	if err != nil {
-		return db.Notification{}, err
-	}
-	return notificationFromServiceUpsertRow(row), nil
-}
-
 func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error) {
 	rows, err := r.q.ListEnvironmentNotifications(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
 	if err != nil {
@@ -70,24 +62,6 @@ func (r *Repository) GetByJobID(ctx context.Context, jobID string) (db.Notificat
 func notificationFromProjectUpsertRow(row db.UpsertNotificationByEnvironmentJobRow) db.Notification {
 	return db.Notification{
 		ID:            row.ID,
-		ServiceID:     row.ServiceID,
-		Title:         row.Title,
-		Message:       row.Message,
-		Channels:      row.Channels,
-		Recipient:     row.Recipient,
-		Metadata:      row.Metadata,
-		Status:        row.Status,
-		EnvironmentID: row.EnvironmentID,
-		CreatedAt:     row.CreatedAt,
-		UpdatedAt:     row.UpdatedAt,
-		JobID:         row.JobID,
-	}
-}
-
-func notificationFromServiceUpsertRow(row db.UpsertNotificationByServiceJobRow) db.Notification {
-	return db.Notification{
-		ID:            row.ID,
-		ServiceID:     row.ServiceID,
 		Title:         row.Title,
 		Message:       row.Message,
 		Channels:      row.Channels,
@@ -104,7 +78,6 @@ func notificationFromServiceUpsertRow(row db.UpsertNotificationByServiceJobRow) 
 func notificationFromGetByJobIDRow(row db.GetNotificationByJobIDRow) db.Notification {
 	return db.Notification{
 		ID:            row.ID,
-		ServiceID:     row.ServiceID,
 		Title:         row.Title,
 		Message:       row.Message,
 		Channels:      row.Channels,
@@ -121,7 +94,6 @@ func notificationFromGetByJobIDRow(row db.GetNotificationByJobIDRow) db.Notifica
 func notificationFromListProjectRow(row db.ListEnvironmentNotificationsRow) db.Notification {
 	return db.Notification{
 		ID:            row.ID,
-		ServiceID:     row.ServiceID,
 		Title:         row.Title,
 		Message:       row.Message,
 		Channels:      row.Channels,
@@ -138,7 +110,6 @@ func notificationFromListProjectRow(row db.ListEnvironmentNotificationsRow) db.N
 func notificationFromGetProjectRow(row db.GetEnvironmentNotificationByIDRow) db.Notification {
 	return db.Notification{
 		ID:            row.ID,
-		ServiceID:     row.ServiceID,
 		Title:         row.Title,
 		Message:       row.Message,
 		Channels:      row.Channels,
@@ -169,10 +140,6 @@ func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID 
 		EnvironmentID: projectID,
 		Channel:       channel,
 	})
-}
-
-func (r *Repository) GetServiceChannelConfig(ctx context.Context, arg db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error) {
-	return r.q.GetServiceChannelConfig(ctx, arg)
 }
 
 func (r *Repository) GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error) {

@@ -71,10 +71,6 @@ func (s *fakeNotificationStore) UpsertByProjectJob(_ context.Context, arg db.Ups
 	return notification, nil
 }
 
-func (s *fakeNotificationStore) UpsertByServiceJob(_ context.Context, _ db.UpsertNotificationByServiceJobParams) (db.Notification, error) {
-	return db.Notification{}, pgx.ErrNoRows
-}
-
 func (s *fakeNotificationStore) ListByProject(_ context.Context, _ uuid.UUID) ([]db.Notification, error) {
 	items := make([]db.Notification, 0, len(s.notifications))
 	for _, item := range s.notifications {
@@ -121,10 +117,6 @@ func (s *fakeNotificationStore) InsertDeliveryAttempt(_ context.Context, _ db.In
 
 func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Provider, error) {
 	return s.providers, nil
-}
-
-func (s *fakeNotificationStore) GetServiceChannelConfig(_ context.Context, _ db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error) {
-	return db.ServiceChannelConfig{}, pgx.ErrNoRows
 }
 
 func (s *fakeNotificationStore) GetWorkflowByID(_ context.Context, _, _ uuid.UUID) (db.Workflow, error) {

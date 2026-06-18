@@ -63,15 +63,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Metadata:     payload.Metadata,
 	}
 
-	// Resolve environment or legacy service from context.
-	if environment := auth.GetAuthenticatedEnvironment(r.Context()); environment != nil {
-		job.ProjectID = environment.EnvironmentID.String()
-	} else if svc := auth.GetService(r.Context()); svc != nil {
-		job.ServiceID = svc.ID.String()
-	} else {
+	environment := auth.GetAuthenticatedEnvironment(r.Context())
+	if environment == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	job.ProjectID = environment.EnvironmentID.String()
 
 	preparedJob, err := h.service.PrepareJob(r.Context(), job)
 	if err != nil {

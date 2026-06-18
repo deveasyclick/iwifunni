@@ -24,7 +24,6 @@ var ErrInvalidSendRequest = errors.New("invalid notification request")
 
 type NotificationView struct {
 	ID            string         `json:"id"`
-	ServiceID     *string        `json:"service_id,omitempty"`
 	EnvironmentID *string        `json:"environment_id,omitempty"`
 	Title         string         `json:"title"`
 	Message       string         `json:"message"`
@@ -37,14 +36,12 @@ type NotificationView struct {
 
 type notificationStore interface {
 	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error)
-	UpsertByServiceJob(ctx context.Context, arg db.UpsertNotificationByServiceJobParams) (db.Notification, error)
 	ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error)
 	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
 	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
 	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
 	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error)
-	GetServiceChannelConfig(ctx context.Context, arg db.GetServiceChannelConfigParams) (db.ServiceChannelConfig, error)
 	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
 	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
 	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)
@@ -221,44 +218,7 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 		return nil
 	}
 
-	// Legacy service-based path
-	serviceID, err := uuid.Parse(job.ServiceID)
-	if err != nil {
-		return err
-	}
-	notificationRecord, err := s.repo.UpsertByServiceJob(ctx, db.UpsertNotificationByServiceJobParams{
-		ID:        uuid.New(),
-		JobID:     &job.JobID,
-		ServiceID: serviceID,
-		Title:     job.Title,
-		Message:   job.Message,
-		Channels:  job.Channels,
-		Recipient: recipient,
-		Metadata:  metadata,
-		Status:    "pending",
-		CreatedAt: nowTs,
-		UpdatedAt: nowTs,
-	})
-	if err != nil {
-		return err
-	}
-	notificationID := notificationRecord.ID
-	if isTerminalNotificationStatus(notificationRecord.Status) {
-		return nil
-	}
-
-	successCount, failureCount := 0, 0
-	for _, channel := range job.Channels {
-		if err := s.deliverChannel(ctx, serviceID, notificationID, channel, job); err != nil {
-			logger.Get().Warn().Err(err).Str("channel", channel).Msg("delivery attempt failed")
-			failureCount++
-		} else {
-			successCount++
-		}
-	}
-
-	status := finalNotificationStatus(successCount, failureCount, 0)
-	return s.repo.UpdateStatus(ctx, notificationID, status, pgtype.Timestamptz{Time: now(), Valid: true})
+	return nil
 }
 
 func invalidSend(message string) error {
@@ -513,43 +473,57 @@ func isTerminalNotificationStatus(status string) bool {
 }
 
 func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notificationID uuid.UUID, channel string, job *types.NotificationJob) error {
+	log := logger.Get()
+
 	providerRecords, err := s.repo.GetActiveProvidersByChannel(ctx, projectID, channel)
 	if err != nil {
+		log.Error().Err(err).Str("channel", channel).Str("project_id", projectID.String()).Msg("delivery: failed to query active providers")
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s: %w", channel, err))
 	}
 	if len(providerRecords) == 0 {
+		log.Warn().Str("channel", channel).Str("project_id", projectID.String()).Msg("delivery: no active provider found — check provider configuration")
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s", channel))
 	}
+
+	log.Info().Str("channel", channel).Int("provider_count", len(providerRecords)).Msg("delivery: found active providers")
 
 	var lastErr error
 	for _, providerRecord := range providerRecords {
 		p, ok := s.registry.Get(providerRecord.Name)
 		if !ok || p.Channel() != channel {
+			log.Warn().Str("provider", providerRecord.Name).Str("channel", channel).Msg("delivery: provider not registered for channel")
 			lastErr = fmt.Errorf("provider %s not registered for channel %s", providerRecord.Name, channel)
 			continue
 		}
 		providerConfig, cfgErr := s.buildProjectProviderConfig(providerRecord)
 		if cfgErr != nil {
+			log.Warn().Err(cfgErr).Str("provider", providerRecord.Name).Msg("delivery: failed to build provider config")
 			lastErr = cfgErr
 			continue
 		}
 
+		log.Info().Str("provider", providerRecord.Name).Str("channel", channel).Msg("delivery: attempting send via provider")
 		attempts, providerErr := p.Send(ctx, job, providerConfig)
 		for _, a := range attempts {
 			if a.Err != nil {
+				log.Warn().Err(a.Err).Str("provider", providerRecord.Name).Str("destination", a.Destination).Msg("delivery: attempt failed")
 				_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
 				continue
 			}
+			log.Info().Str("provider", providerRecord.Name).Str("destination", a.Destination).Msg("delivery: attempt succeeded")
 			_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
 		}
 		if providerErr == nil {
+			log.Info().Str("provider", providerRecord.Name).Str("channel", channel).Msg("delivery: all attempts succeeded")
 			return nil
 		}
+		log.Warn().Err(providerErr).Str("provider", providerRecord.Name).Msg("delivery: provider returned error, trying next")
 		lastErr = providerErr
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("no active provider for channel %s", channel)
 	}
+	log.Error().Err(lastErr).Str("channel", channel).Str("project_id", projectID.String()).Msg("delivery: all providers failed")
 	return s.recordFailed(ctx, notificationID, channel, "", lastErr)
 }
 
@@ -608,36 +582,6 @@ func (s *Service) recordSkipped(ctx context.Context, notificationID uuid.UUID, c
 		ErrorMessage:   &message,
 		AttemptedAt:    pgtype.Timestamptz{Time: now(), Valid: true},
 	})
-}
-
-func (s *Service) deliverChannel(ctx context.Context, serviceID, notificationID uuid.UUID, channel string, job *types.NotificationJob) error {
-	configRecord, err := s.repo.GetServiceChannelConfig(ctx, db.GetServiceChannelConfigParams{
-		ServiceID: serviceID,
-		Channel:   channel,
-	})
-	if err != nil {
-		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("channel config not found: %w", err))
-	}
-	if !configRecord.Enabled {
-		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("channel %s is disabled", channel))
-	}
-	providerName := configRecord.Provider
-	if providerName == "" {
-		providerName = defaultProviderForChannel(channel)
-	}
-	p, ok := s.registry.Get(providerName)
-	if !ok || p.Channel() != channel {
-		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("unsupported provider %s for channel %s", providerName, channel))
-	}
-	attempts, providerErr := p.Send(ctx, job, configRecord.ConfigJson)
-	for _, a := range attempts {
-		if a.Err != nil {
-			_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
-			continue
-		}
-		_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
-	}
-	return providerErr
 }
 
 func (s *Service) recordSuccess(ctx context.Context, notificationID uuid.UUID, channel, destination string) error {
@@ -707,12 +651,6 @@ func notificationViewFromRecord(item db.Notification) NotificationView {
 		_ = json.Unmarshal(item.Metadata, &metadata)
 	}
 
-	var serviceID *string
-	if item.ServiceID != uuid.Nil {
-		value := item.ServiceID.String()
-		serviceID = &value
-	}
-
 	var environmentID *string
 	if item.EnvironmentID.Valid {
 		value := uuid.UUID(item.EnvironmentID.Bytes).String()
@@ -721,7 +659,6 @@ func notificationViewFromRecord(item db.Notification) NotificationView {
 
 	return NotificationView{
 		ID:            item.ID.String(),
-		ServiceID:     serviceID,
 		EnvironmentID: environmentID,
 		Title:         item.Title,
 		Message:       item.Message,

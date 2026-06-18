@@ -1,11 +1,3 @@
-CREATE TABLE services (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL,
-    api_key TEXT NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE TABLE organizations (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
@@ -94,13 +86,11 @@ CREATE TABLE service_channel_configs (
     provider TEXT NOT NULL,
     config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (service_id, channel)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE notifications (
     id UUID PRIMARY KEY,
-    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     channels TEXT[] NOT NULL,

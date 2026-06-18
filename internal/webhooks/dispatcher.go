@@ -63,7 +63,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, environmentID uuid.UUID, even
 
 	webhooks, err := d.queries.ListActiveWebhooksForEvent(ctx, db.ListActiveWebhooksForEventParams{
 		EnvironmentID: environmentID,
-		Events:        []string{event},
+		Column2:       event,
 	})
 	if err != nil {
 		logger.Get().Warn().Err(err).Str("event", event).Msg("failed to list webhooks for event")
