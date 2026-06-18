@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useSubscriberSearch } from '@/features/subscribers/queries';
+import { Search, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PreviewSubscriber } from '../types/data-panel';
 
 interface PreviewSubscriberSelectorProps {
@@ -22,8 +22,8 @@ const toPreviewSubscriber = (s: {
   id: s.id,
   firstName: s.name?.split(' ')[0] || s.name || '',
   lastName: s.name?.split(' ').slice(1).join(' ') || '',
-  email: s.email,
-  phone: s.phone,
+  email: s.email ?? undefined,
+  phone: s.phone ?? undefined,
 });
 
 export const PreviewSubscriberSelector = ({

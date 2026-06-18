@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { VariableDefinition } from '../types/data-panel';
 import {
   mailyVariablesToText,
-  textToMailyVariables,
   renderPreview,
+  textToMailyVariables,
 } from './encode';
-import type { VariableDefinition } from '../types/data-panel';
 
 // ---------------------------------------------------------------------------
 // mailyVariablesToText
@@ -98,15 +98,15 @@ describe('textToMailyVariables', () => {
     },
   ];
 
-  it('converts {{path}} to a span with data-id and label', () => {
+  it('converts {{path}} to a span with data-type and data-id', () => {
     expect(textToMailyVariables('Hello {{subscriber.firstName}}', defs)).toBe(
-      'Hello <span data-id="subscriber.firstName" data-required="false">First Name</span>',
+      'Hello <span data-type="variable" data-id="subscriber.firstName">First Name</span>',
     );
   });
 
   it('uses the path itself as label when definition is missing', () => {
     expect(textToMailyVariables('{{unknown.var}}', defs)).toBe(
-      '<span data-id="unknown.var" data-required="false">unknown.var</span>',
+      '<span data-type="variable" data-id="unknown.var">unknown.var</span>',
     );
   });
 
@@ -118,9 +118,9 @@ describe('textToMailyVariables', () => {
       ),
     ).toBe(
       [
-        '<span data-id="subscriber.firstName" data-required="false">First Name</span>',
+        '<span data-type="variable" data-id="subscriber.firstName">First Name</span>',
         ' ',
-        '<span data-id="subscriber.lastName" data-required="false">Last Name</span>',
+        '<span data-type="variable" data-id="subscriber.lastName">Last Name</span>',
       ].join(''),
     );
   });
@@ -135,7 +135,7 @@ describe('textToMailyVariables', () => {
 
   it('works with empty variable definitions', () => {
     expect(textToMailyVariables('Hi {{subscriber.firstName}}', [])).toBe(
-      'Hi <span data-id="subscriber.firstName" data-required="false">subscriber.firstName</span>',
+      'Hi <span data-type="variable" data-id="subscriber.firstName">subscriber.firstName</span>',
     );
   });
 });

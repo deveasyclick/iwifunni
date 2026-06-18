@@ -1,15 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Editor as MailyEditor } from '@maily-to/core';
 import {
   VariableExtension,
   getVariableSuggestions,
   type Variable,
 } from '@maily-to/core/extensions';
-import type { VariableDefinition } from '../types/data-panel';
-import { type Editor } from '@tiptap/react';
-import { Editor as MailyEditor } from '@maily-to/core';
 import '@maily-to/core/style.css';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { VariableDefinition } from '../types/data-panel';
 
 /**
  * Custom renderer for variable chips in the editor.
@@ -31,6 +30,26 @@ type Props = {
   variableDefinitions?: VariableDefinition[];
 };
 
+// Extend VariableExtension to also parse <span data-type="variable">
+// elements — not just <div>.
+//
+// The default extension only has parseHTML rule:
+//   div[data-type="variable"]    — block-level, causes paragraph breaks
+//
+// We add:
+//   span[data-type="variable"]   — inline, keeps variable in-flow
+//
+// Both still share the same "variable" node type, so they render
+// identically once parsed. The data-type="variable" attribute is what
+// identifies the element as a variable node to ProseMirror, while
+// data-id="path" stores the variable path for round-trip conversion.
+const SpanVariableExtension = VariableExtension.extend({
+  parseHTML() {
+    const parentRules = this.parent?.() ?? [];
+    return [...parentRules, { tag: 'span[data-type="variable"]' }];
+  },
+});
+
 const MailyEmailEditor = ({
   initialValue,
   onHtmlChange,
@@ -43,7 +62,7 @@ const MailyEmailEditor = ({
     onHtmlChangeRef.current = onHtmlChange;
   }, [onHtmlChange]);
 
-  const handleUpdate = useCallback((editor: Editor) => {
+  const handleUpdate = useCallback((editor: { getHTML: () => string }) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const html = editor.getHTML();
@@ -64,7 +83,7 @@ const MailyEmailEditor = ({
   // Build extensions once — the variables function reads from the ref so
   // suggestions stay up-to-date without recreating the extension.
   const extensions = useMemo(() => {
-    const ext = VariableExtension.configure({
+    const ext = SpanVariableExtension.configure({
       renderLabel: ({ node }) => {
         return `{{${node.attrs.id}}}`;
       },

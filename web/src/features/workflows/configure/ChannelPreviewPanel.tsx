@@ -1,8 +1,21 @@
 'use client';
 
-import { useMemo } from 'react';
 import type { WorkflowChannel } from '@/app/types/workflow';
-import { renderPreview } from '../editors/encode';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { request } from '@/lib/api-client';
+import { Loader2, Monitor, Send, Smartphone } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { renderPreview, resolveTemplateVariables } from '../editors/encode';
 
 type ChannelPreviewPanelProps = {
   channel: WorkflowChannel;
@@ -14,6 +27,107 @@ type ChannelPreviewPanelProps = {
   senderEmail?: string;
 };
 
+type EmailPreviewCardProps = {
+  compact?: boolean;
+  senderInitial: string;
+  displaySenderName: string;
+  displaySenderLine: string;
+  displaySubject: string;
+  timeStr: string;
+  dateStr: string;
+  renderedBody: string | false;
+};
+
+/** Shared email card for desktop and mobile views. */
+const EmailPreviewCard = ({
+  compact,
+  senderInitial,
+  displaySenderName,
+  displaySenderLine,
+  displaySubject,
+  timeStr,
+  dateStr,
+  renderedBody,
+}: EmailPreviewCardProps) => {
+  const s = compact
+    ? {
+        avatar: 'h-7 w-7 text-[11px]',
+        headerPad: 'px-4 py-3',
+        gap: 'gap-2',
+        nameSize: 'text-xs',
+        emailSize: 'text-[11px]',
+        timeSize: 'text-[10px]',
+        subjectSize: 'text-xs',
+        bodyHeight: 'h-75',
+        emptyPad: 'px-4 py-8 text-xs',
+      }
+    : {
+        avatar: 'h-9 w-9 text-[13px]',
+        headerPad: 'px-5 py-4',
+        gap: 'gap-3',
+        nameSize: 'text-sm',
+        emailSize: 'text-[13px]',
+        timeSize: 'text-[11px]',
+        subjectSize: 'text-[13px]',
+        bodyHeight: 'h-105',
+        emptyPad: 'px-4 py-8 text-sm',
+      };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/50 bg-white text-slate-900 shadow-sm">
+      <div
+        className={`border-b border-slate-200 bg-slate-50/80 ${s.headerPad}`}
+      >
+        <div className={`flex items-start ${s.gap}`}>
+          <div
+            className={`flex ${s.avatar} shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground`}
+          >
+            {senderInitial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <p
+                className={`truncate font-semibold text-slate-900 ${s.nameSize}`}
+              >
+                {displaySenderName}
+              </p>
+              <span className={`shrink-0 text-slate-400 ${s.timeSize}`}>
+                {timeStr}
+              </span>
+            </div>
+            <p className={`truncate text-slate-500 ${s.emailSize}`}>
+              {displaySenderLine}
+            </p>
+            <p className={`mt-2 font-medium text-slate-800 ${s.subjectSize}`}>
+              {displaySubject}
+            </p>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-400">
+          <span>to me</span>
+          <span>{dateStr}</span>
+        </div>
+      </div>
+      <div className="border-t border-slate-200">
+        <div className="px-1 py-1">
+          {renderedBody ? (
+            <iframe
+              srcDoc={renderedBody}
+              title="Email preview"
+              className={`w-full border-0 ${s.bodyHeight}`}
+              sandbox="allow-same-origin"
+            />
+          ) : (
+            <p className={`text-center text-slate-400 ${s.emptyPad}`}>
+              Start editing to see a live preview.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ChannelPreviewPanel = ({
   channel,
   subject,
@@ -23,6 +137,15 @@ export const ChannelPreviewPanel = ({
   senderName,
   senderEmail,
 }: ChannelPreviewPanelProps) => {
+  const [mobileView, setMobileView] = useState(false);
+  const [testEmailOpen, setTestEmailOpen] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<
+    'idle' | 'sending' | 'sent' | 'error'
+  >('idle');
+  const [sendError, setSendError] = useState('');
+
   const previewSubject = useMemo(() => {
     if (!subject.trim()) return labels.subject;
     return previewContext ? renderPreview(subject, previewContext) : subject;
@@ -49,66 +172,221 @@ export const ChannelPreviewPanel = ({
     year: 'numeric',
   });
 
+  const senderInitial = (senderName || '?')[0].toUpperCase();
+  const displaySenderName = senderName || 'Sender';
+  const displaySenderLine = senderLine || 'sender@example.com';
+  const displaySubject = previewSubject || '(no subject)';
+
+  const handleSendTest = async () => {
+    if (!recipientEmail.trim()) return;
+    setSending(true);
+    setSendStatus('sending');
+    setSendError('');
+
+    // Resolve template variables so the email doesn't contain raw {{path}} tags
+    const resolvedBody = previewContext
+      ? resolveTemplateVariables(body, previewContext)
+      : body;
+
+    try {
+      await request('/api/notifications/test-send', {
+        method: 'POST',
+        body: {
+          recipient_email: recipientEmail.trim(),
+          subject: previewSubject,
+          body: resolvedBody,
+          sender_name: senderName,
+          sender_email: senderEmail,
+        },
+      });
+      setSendStatus('sent');
+      setTimeout(() => {
+        setTestEmailOpen(false);
+        setSendStatus('idle');
+        setRecipientEmail('');
+      }, 2000);
+    } catch (err) {
+      setSendStatus('error');
+      setSendError(err instanceof Error ? err.message : 'Failed to send');
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-border/50 bg-card p-5">
-      <div className="mb-4">
-        <h6 className="font-medium text-foreground">Preview</h6>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live preview of the content that will be used for this notification.
-        </p>
+      {/* Header with preview toggle and test button */}
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h6 className="font-medium text-foreground">Preview</h6>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live preview of the content that will be used for this notification.
+          </p>
+        </div>
+
+        {channel === 'email' && (
+          <div className="flex items-center gap-2">
+            {/* Desktop / Mobile toggle */}
+            <div className="flex overflow-hidden rounded-md border border-border/50">
+              <button
+                type="button"
+                onClick={() => setMobileView(false)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs transition-colors ${
+                  !mobileView
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Monitor className="h-3.5 w-3.5" />
+                Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileView(true)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs transition-colors ${
+                  mobileView
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                Mobile
+              </button>
+            </div>
+
+            {/* Send Test Email button */}
+            <Dialog open={testEmailOpen} onOpenChange={setTestEmailOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <Send className="h-3.5 w-3.5" />
+                  Test
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send Test Email</DialogTitle>
+                  <DialogDescription>
+                    Send a preview of this email to a recipient for testing.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 py-2">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="test-recipient"
+                      className="text-sm font-medium text-foreground"
+                    >
+                      Recipient email
+                    </label>
+                    <Input
+                      id="test-recipient"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">Preview info</p>
+                    <p className="mt-1">
+                      Subject: {previewSubject || labels.subject}
+                    </p>
+                    <p>
+                      From:{' '}
+                      {senderLine ||
+                        `${senderName || 'Sender'} <${senderEmail || 'sender@example.com'}>`}
+                    </p>
+                  </div>
+
+                  {sendStatus === 'sent' && (
+                    <p className="text-sm text-green-600">
+                      ✓ Test email sent successfully!
+                    </p>
+                  )}
+
+                  {sendStatus === 'error' && (
+                    <p className="text-sm text-destructive">
+                      {sendError ||
+                        'Failed to send test email. Please try again.'}
+                    </p>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setTestEmailOpen(false);
+                      setSendStatus('idle');
+                      setRecipientEmail('');
+                      setSendError('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSendTest}
+                    disabled={sending || !recipientEmail.trim()}
+                    className="gap-1.5"
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-3.5 w-3.5" />
+                        Send Test
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       {channel === 'email' ? (
-        <div className="overflow-hidden rounded-xl border border-border/50 bg-white text-slate-900 shadow-sm">
-          {/* Email header — inbox style */}
-          <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
-            <div className="flex items-start gap-3">
-              {/* Avatar circle with first letter */}
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-primary-foreground">
-                {(senderName || '?')[0].toUpperCase()}
+        mobileView ? (
+          /* Mobile phone frame */
+          <div className="mx-auto max-w-[375px]">
+            <div className="overflow-hidden rounded-[44px] border-[3px] border-border/60 bg-dark shadow-xl">
+              <div className="relative flex justify-center pt-3">
+                <div className="h-5 w-28 rounded-b-xl bg-black" />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-sm font-semibold text-slate-900">
-                    {senderName || 'Sender'}
-                  </p>
-                  <span className="shrink-0 text-[11px] text-slate-400">
-                    {timeStr}
-                  </span>
-                </div>
-                <p className="truncate text-[13px] text-slate-500">
-                  {senderLine || 'sender@example.com'}
-                </p>
-                <p className="mt-2 text-[13px] font-medium text-slate-800">
-                  {previewSubject || '(no subject)'}
-                </p>
-              </div>
-            </div>
-            {/* Inbox metadata line */}
-            <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-400">
-              <span>to me</span>
-              <span>{dateStr}</span>
-            </div>
-          </div>
-
-          {/* Email body */}
-          <div className="border-t border-slate-200">
-            <div className="px-1 py-1">
-              {renderedBody ? (
-                <iframe
-                  srcDoc={renderedBody}
-                  title="Email preview"
-                  className="h-105 w-full border-0"
-                  sandbox="allow-same-origin"
+              <div className="px-2 pb-2 pt-2">
+                <EmailPreviewCard
+                  compact
+                  senderInitial={senderInitial}
+                  displaySenderName={displaySenderName}
+                  displaySenderLine={displaySenderLine}
+                  displaySubject={displaySubject}
+                  timeStr={timeStr}
+                  dateStr={dateStr}
+                  renderedBody={renderedBody}
                 />
-              ) : (
-                <p className="px-4 py-8 text-center text-sm text-slate-400">
-                  Start editing to see a live preview.
-                </p>
-              )}
+              </div>
+              <div className="flex justify-center pb-3">
+                <div className="h-1 w-32 rounded-full bg-white/30" />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <EmailPreviewCard
+            senderInitial={senderInitial}
+            displaySenderName={displaySenderName}
+            displaySenderLine={displaySenderLine}
+            displaySubject={displaySubject}
+            timeStr={timeStr}
+            dateStr={dateStr}
+            renderedBody={renderedBody}
+          />
+        )
       ) : null}
 
       {channel === 'sms' ? (

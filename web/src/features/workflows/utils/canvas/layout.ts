@@ -1,9 +1,9 @@
-import dagre from '@dagrejs/dagre';
-import { nodeWidth, nodeHeight } from '../../constants';
 import type {
-  WorkflowCanvasNode,
   WorkflowCanvasEdge,
+  WorkflowCanvasNode,
 } from '@/features/workflows/types/canvas';
+import dagre from '@dagrejs/dagre';
+import { nodeHeight, nodeWidth } from '../../constants';
 
 export const layoutCanvasGraph = (
   nodes: WorkflowCanvasNode[],
@@ -26,8 +26,7 @@ export const layoutCanvasGraph = (
     graph.setNode(node.id, { width: nodeWidth, height: nodeHeight }),
   );
   edges.forEach((edge) => graph.setEdge(edge.source, edge.target));
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  dagre.layout(graph);
+  dagre.layout(graph as Parameters<typeof dagre.layout>[0]);
 
   return {
     nodes: nodes.map((node) => {

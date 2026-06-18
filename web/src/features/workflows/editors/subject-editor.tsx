@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import '@maily-to/core/style.css';
+import { Editor as MailyEditor } from '@maily-to/core';
 import {
   VariableExtension,
   getVariableSuggestions,
   type Variable,
 } from '@maily-to/core/extensions';
-import { textToMailyVariables } from './encode';
-import { Editor as MailyEditor } from '@maily-to/core';
-
-import { Editor } from '@tiptap/react';
+import '@maily-to/core/style.css';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { VariableDefinition } from '../types/data-panel';
+import { textToMailyVariables } from './encode';
 
 /** Small inline chip for variables in the subject line. */
 function SubjectChip({ variable }: Readonly<{ variable: Variable }>) {
@@ -47,7 +45,7 @@ export function SubjectEditor({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const handleUpdate = useCallback((editor: Editor) => {
+  const handleUpdate = useCallback((editor: { getText: () => string }) => {
     const text = editor.getText();
     onChangeRef.current?.(text);
   }, []);
