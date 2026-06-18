@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSONContent } from '@tiptap/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { workflowApi } from '../api';
 import { zeroUUID } from '../constants';
@@ -21,6 +22,7 @@ export type ChannelConfigState = {
   templateId: string;
   subject: string;
   body: string;
+  contentJson: JSONContent | null;
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
   payload: string;
 };
@@ -28,7 +30,7 @@ export type ChannelConfigState = {
 export type ChannelConfigActions = {
   setSubject: (subject: string) => void;
   setBody: (body: string) => void;
-  handleHtmlChange: (html: string) => void;
+  handleHtmlChange: (html: string, json?: JSONContent | null) => void;
   setPayload: (payload: string) => void;
 };
 
@@ -71,6 +73,7 @@ export const useChannelConfig = (
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [contentJson, setContentJson] = useState<JSONContent | null>(null);
   const [payload, setPayload] = useState('{}');
 
   useEffect(() => {
@@ -166,8 +169,9 @@ export const useChannelConfig = (
 
   // Autosave on HTML content change (from Maily editor)
   const handleHtmlChange = useCallback(
-    (html: string) => {
+    (html: string, json?: JSONContent | null) => {
       setBody(html);
+      if (json) setContentJson(json);
       encodedBodyRef.current = html;
       if (bodyDebounceRef.current) clearTimeout(bodyDebounceRef.current);
       bodyDebounceRef.current = setTimeout(() => {
@@ -288,6 +292,7 @@ export const useChannelConfig = (
     templateId,
     subject,
     body,
+    contentJson,
     payload,
     autosaveStatus,
     setSubject: handleSubjectChange,

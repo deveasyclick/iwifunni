@@ -13,14 +13,16 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { request } from '@/lib/api-client';
+import type { JSONContent } from '@tiptap/core';
 import { Loader2, Monitor, Send, Smartphone } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { renderPreview, resolveTemplateVariables } from '../editors/encode';
 
 type ChannelPreviewPanelProps = {
   channel: WorkflowChannel;
   subject: string;
   body: string;
+  contentJson?: JSONContent | null;
   labels: { subject: string; body: string };
   previewContext?: Record<string, unknown>;
   senderName?: string;
@@ -36,6 +38,7 @@ type EmailPreviewCardProps = {
   timeStr: string;
   dateStr: string;
   renderedBody: string | false;
+  loading?: boolean;
 };
 
 /** Shared email card for desktop and mobile views. */
@@ -48,6 +51,7 @@ const EmailPreviewCard = ({
   timeStr,
   dateStr,
   renderedBody,
+  loading = false,
 }: EmailPreviewCardProps) => {
   const s = compact
     ? {
@@ -110,7 +114,14 @@ const EmailPreviewCard = ({
       </div>
       <div className="border-t border-slate-200">
         <div className="px-1 py-1">
-          {renderedBody ? (
+          {loading ? (
+            <div className={`flex items-center justify-center ${s.bodyHeight}`}>
+              <div className="flex flex-col items-center gap-2 text-xs text-slate-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500" />
+                <span>Rendering preview…</span>
+              </div>
+            </div>
+          ) : renderedBody ? (
             <iframe
               srcDoc={renderedBody}
               title="Email preview"
@@ -128,10 +139,98 @@ const EmailPreviewCard = ({
   );
 };
 
+/**
+ * Renders Maily JSON content into proper email HTML using @maily-to/render.
+ * Falls back to the simple renderPreview ({{path}} substitution) when
+ * contentJson is not available (initial load or SMS/push channels).
+ */
+function useEmailPreview(
+  channel: WorkflowChannel,
+  body: string,
+  contentJson: JSONContent | null | undefined,
+  previewContext: Record<string, unknown> | undefined,
+): { html: string | null; loading: boolean } {
+  const [html, setHtml] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  // Track the most recent render request so we can cancel stale ones
+  const renderIdRef = useRef(0);
+
+  useEffect(() => {
+    if (channel !== 'email' || !contentJson) {
+      // Fall back to simple {{path}} substitution
+      setLoading(false);
+      setHtml(null);
+      return;
+    }
+
+    const id = ++renderIdRef.current;
+    let cancelled = false;
+    setLoading(true);
+
+    const render = async () => {
+      try {
+        // Dynamic import to avoid bundling heavy deps on non-email pages
+        const { Maily } = await import('@maily-to/render');
+
+        if (cancelled) return;
+
+        const maily = new Maily(contentJson);
+
+        // Set variable values from preview context
+        if (previewContext) {
+          const stringValues: Record<string, string> = {};
+          for (const [key, value] of Object.entries(previewContext)) {
+            if (
+              typeof value === 'string' ||
+              typeof value === 'number' ||
+              typeof value === 'boolean'
+            ) {
+              stringValues[key] = String(value);
+            }
+          }
+          if (Object.keys(stringValues).length > 0) {
+            maily.setVariableValues(stringValues);
+          }
+        }
+
+        const emailHtml = await maily.render({ pretty: false });
+
+        if (!cancelled && id === renderIdRef.current) {
+          setHtml(emailHtml);
+        }
+      } catch (err) {
+        console.error(
+          'Failed to render email preview with @maily-to/render, falling back:',
+          err,
+        );
+        if (!cancelled) {
+          // Fall back to simple rendering on error
+          setHtml(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    render();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [channel, contentJson, previewContext]);
+
+  // When contentJson is not available, the parent component passes null.
+  // In that case, return null so the caller can fall through to renderPreview.
+  return { html, loading };
+}
+
 export const ChannelPreviewPanel = ({
   channel,
   subject,
   body,
+  contentJson,
   labels,
   previewContext,
   senderName,
@@ -151,10 +250,36 @@ export const ChannelPreviewPanel = ({
     return previewContext ? renderPreview(subject, previewContext) : subject;
   }, [subject, labels.subject, previewContext]);
 
+  // Use @maily-to/render for proper email HTML; fall back to simple
+  // {{path}} substitution when JSON content isn't available yet.
+  const { html: mailyHtml, loading: mailyLoading } = useEmailPreview(
+    channel,
+    body,
+    contentJson,
+    previewContext,
+  );
+
+  // Derive a desktop-specific version of the rendered HTML that disables the
+  // column-stacking media query (max-width:425px). The @maily-to/render library
+  // emits CSS that stacks .tab-col-full columns below 425px — that's correct
+  // for real email clients on mobile, but the preview iframe is often narrower
+  // than 425px because of panel padding/borders, causing columns to incorrectly
+  // stack even in the "desktop" preview.
+  const renderedBodyDesktop = useMemo(() => {
+    if (!mailyHtml) return null;
+    // Shift the breakpoint to 1px so it's never triggered in the desktop view
+    return mailyHtml.replace('max-width:425px', 'max-width:1px');
+  }, [mailyHtml]);
+
   const renderedBody = useMemo(() => {
     if (!body.trim()) return `Preview your ${channel} content here.`;
+
+    // When Maily JSON is available, use the properly rendered email HTML
+    if (mailyHtml) return mailyHtml;
+
+    // Fall back to simple {{path}} substitution
     return previewContext ? renderPreview(body, previewContext) : body;
-  }, [body, channel, previewContext]);
+  }, [body, channel, previewContext, mailyHtml]);
 
   const senderLine =
     senderName && senderEmail ? `${senderName} <${senderEmail}>` : '';
@@ -353,7 +478,8 @@ export const ChannelPreviewPanel = ({
 
       {channel === 'email' ? (
         mobileView ? (
-          /* Mobile phone frame */
+          /* Mobile phone frame — use original HTML with responsive CSS
+             (columns correctly stack below 425px) */
           <div className="mx-auto max-w-[375px]">
             <div className="overflow-hidden rounded-[44px] border-[3px] border-border/60 bg-dark shadow-xl">
               <div className="relative flex justify-center pt-3">
@@ -369,6 +495,7 @@ export const ChannelPreviewPanel = ({
                   timeStr={timeStr}
                   dateStr={dateStr}
                   renderedBody={renderedBody}
+                  loading={mailyLoading}
                 />
               </div>
               <div className="flex justify-center pb-3">
@@ -377,6 +504,8 @@ export const ChannelPreviewPanel = ({
             </div>
           </div>
         ) : (
+          /* Desktop view — use the version with the 425px breakpoint
+             disabled so columns stay side-by-side */
           <EmailPreviewCard
             senderInitial={senderInitial}
             displaySenderName={displaySenderName}
@@ -384,7 +513,8 @@ export const ChannelPreviewPanel = ({
             displaySubject={displaySubject}
             timeStr={timeStr}
             dateStr={dateStr}
-            renderedBody={renderedBody}
+            renderedBody={renderedBodyDesktop || renderedBody}
+            loading={mailyLoading}
           />
         )
       ) : null}

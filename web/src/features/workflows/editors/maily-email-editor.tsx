@@ -8,6 +8,7 @@ import {
 } from '@maily-to/core/extensions';
 import '@maily-to/core/style.css';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { JSONContent } from '@tiptap/core';
 import type { VariableDefinition } from '../types/data-panel';
 
 /**
@@ -26,7 +27,7 @@ function VariableChipView({ variable }: Readonly<{ variable: Variable }>) {
 
 type Props = {
   initialValue?: string;
-  onHtmlChange?: (html: string) => void;
+  onHtmlChange?: (html: string, json?: JSONContent) => void;
   variableDefinitions?: VariableDefinition[];
 };
 
@@ -62,13 +63,17 @@ const MailyEmailEditor = ({
     onHtmlChangeRef.current = onHtmlChange;
   }, [onHtmlChange]);
 
-  const handleUpdate = useCallback((editor: { getHTML: () => string }) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const html = editor.getHTML();
-      onHtmlChangeRef.current?.(html);
-    }, 400);
-  }, []);
+  const handleUpdate = useCallback(
+    (editor: { getHTML: () => string; getJSON: () => JSONContent }) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        const html = editor.getHTML();
+        const json = editor.getJSON();
+        onHtmlChangeRef.current?.(html, json);
+      }, 400);
+    },
+    [],
+  );
 
   // Cleanup debounce on unmount
   useEffect(() => {

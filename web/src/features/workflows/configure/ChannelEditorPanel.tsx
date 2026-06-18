@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSONContent } from '@tiptap/core';
 import { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,7 +46,7 @@ type ChannelEditorPanelProps = {
   onSenderChange: (name: string, email: string, useDefaults: boolean) => void;
   onSubjectChange: (value: string) => void;
   onBodyChange: (value: string) => void;
-  onHtmlChange: (html: string) => void;
+  onHtmlChange: (html: string, json?: JSONContent | null) => void;
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
 };
 
@@ -110,10 +111,11 @@ export const ChannelEditorPanel = ({
       : staticVars;
   }, [payload]);
 
-  // Convert Maily's HTML format → {{path}} before persisting
+  // Convert Maily's HTML format → {{path}} before persisting;
+  // forward the raw JSON content for proper email rendering in the preview.
   const handleHtmlChange = useCallback(
-    (html: string) => {
-      onHtmlChange(mailyVariablesToText(html));
+    (html: string, json?: JSONContent | null) => {
+      onHtmlChange(mailyVariablesToText(html), json);
     },
     [onHtmlChange],
   );

@@ -152,6 +152,7 @@ const ConfigureWorkflowChannel = ({
                   channel={config.channel}
                   subject={config.subject}
                   body={config.body}
+                  contentJson={config.contentJson}
                   labels={labels}
                   previewContext={previewContext}
                   senderName={displaySender.name}
