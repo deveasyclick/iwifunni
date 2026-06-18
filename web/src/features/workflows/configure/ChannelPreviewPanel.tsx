@@ -308,10 +308,14 @@ export const ChannelPreviewPanel = ({
     setSendStatus('sending');
     setSendError('');
 
-    // Resolve template variables so the email doesn't contain raw {{path}} tags
+    // Use the Maily-rendered email HTML when available (proper email markup
+    // with tables, inline styles, and resolved variables). Fall back to a
+    // simple {{path}} substitution for channels/content without a Maily JSON
+    // representation.
     const resolvedBody = previewContext
       ? resolveTemplateVariables(body, previewContext)
       : body;
+    const emailHtml = mailyHtml || resolvedBody;
 
     try {
       await request('/api/notifications/test-send', {
@@ -319,7 +323,7 @@ export const ChannelPreviewPanel = ({
         body: {
           recipient_email: recipientEmail.trim(),
           subject: previewSubject,
-          body: resolvedBody,
+          body: emailHtml,
           sender_name: senderName,
           sender_email: senderEmail,
         },
