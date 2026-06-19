@@ -155,6 +155,7 @@ const ConfigureWorkflowChannel = ({
                   contentJson={config.contentJson}
                   labels={labels}
                   previewContext={previewContext}
+                  previewSubscriber={dataPanel.previewSubscriber}
                   senderName={displaySender.name}
                   senderEmail={displaySender.email}
                 />

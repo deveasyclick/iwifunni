@@ -1,6 +1,7 @@
 'use client';
 
 import type { WorkflowChannel } from '@/app/types/workflow';
+import type { PreviewSubscriber } from '../types/data-panel';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+
 import { request } from '@/lib/api-client';
 import type { JSONContent } from '@tiptap/core';
 import { Loader2, Monitor, Send, Smartphone } from 'lucide-react';
@@ -25,6 +26,7 @@ type ChannelPreviewPanelProps = {
   contentJson?: JSONContent | null;
   labels: { subject: string; body: string };
   previewContext?: Record<string, unknown>;
+  previewSubscriber?: PreviewSubscriber | null;
   senderName?: string;
   senderEmail?: string;
 };
@@ -233,17 +235,23 @@ export const ChannelPreviewPanel = ({
   contentJson,
   labels,
   previewContext,
+  previewSubscriber,
   senderName,
   senderEmail,
 }: ChannelPreviewPanelProps) => {
   const [mobileView, setMobileView] = useState(false);
   const [testEmailOpen, setTestEmailOpen] = useState(false);
-  const [recipientEmail, setRecipientEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState<
     'idle' | 'sending' | 'sent' | 'error'
   >('idle');
   const [sendError, setSendError] = useState('');
+
+  const subscriberEmail = previewSubscriber?.email ?? '';
+  const subscriberName =
+    [previewSubscriber?.firstName, previewSubscriber?.lastName]
+      .filter(Boolean)
+      .join(' ') || 'Selected subscriber';
 
   const previewSubject = useMemo(() => {
     if (!subject.trim()) return labels.subject;
@@ -303,7 +311,7 @@ export const ChannelPreviewPanel = ({
   const displaySubject = previewSubject || '(no subject)';
 
   const handleSendTest = async () => {
-    if (!recipientEmail.trim()) return;
+    if (!subscriberEmail) return;
     setSending(true);
     setSendStatus('sending');
     setSendError('');
@@ -321,7 +329,7 @@ export const ChannelPreviewPanel = ({
       await request('/api/notifications/test-send', {
         method: 'POST',
         body: {
-          recipient_email: recipientEmail.trim(),
+          recipient_email: subscriberEmail,
           subject: previewSubject,
           body: emailHtml,
           sender_name: senderName,
@@ -332,7 +340,6 @@ export const ChannelPreviewPanel = ({
       setTimeout(() => {
         setTestEmailOpen(false);
         setSendStatus('idle');
-        setRecipientEmail('');
       }, 2000);
     } catch (err) {
       setSendStatus('error');
@@ -400,21 +407,34 @@ export const ChannelPreviewPanel = ({
                 </DialogHeader>
 
                 <div className="space-y-3 py-2">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="test-recipient"
-                      className="text-sm font-medium text-foreground"
-                    >
-                      Recipient email
-                    </label>
-                    <Input
-                      id="test-recipient"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                    />
-                  </div>
+                  {subscriberEmail ? (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        Recipient
+                      </label>
+                      <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {subscriberName.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="flex-1 truncate">
+                          <span className="font-medium text-foreground">
+                            {subscriberName}
+                          </span>
+                          <span className="ml-1.5 text-muted-foreground">
+                            {subscriberEmail}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-center text-sm text-muted-foreground">
+                      Select a preview subscriber from the{' '}
+                      <span className="font-medium text-foreground">
+                        Data
+                      </span>{' '}
+                      panel to send a test email.
+                    </div>
+                  )}
 
                   <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                     <p className="font-medium text-foreground">Preview info</p>
@@ -449,7 +469,6 @@ export const ChannelPreviewPanel = ({
                     onClick={() => {
                       setTestEmailOpen(false);
                       setSendStatus('idle');
-                      setRecipientEmail('');
                       setSendError('');
                     }}
                   >
@@ -458,7 +477,7 @@ export const ChannelPreviewPanel = ({
                   <Button
                     size="sm"
                     onClick={handleSendTest}
-                    disabled={sending || !recipientEmail.trim()}
+                    disabled={sending || !subscriberEmail}
                     className="gap-1.5"
                   >
                     {sending ? (
