@@ -6,6 +6,7 @@ import tsParser from '@typescript-eslint/parser';
 import nextPlugin from '@next/eslint-plugin-next';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import reactPlugin from 'eslint-plugin-react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,7 +96,24 @@ const eslintConfig = [
     },
   },
 
-  // 5. Prettier errors mapping
+  // 5. React rules — only for source files to avoid ESLint 10 context issues
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx'],
+    plugins: {
+      react: reactPlugin,
+    },
+    rules: {
+      'react/jsx-no-useless-fragment': 'error',
+      'react/prefer-read-only-props': 'error',
+    },
+    settings: {
+      react: {
+        version: '19.0.0',
+      },
+    },
+  },
+
+  // 6. Prettier errors mapping
   {
     plugins: {
       prettier: prettierPlugin,
@@ -116,7 +134,7 @@ const eslintConfig = [
     },
   },
 
-  // 6. Prettier style overrides
+  // 7. Prettier style overrides
   prettierConfig,
 ];
 
