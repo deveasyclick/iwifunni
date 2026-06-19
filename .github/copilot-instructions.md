@@ -23,7 +23,6 @@
 ## Validation
 
 - Use [Taskfile.yml](../Taskfile.yml) commands when possible for backend validation, especially `task build`, `task lint`, and `task sqlc` when relevant.
-- For frontend work, validate with the available `pnpm` scripts in [web/package.json](../web/package.json) that match the files you touched.
 
 ## Frontend Component Conventions
 
@@ -91,6 +90,11 @@ workflows/
 - **Store actions are separated.** The Zustand store in `store/builder/` has three files: `store.ts` (store creation), `actions.ts` (pure action factories), and `selectors.ts` (derived computations). Keep them separated, not inlined into the store.
 - **Draft logic is separated.** All draft creation, normalization, and conversion logic belongs in `draft/`, not in utility files or components.
 - **React Query hooks go in `queries.ts`.** Each feature folder has a single `queries.ts` that exports all `useQuery`/`useMutation` hooks. Do not create a `hooks/` directory for React Query hooks; they belong in `queries.ts`.
+
+# Agent Workflow Rules
+
+- Stage changes and show the diff — do not commit automatically.
+- Let the user review and commit manually.
 
 # Commit Message Rules
 Follow Conventional Commit format for all commits.

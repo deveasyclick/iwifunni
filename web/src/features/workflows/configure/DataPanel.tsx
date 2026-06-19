@@ -1,57 +1,99 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  Loader2,
-  AlertCircle,
-  ChevronRight,
-  User,
-  Package,
-} from 'lucide-react';
-import { PreviewSubscriberSelector } from './PreviewSubscriberSelector';
+import { AlertCircle, ChevronRight, Loader2, User } from 'lucide-react';
+import { useMemo } from 'react';
 import type { DataPanelProps } from '../types/data-panel';
+import { ObjectPreview } from './components/ObjectPreview';
+import { PayloadEditor } from './components/PayloadEditor';
+import { SubscriberSearch } from './components/SubscriberSearch';
+import { usePayloadEditor } from './hooks/use-payload-editor';
+import { useSubscriberSearchInput } from './hooks/use-subscriber-search-input';
 
-/**
- * Formats an object as a colorized object literal like:
- *   {
- *     firstName: "Yusuf",
- *     email:     "yusuf@..."
- *   }
- */
-function colorizeObject(data: Record<string, unknown>): string {
-  const entries = Object.entries(data).filter(
-    ([, v]) => v !== undefined && v !== null,
-  );
-  if (entries.length === 0) return '{ }';
-
-  const maxKeyLen = Math.max(...entries.map(([k]) => k.length));
-  const lines = entries.map(([key, value]) => {
-    const val =
-      typeof value === 'string'
-        ? `<span style="color:#16a34a">"${value}"</span>`
-        : `<span style="color:#d97706">${String(value)}</span>`;
-    return `  ${key.padEnd(maxKeyLen)}: ${val}`;
-  });
-
-  return `{\n${lines.join(',\n')}\n}`;
+function buildSubscriberData(
+  previewSubscriber: NonNullable<DataPanelProps['previewSubscriber']>,
+): Record<string, unknown> {
+  const obj: Record<string, unknown> = {
+    id: previewSubscriber.id,
+  };
+  if (previewSubscriber.firstName) obj.firstName = previewSubscriber.firstName;
+  if (previewSubscriber.lastName) obj.lastName = previewSubscriber.lastName;
+  if (previewSubscriber.email) obj.email = previewSubscriber.email;
+  if (previewSubscriber.phone) obj.phone = previewSubscriber.phone;
+  return obj;
 }
 
-/**
- * Renders a colorized object literal via dangerouslySetInnerHTML.
- */
-function ObjectPreview({ data }: Readonly<{ data: Record<string, unknown> }>) {
-  const html = useMemo(() => colorizeObject(data), [data]);
-
+function SubscriberLoadingState() {
   return (
-    <pre
-      className="max-h-48 overflow-y-auto rounded-md bg-muted/50 p-3 text-xs font-mono whitespace-pre-wrap break-all"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="flex items-center justify-center py-4">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+function SubscriberErrorState({ message }: Readonly<{ message: string }>) {
+  return (
+    <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+      <AlertCircle className="h-3 w-3 shrink-0" />
+      {message}
+    </div>
+  );
+}
+
+function SubscriberEmptyState() {
+  return (
+    <span className="text-xs text-muted-foreground italic">
+      Select a subscriber to preview data
+    </span>
+  );
+}
+
+function SubscriberDataPreview({
+  subscriberData,
+}: Readonly<{ subscriberData: Record<string, unknown> }>) {
+  return <ObjectPreview data={subscriberData} />;
+}
+
+function SubscriberSection({
+  subscriberLoading,
+  subscriberError,
+  subscriberData,
+}: {
+  subscriberLoading: boolean;
+  subscriberError: string | null;
+  subscriberData: Record<string, unknown> | null;
+}) {
+  if (subscriberLoading) {
+    return <SubscriberLoadingState />;
+  }
+
+  if (subscriberError) {
+    return <SubscriberErrorState message={subscriberError} />;
+  }
+
+  if (subscriberData) {
+    return <SubscriberDataPreview subscriberData={subscriberData} />;
+  }
+
+  return <SubscriberEmptyState />;
+}
+
+function ResetButton({ onClick }: Readonly<{ onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="text-xs font-normal text-primary hover:text-primary/80 transition-colors"
+    >
+      Reset to me
+    </button>
   );
 }
 
@@ -69,117 +111,62 @@ export const DataPanel = ({
   onSelectSubscriber,
   onResetSubscriber,
 }: DataPanelProps) => {
-  // Build subscriber object (no metadata)
+  const { payloadLocal, payloadError, handlePayloadChange } = usePayloadEditor(
+    payload,
+    onPayloadChange,
+  );
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    isSearching,
+    searchResults,
+    clearSearch,
+  } = useSubscriberSearchInput();
+
   const subscriberData = useMemo(() => {
     if (!previewSubscriber) return null;
-    const obj: Record<string, unknown> = {
-      id: previewSubscriber.id,
-    };
-    if (previewSubscriber.firstName)
-      obj.firstName = previewSubscriber.firstName;
-    if (previewSubscriber.lastName) obj.lastName = previewSubscriber.lastName;
-    if (previewSubscriber.email) obj.email = previewSubscriber.email;
-    if (previewSubscriber.phone) obj.phone = previewSubscriber.phone;
-    return obj;
+    return buildSubscriberData(previewSubscriber);
   }, [previewSubscriber]);
-
-  const [payloadError, setPayloadError] = useState<string | null>(null);
-  const [payloadLocal, setPayloadLocal] = useState(payload);
-
-  // Sync from parent
-  useEffect(() => {
-    setPayloadLocal(payload);
-  }, [payload]);
-
-  const handlePayloadChange = useCallback(
-    (value: string) => {
-      setPayloadLocal(value);
-      try {
-        JSON.parse(value);
-        setPayloadError(null);
-        onPayloadChange(value);
-      } catch {
-        setPayloadError('Invalid JSON');
-      }
-    },
-    [onPayloadChange],
-  );
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Preview subscriber selector */}
-      <PreviewSubscriberSelector
-        previewSubscriber={previewSubscriber ?? null}
-        onSelect={onSelectSubscriber || (() => {})}
-        onReset={onResetSubscriber || (() => {})}
-        hasDefault={true}
+      {/* Payload (editable JSON) — on top */}
+      <PayloadEditor
+        value={payloadLocal}
+        error={payloadError}
+        onChange={handlePayloadChange}
       />
 
-      {/* Payload (editable JSON) — on top */}
-      <Collapsible defaultOpen className="group">
-        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent/50 transition-colors">
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
-          <Package className="h-3.5 w-3.5 text-muted-foreground" />
-          Payload
-          {payloadError && (
-            <span className="ml-auto text-[10px] text-destructive">
-              Invalid JSON
-            </span>
-          )}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <div className="relative rounded-md border border-border/50 bg-[#1e1e2e]">
-            <div className="flex">
-              <div className="select-none py-3 pl-3 pr-2 text-right text-[13px] leading-relaxed text-[#585b70] font-mono">
-                {payloadLocal.split('\n').map((_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
-              <textarea
-                value={payloadLocal}
-                onChange={(e) => handlePayloadChange(e.target.value)}
-                className={`min-h-32 w-full resize-y border-0 bg-transparent p-3 pl-2 font-mono text-[13px] leading-relaxed text-[#cdd6f4] placeholder-[#585b70] caret-[#f5e0dc] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/30 ${
-                  payloadError ? 'ring-1 ring-destructive/50' : ''
-                }`}
-                placeholder='{&#10;  "event": "order.created"&#10;}'
-                spellCheck={false}
-              />
-            </div>
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Define test payload values. Type{' '}
-            <code className="rounded bg-muted px-1 font-mono text-[10px]">
-              {'{{'}
-            </code>{' '}
-            in the editor to insert variables.
-          </p>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Subscriber Data (read-only object view) — on bottom */}
+      {/* Subscriber Data (selector + read-only object view) */}
       <Collapsible defaultOpen className="group">
         <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent/50 transition-colors">
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
           <User className="h-3.5 w-3.5 text-muted-foreground" />
-          Subscriber
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          {subscriberLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : subscriberError ? (
-            <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              <AlertCircle className="h-3 w-3 shrink-0" />
-              {subscriberError}
-            </div>
-          ) : subscriberData ? (
-            <ObjectPreview data={subscriberData} />
-          ) : (
-            <span className="text-xs text-muted-foreground italic">
-              No subscriber data
-            </span>
+          <span className="flex-1 text-left">Subscriber</span>
+          {onResetSubscriber && previewSubscriber && (
+            <ResetButton onClick={onResetSubscriber} />
           )}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 space-y-3">
+          <SubscriberSearch
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            isSearching={isSearching}
+            searchResults={searchResults}
+            previewSubscriberId={previewSubscriber?.id}
+            onSelect={(sub) => {
+              onSelectSubscriber?.(sub);
+              clearSearch();
+            }}
+            onClear={clearSearch}
+          />
+
+          <SubscriberSection
+            subscriberLoading={subscriberLoading}
+            subscriberError={subscriberError}
+            subscriberData={subscriberData}
+          />
         </CollapsibleContent>
       </Collapsible>
     </div>

@@ -46,6 +46,35 @@ export interface DataPanelProps {
 /**
  * Return type of the useDataPanel hook.
  */
+/**
+ * Return type of the usePayloadEditor hook.
+ */
+export interface UsePayloadEditorReturn {
+  payloadLocal: string;
+  payloadError: string | null;
+  handlePayloadChange: (value: string) => void;
+}
+
+/**
+ * Return type of the useSubscriberSearchInput hook.
+ */
+export interface UseSubscriberSearchInputReturn {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  debouncedQuery: string;
+  searchResults: Array<{
+    id: string;
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+  }>;
+  isSearching: boolean;
+  clearSearch: () => void;
+}
+
+/**
+ * Return type of the useDataPanel hook.
+ */
 export interface UseDataPanelReturn {
   groups: VariableGroup[];
   allVariables: VariableDefinition[];
