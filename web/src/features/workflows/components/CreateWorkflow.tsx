@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useWorkflowCreate } from '../hooks/use-workflow-create';
 
 type CreateWorkflowProps = {
-  onClose: () => void;
+  readonly onClose: () => void;
 };
 
 const CreateWorkflow = ({ onClose }: CreateWorkflowProps) => {

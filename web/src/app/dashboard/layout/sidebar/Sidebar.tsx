@@ -108,7 +108,7 @@ const renderSidebarItems = (
   });
 };
 
-const SidebarLayout = ({ onClose }: { onClose?: () => void }) => {
+const SidebarLayout = ({ onClose }: { readonly onClose?: () => void }) => {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
 

@@ -21,10 +21,10 @@ import { cn } from '@/lib/utils';
 import { getCountryList, type Country } from '../constants/countries';
 
 interface PhoneInputProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
+  readonly value?: string;
+  readonly onChange?: (value: string) => void;
+  readonly disabled?: boolean;
+  readonly placeholder?: string;
 }
 
 function parseDialCode(value: string): string {

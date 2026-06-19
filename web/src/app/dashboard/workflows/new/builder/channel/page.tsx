@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 type WorkflowChannelPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const firstValue = (value: string | string[] | undefined) =>

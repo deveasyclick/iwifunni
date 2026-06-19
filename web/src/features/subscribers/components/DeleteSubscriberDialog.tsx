@@ -12,11 +12,11 @@ import { Button } from '@/components/ui/button';
 import type { SubscriberType } from '@/app/types/subscriber';
 
 type DeleteSubscriberDialogProps = {
-  open: boolean;
-  deletingItem: SubscriberType | null;
-  isDeleting: boolean;
-  onConfirm: (id: string) => void;
-  onCancel: () => void;
+  readonly open: boolean;
+  readonly deletingItem: SubscriberType | null;
+  readonly isDeleting: boolean;
+  readonly onConfirm: (id: string) => void;
+  readonly onCancel: () => void;
 };
 
 export const DeleteSubscriberDialog = ({

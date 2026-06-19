@@ -10,12 +10,12 @@ import { Icon } from '@iconify/react';
 import type { ProviderDefinition } from '../types';
 
 type ConnectedProviderCardProps = {
-  definition: ProviderDefinition;
-  item: ProviderItem;
-  fallbackExists: boolean;
-  isMutating: boolean;
-  onEdit: (definition: ProviderDefinition, item: ProviderItem) => void;
-  onStateChange: (
+  readonly definition: ProviderDefinition;
+  readonly item: ProviderItem;
+  readonly fallbackExists: boolean;
+  readonly isMutating: boolean;
+  readonly onEdit: (definition: ProviderDefinition, item: ProviderItem) => void;
+  readonly onStateChange: (
     item: ProviderItem,
     payload: UpdateProviderStatePayload,
   ) => void;

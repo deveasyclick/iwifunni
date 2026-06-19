@@ -4,9 +4,9 @@ import type { SubscriberCounts } from '../utils/count-subscribers';
 import { filterCards } from '../constants';
 
 interface SubscriberFilterProps {
-  counts: SubscriberCounts;
-  filter: string;
-  setFilter: (filter: string) => void;
+  readonly counts: SubscriberCounts;
+  readonly filter: string;
+  readonly setFilter: (filter: string) => void;
 }
 
 const SubscriberFilter: React.FC<SubscriberFilterProps> = ({

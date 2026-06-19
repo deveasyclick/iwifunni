@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 type WorkflowBuilderPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const WorkflowBuilderPage = async ({

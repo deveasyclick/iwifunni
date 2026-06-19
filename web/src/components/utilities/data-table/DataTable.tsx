@@ -68,7 +68,7 @@ export function toTitleCase(str: string) {
 }
 
 interface DynamicTableProps<T> {
-  data?: T[];
+  readonly data?: T[];
 }
 
 const DataTable = <T extends Record<string, unknown>>({

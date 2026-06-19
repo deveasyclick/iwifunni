@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import type { WorkflowItem } from '@/app/types/workflow';
 
 type DeleteWorkflowDialogProps = {
-  deletingItem: WorkflowItem | null;
-  mutatingID: string | null;
-  onConfirm: (id: string) => void;
-  onCancel: () => void;
+  readonly deletingItem: WorkflowItem | null;
+  readonly mutatingID: string | null;
+  readonly onConfirm: (id: string) => void;
+  readonly onCancel: () => void;
 };
 
 export const DeleteWorkflowDialog = ({

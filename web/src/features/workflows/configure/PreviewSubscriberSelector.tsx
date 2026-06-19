@@ -7,10 +7,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PreviewSubscriber } from '../types/data-panel';
 
 interface PreviewSubscriberSelectorProps {
-  previewSubscriber: PreviewSubscriber | null;
-  onSelect: (subscriber: PreviewSubscriber) => void;
-  onReset: () => void;
-  hasDefault: boolean;
+  readonly previewSubscriber: PreviewSubscriber | null;
+  readonly onSelect: (subscriber: PreviewSubscriber) => void;
+  readonly onReset: () => void;
+  readonly hasDefault: boolean;
 }
 
 const toPreviewSubscriber = (s: {

@@ -10,8 +10,8 @@ interface BreadcrumbItem {
 }
 
 interface BreadCrumbType {
-  title: string;
-  items?: BreadcrumbItem[];
+  readonly title: string;
+  readonly items?: BreadcrumbItem[];
 }
 
 const BreadcrumbComp = ({ items = [], title }: BreadCrumbType) => {

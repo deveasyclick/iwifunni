@@ -3,8 +3,8 @@ import React from 'react';
 import type { NotificationType } from '@/app/types/notification';
 
 interface NotificationFilterProps {
-  notifications: NotificationType[];
-  setFilter: (filter: string) => void;
+  readonly notifications: NotificationType[];
+  readonly setFilter: (filter: string) => void;
 }
 
 const NotificationFilter: React.FC<NotificationFilterProps> = ({

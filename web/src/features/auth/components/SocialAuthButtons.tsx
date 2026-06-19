@@ -4,7 +4,7 @@ import { FaGithub, FaGoogle } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 
 type SocialAuthButtonsProps = {
-  helperText?: string;
+  readonly helperText?: string;
 };
 
 export function SocialAuthButtons({

@@ -13,10 +13,10 @@ import { CHANNEL_GROUPS } from '../constants';
 import type { ProviderCard } from '../types';
 
 type AvailableProvidersSheetProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  unconnectedCards: ProviderCard[];
-  onConnect: (definition: ProviderCard['definition']) => void;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly unconnectedCards: ProviderCard[];
+  readonly onConnect: (definition: ProviderCard['definition']) => void;
 };
 
 export const AvailableProvidersSheet = ({

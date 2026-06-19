@@ -17,19 +17,19 @@ import { type FormEvent } from 'react';
 import type { ProviderDefinition } from '../types';
 
 type ProviderConnectDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedProvider: ProviderDefinition | null;
-  editingItem: ProviderItem | null;
-  fieldValues: Record<string, string>;
-  enabledToggle: boolean;
-  primaryToggle: boolean;
-  mutatingKey: string | null;
-  onFieldChange: (key: string, value: string) => void;
-  onEnabledToggle: (checked: boolean) => void;
-  onPrimaryToggle: (checked: boolean) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onClose: () => void;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly selectedProvider: ProviderDefinition | null;
+  readonly editingItem: ProviderItem | null;
+  readonly fieldValues: Record<string, string>;
+  readonly enabledToggle: boolean;
+  readonly primaryToggle: boolean;
+  readonly mutatingKey: string | null;
+  readonly onFieldChange: (key: string, value: string) => void;
+  readonly onEnabledToggle: (checked: boolean) => void;
+  readonly onPrimaryToggle: (checked: boolean) => void;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  readonly onClose: () => void;
 };
 
 export const ProviderConnectDialog = ({

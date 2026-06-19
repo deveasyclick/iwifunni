@@ -31,23 +31,27 @@ const SubjectEditor = dynamic(
 );
 
 type ChannelEditorPanelProps = {
-  channel: WorkflowChannel;
-  subject: string;
-  body: string;
-  labels: { subject: string; body: string };
-  payload: string;
-  senderName: string;
-  senderEmail: string;
-  useDefaults: boolean;
-  hasProvider: boolean;
-  providerLoading: boolean;
-  providerName: string;
-  providerEmail: string;
-  onSenderChange: (name: string, email: string, useDefaults: boolean) => void;
-  onSubjectChange: (value: string) => void;
-  onBodyChange: (value: string) => void;
-  onHtmlChange: (html: string, json?: JSONContent | null) => void;
-  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  readonly channel: WorkflowChannel;
+  readonly subject: string;
+  readonly body: string;
+  readonly labels: { subject: string; body: string };
+  readonly payload: string;
+  readonly senderName: string;
+  readonly senderEmail: string;
+  readonly useDefaults: boolean;
+  readonly hasProvider: boolean;
+  readonly providerLoading: boolean;
+  readonly providerName: string;
+  readonly providerEmail: string;
+  readonly onSenderChange: (
+    name: string,
+    email: string,
+    useDefaults: boolean,
+  ) => void;
+  readonly onSubjectChange: (value: string) => void;
+  readonly onBodyChange: (value: string) => void;
+  readonly onHtmlChange: (html: string, json?: JSONContent | null) => void;
+  readonly autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
 };
 
 export const ChannelEditorPanel = ({

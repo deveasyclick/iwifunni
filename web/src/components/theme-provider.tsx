@@ -6,12 +6,12 @@ type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
 
 type ThemeProviderProps = {
-  children: React.ReactNode;
-  attribute?: 'class' | 'data-theme';
-  defaultTheme?: Theme;
-  enableSystem?: boolean;
-  disableTransitionOnChange?: boolean;
-  storageKey?: string;
+  readonly children: React.ReactNode;
+  readonly attribute?: 'class' | 'data-theme';
+  readonly defaultTheme?: Theme;
+  readonly enableSystem?: boolean;
+  readonly disableTransitionOnChange?: boolean;
+  readonly storageKey?: string;
 };
 
 type ThemeContextValue = {

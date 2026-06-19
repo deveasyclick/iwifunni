@@ -14,9 +14,9 @@ import { useCreateSubscriberForm } from '../hooks/use-create-subscriber-form';
 import { PhoneInput } from '../components/PhoneInput';
 
 type CreateSubscriberFormProps = {
-  onCreated?: () => void;
-  onCancel?: () => void;
-  compact?: boolean;
+  readonly onCreated?: () => void;
+  readonly onCancel?: () => void;
+  readonly compact?: boolean;
 };
 
 const CreateSubscriberForm = ({

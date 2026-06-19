@@ -63,9 +63,9 @@ function SubscriberSection({
   subscriberError,
   subscriberData,
 }: {
-  subscriberLoading: boolean;
-  subscriberError: string | null;
-  subscriberData: Record<string, unknown> | null;
+  readonly subscriberLoading: boolean;
+  readonly subscriberError: string | null;
+  readonly subscriberData: Record<string, unknown> | null;
 }) {
   if (subscriberLoading) {
     return <SubscriberLoadingState />;

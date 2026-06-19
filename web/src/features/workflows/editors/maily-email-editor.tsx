@@ -26,9 +26,9 @@ function VariableChipView({ variable }: Readonly<{ variable: Variable }>) {
 }
 
 type Props = {
-  initialValue?: string;
-  onHtmlChange?: (html: string, json?: JSONContent) => void;
-  variableDefinitions?: VariableDefinition[];
+  readonly initialValue?: string;
+  readonly onHtmlChange?: (html: string, json?: JSONContent) => void;
+  readonly variableDefinitions?: VariableDefinition[];
 };
 
 // Extend VariableExtension to also parse <span data-type="variable">
