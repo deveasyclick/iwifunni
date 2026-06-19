@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { colorizeObject } from '../utils/colorize-object';
+import { colorizeObject } from '../../utils/colorize-object';
 
 interface ObjectPreviewProps {
   data: Record<string, unknown>;

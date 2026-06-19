@@ -44,9 +44,6 @@ export interface DataPanelProps {
 }
 
 /**
- * Return type of the useDataPanel hook.
- */
-/**
  * Return type of the usePayloadEditor hook.
  */
 export interface UsePayloadEditorReturn {
@@ -70,6 +67,14 @@ export interface UseSubscriberSearchInputReturn {
   }>;
   isSearching: boolean;
   clearSearch: () => void;
+}
+
+/**
+ * Return type of the useEmailPreview hook.
+ */
+export interface UseEmailPreviewReturn {
+  html: string | null;
+  loading: boolean;
 }
 
 /**
