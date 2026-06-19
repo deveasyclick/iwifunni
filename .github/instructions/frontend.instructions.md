@@ -34,3 +34,5 @@ applyTo:
 - Always write component name in PascalCase.
 - **Avoid ternary operators inside components.** Extract conditional logic into helper functions, early returns, or dedicated sub-components. This keeps JSX readable and maintainable.
 - **Prefer shadcn components over raw HTML/JSX elements.** When a shadcn equivalent exists (e.g., `Button`, `Input`, `Dialog`, `Select`, `Card`, `Badge`), always use it instead of raw HTML elements like `<button>`, `<input>`, `<div>` styled as cards, etc.
+- **Avoid redundant fragments.** Never wrap a single child in a fragment (`<><Child /></>`). Either return the child directly or use the fragment only when grouping multiple children.
+- **Mark component props as read-only.** Always use `Readonly<PropsType>` in the component function signature (e.g., `({ name }: Readonly<{ name: string }>)` or `function Comp({ name }: Readonly<Props>)`). This ensures prop objects are not mutated inside the component.
