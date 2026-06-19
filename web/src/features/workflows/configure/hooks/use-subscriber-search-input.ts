@@ -33,4 +33,3 @@ export function useSubscriberSearchInput(): UseSubscriberSearchInputReturn {
     clearSearch,
   };
 }
-
