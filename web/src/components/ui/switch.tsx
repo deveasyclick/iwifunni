@@ -10,7 +10,7 @@ function Switch({
   size = 'default',
   ...props
 }: React.ComponentProps<typeof SwitchPrimitive.Root> & {
-  size?: 'sm' | 'default';
+  readonly size?: 'sm' | 'default';
 }) {
   return (
     <SwitchPrimitive.Root

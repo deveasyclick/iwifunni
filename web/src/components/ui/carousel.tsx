@@ -15,10 +15,10 @@ type CarouselOptions = UseCarouselParameters[0];
 type CarouselPlugin = UseCarouselParameters[1];
 
 type CarouselProps = {
-  opts?: CarouselOptions;
-  plugins?: CarouselPlugin;
-  orientation?: 'horizontal' | 'vertical';
-  setApi?: (api: CarouselApi) => void;
+  readonly opts?: CarouselOptions;
+  readonly plugins?: CarouselPlugin;
+  readonly orientation?: 'horizontal' | 'vertical';
+  readonly setApi?: (api: CarouselApi) => void;
 };
 
 type CarouselContextProps = {

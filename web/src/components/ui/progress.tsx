@@ -27,7 +27,7 @@ interface ProgressProps
   extends
     React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>,
     VariantProps<typeof progressIndicatorVariants> {
-  value?: number;
+  readonly value?: number;
 }
 
 const Progress = React.forwardRef<
