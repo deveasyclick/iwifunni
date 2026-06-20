@@ -74,7 +74,9 @@ workflows/
 └── WorkflowManagement.tsx    # Workflow list page
 ```
 
-### Rules
+### Rules (always enforced)
+
+> These rules are **not optional.** Every PR must comply. If a rule is violated, the change must be corrected before merging.
 
 - **All types go in `types/`.** Do not define prop types (`*Props`) or domain types inside component files. Every shared type belongs in one of the `types/*.ts` files organized by domain.
 - **Component files are pure UI.** Page-level components (`create-workflow.tsx`, `WorkflowManagement.tsx`, etc.) must not contain business logic, inline API calls, or complex state management. Extract those into `hooks/`.
@@ -83,9 +85,10 @@ workflows/
 - **Constants go in `constants/`.** Do not scatter literal constants across files. All shared constants (UUID patterns, sizes, channel lists, etc.) belong in `constants/index.ts`.
 - **Zod schemas go in `schema/`.** Do not define validation schemas inside component or utility files. Place them in `schema/` and import where needed.
 - **Shared helpers go in `lib/` or their own module.** Do not duplicate utility functions (like `wrapData`) across API route files. Extract shared logic into `lib/` and import where needed.
+- **Pure functions never live inside component files.** Do not define utility functions, helpers, formatters, or domain logic directly inside a component `.tsx` file. Extract them to `utils/` and import where needed. If a utility is only used by one component, it still belongs in `utils/` — not inlined.
 - **No god utility files.** Split utilities by domain into sub-directories under `utils/` (e.g., `utils/canvas/`, `utils/duration/`, `utils/display/`, `utils/validation/`). A single file should not mix duration parsing, canvas layout, node display, and draft conversion logic.
 - **No empty re-export barrels.** Do not create files that only re-export from another module. Import directly from the source file.
-- **Component names use PascalCase.** All React component files must be named in PascalCase (e.g., `CreateSubscriberForm.tsx`, `SubscriberMetadata.tsx`). Non-component files (utilities, hooks, types, constants, schemas) use kebab-case.
+- **Component names use PascalCase — always.** React component files must be named in PascalCase (e.g., `CreateSubscriberForm.tsx`, `SubscriberMetadata.tsx`) AND the component's export/function name must match the filename exactly. A file named `CreateSubscriberForm.tsx` must export a function or default export named `CreateSubscriberForm`. Non-component files (utilities, hooks, types, constants, schemas) use kebab-case.
 - **No `.tsx` without JSX.** Files that contain no JSX must be `.ts`, not `.tsx`. Utility functions, pure business logic, and type definitions are `.ts`.
 - **Store actions are separated.** The Zustand store in `store/builder/` has three files: `store.ts` (store creation), `actions.ts` (pure action factories), and `selectors.ts` (derived computations). Keep them separated, not inlined into the store.
 - **Draft logic is separated.** All draft creation, normalization, and conversion logic belongs in `draft/`, not in utility files or components.
