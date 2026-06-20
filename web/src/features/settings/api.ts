@@ -9,7 +9,12 @@ export interface ProviderConfig {
   id: string;
   name: string;
   channel: string;
-  config?: { sender_name?: string; from_email?: string };
+  config?: {
+    sender_name?: string;
+    from_email?: string;
+    sender_id?: string;
+    from_number?: string;
+  };
   is_primary: boolean;
   is_active: boolean;
 }

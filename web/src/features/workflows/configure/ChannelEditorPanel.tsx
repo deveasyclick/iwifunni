@@ -1,32 +1,29 @@
 'use client';
 
-import type { JSONContent } from '@tiptap/core';
-import { useCallback, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
 import type { WorkflowChannel } from '@/app/types/workflow';
+import type { JSONContent } from '@tiptap/core';
+import { Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useCallback, useMemo } from 'react';
 import { DEFAULT_VARIABLE_GROUPS } from '../constants/variables';
 import { mailyVariablesToText, textToMailyVariables } from '../editors/encode';
+import { SmsBodyEditor } from '../editors/SmsBodyEditor';
 import { SenderDrawer } from './SenderDrawer';
 
-const MailyEmailEditor = dynamic(
-  () => import('../editors/maily-email-editor'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-140 items-center justify-center rounded-xl border border-border/50">
-        <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading email editor…</span>
-        </div>
+const MailyEmailEditor = dynamic(() => import('../editors/EmailEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-140 items-center justify-center rounded-xl border border-border/50">
+      <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Loading email editor…</span>
       </div>
-    ),
-  },
-);
+    </div>
+  ),
+});
 
 const SubjectEditor = dynamic(
-  () => import('../editors/subject-editor').then((m) => m.SubjectEditor),
+  () => import('../editors/SubjectEditor').then((m) => m.SubjectEditor),
   { ssr: false },
 );
 
@@ -43,6 +40,8 @@ type ChannelEditorPanelProps = {
   readonly providerLoading: boolean;
   readonly providerName: string;
   readonly providerEmail: string;
+  readonly smsSenderId?: string;
+  readonly smsHasProvider?: boolean;
   readonly onSenderChange: (
     name: string,
     email: string,
@@ -67,6 +66,8 @@ export const ChannelEditorPanel = ({
   providerLoading,
   providerName,
   providerEmail,
+  smsSenderId,
+  smsHasProvider,
   onSenderChange,
   onSubjectChange,
   onBodyChange,
@@ -167,6 +168,7 @@ export const ChannelEditorPanel = ({
             onChange={onSenderChange}
           />
         ) : null}
+
         {channel === 'sms' ? null : (
           <div>
             <label
@@ -197,16 +199,12 @@ export const ChannelEditorPanel = ({
               variableDefinitions={allVariables}
             />
           ) : (
-            <Textarea
-              id="channel-body"
+            <SmsBodyEditor
               value={body}
-              onChange={(event) => onBodyChange(event.target.value)}
-              className="min-h-72 font-mono text-sm"
-              placeholder={
-                channel === 'sms'
-                  ? 'Hi {{.name}}, your update is ready.'
-                  : 'Hello {{.name}}'
-              }
+              onChange={onBodyChange}
+              variableDefinitions={allVariables}
+              smsSenderId={smsSenderId}
+              smsHasProvider={smsHasProvider}
             />
           )}
         </div>

@@ -30,6 +30,27 @@ export function useEmailProvider() {
   };
 }
 
+export function useSmsProvider() {
+  const query = useProviders();
+
+  const smsProvider: ProviderConfig | null =
+    query.data?.find((p) => p.channel === 'sms' && p.is_primary) ||
+    query.data?.find((p) => p.channel === 'sms' && p.is_active) ||
+    null;
+
+  // Derive a display sender from provider config
+  const senderId =
+    smsProvider?.config?.sender_id || smsProvider?.config?.from_number || '';
+
+  return {
+    provider: smsProvider,
+    loading: query.isLoading,
+    error: query.error,
+    senderId,
+    hasProvider: !!smsProvider,
+  };
+}
+
 export function useCreateProvider() {
   const queryClient = useQueryClient();
   return useMutation({

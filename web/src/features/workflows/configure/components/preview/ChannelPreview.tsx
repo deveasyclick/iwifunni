@@ -73,6 +73,7 @@ interface ChannelPreviewProps {
   readonly renderedBody: string | false;
   readonly renderedBodyDesktop: string | null;
   readonly loading: boolean;
+  readonly smsSenderId?: string;
 }
 
 /** Renders the appropriate preview for the selected channel type. */
@@ -88,6 +89,7 @@ export const ChannelPreview = ({
   renderedBody,
   renderedBodyDesktop,
   loading,
+  smsSenderId,
 }: ChannelPreviewProps) => {
   switch (channel) {
     case 'email':
@@ -106,7 +108,7 @@ export const ChannelPreview = ({
         />
       );
     case 'sms':
-      return <SmsPreview renderedBody={renderedBody} />;
+      return <SmsPreview renderedBody={renderedBody} senderId={smsSenderId} />;
     case 'push':
       return (
         <PushPreview
