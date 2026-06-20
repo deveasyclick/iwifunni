@@ -6,7 +6,7 @@ import { channelConfigLabels } from '../utils/display';
 import { useChannelConfig } from '../hooks/use-channel-config';
 import { useDataPanel } from '../hooks/use-data-panel';
 import { buildPreviewContext } from '../utils/preview-context';
-import { useEmailProvider } from '@/features/settings/queries';
+import { useEmailProvider, useSmsProvider } from '@/features/settings/queries';
 import { ChannelEditorPanel } from './ChannelEditorPanel';
 import { ChannelPreviewPanel } from './ChannelPreviewPanel';
 import { DataPanel } from './DataPanel';
@@ -19,36 +19,38 @@ const ConfigureWorkflowChannel = ({
 }: ConfigureWorkflowChannelProps) => {
   const config = useChannelConfig(workflowId, nodeId);
   const dataPanel = useDataPanel(workflowId);
-  const { provider: providerConfig, loading: providerLoading } =
+  const { provider: emailProviderConfig, loading: emailProviderLoading } =
     useEmailProvider();
+  const { senderId: smsSenderId, hasProvider: smsHasProvider } =
+    useSmsProvider();
 
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
   const [useDefaults, setUseDefaults] = useState(false);
 
-  // Populate sender fields from provider config once loaded
+  // Populate sender fields from email provider config once loaded
   const providerSetRef = useRef(false);
   useEffect(() => {
-    if (providerConfig && !providerSetRef.current) {
+    if (emailProviderConfig && !providerSetRef.current) {
       providerSetRef.current = true;
-      setSenderName(providerConfig.config?.sender_name || '');
-      setSenderEmail(providerConfig.config?.from_email || '');
+      setSenderName(emailProviderConfig.config?.sender_name || '');
+      setSenderEmail(emailProviderConfig.config?.from_email || '');
     }
-  }, [providerConfig]);
+  }, [emailProviderConfig]);
 
   // Compute effective sender display
   const displaySender = useMemo(() => {
-    if (useDefaults && providerConfig) {
+    if (useDefaults && emailProviderConfig) {
       return {
-        name: providerConfig.config?.sender_name || DEFAULT_SENDER_NAME,
-        email: providerConfig.config?.from_email || DEFAULT_SENDER_EMAIL,
+        name: emailProviderConfig.config?.sender_name || DEFAULT_SENDER_NAME,
+        email: emailProviderConfig.config?.from_email || DEFAULT_SENDER_EMAIL,
       };
     }
     return {
       name: senderName || DEFAULT_SENDER_NAME,
       email: senderEmail || DEFAULT_SENDER_EMAIL,
     };
-  }, [useDefaults, providerConfig, senderName, senderEmail]);
+  }, [useDefaults, emailProviderConfig, senderName, senderEmail]);
 
   const handleSenderChange = useCallback(
     (name: string, email: string, defaults: boolean) => {
@@ -73,6 +75,8 @@ const ConfigureWorkflowChannel = ({
       ),
     [dataPanel.previewSubscriber, config.workflow, config.payload],
   );
+
+  const isEmail = config.channel === 'email';
 
   return (
     <div className="space-y-4">
@@ -113,7 +117,7 @@ const ConfigureWorkflowChannel = ({
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[300px_minmax(0,1.2fr)_minmax(360px,0.9fr)]">
               <div className="xl:overflow-auto xl:resize-x xl:min-w-50 xl:max-w-125">
-                {config.channel === 'email' ? (
+                {isEmail || config.channel === 'sms' ? (
                   <DataPanel
                     workflowId={workflowId}
                     payload={config.payload}
@@ -136,10 +140,12 @@ const ConfigureWorkflowChannel = ({
                 senderName={senderName}
                 senderEmail={senderEmail}
                 useDefaults={useDefaults}
-                hasProvider={!!providerConfig}
-                providerLoading={providerLoading}
-                providerName={providerConfig?.config?.sender_name || ''}
-                providerEmail={providerConfig?.config?.from_email || ''}
+                hasProvider={!!emailProviderConfig}
+                providerLoading={emailProviderLoading}
+                providerName={emailProviderConfig?.config?.sender_name || ''}
+                providerEmail={emailProviderConfig?.config?.from_email || ''}
+                smsSenderId={smsSenderId}
+                smsHasProvider={smsHasProvider}
                 onSenderChange={handleSenderChange}
                 onSubjectChange={config.setSubject}
                 onBodyChange={config.setBody}
@@ -158,6 +164,7 @@ const ConfigureWorkflowChannel = ({
                   previewSubscriber={dataPanel.previewSubscriber}
                   senderName={displaySender.name}
                   senderEmail={displaySender.email}
+                  smsSenderId={smsSenderId}
                 />
               </div>
             </div>

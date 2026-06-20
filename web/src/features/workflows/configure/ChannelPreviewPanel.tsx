@@ -1,9 +1,8 @@
 'use client';
 
 import type { WorkflowChannel } from '@/app/types/workflow';
-import { request } from '@/lib/api-client';
 import type { JSONContent } from '@tiptap/core';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { resolveTemplateVariables } from '../editors/encode';
 import { useEmailPreview } from '../hooks/use-email-preview';
 import {
@@ -11,6 +10,7 @@ import {
   useRenderedBody,
   useRenderedBodyDesktop,
 } from '../hooks/use-preview-state';
+import { useTestSend } from '../queries';
 import type { PreviewSubscriber } from '../types/data-panel';
 import { ChannelPreview } from './components/preview/ChannelPreview';
 import { PreviewActions } from './components/preview/PreviewActions';
@@ -34,6 +34,7 @@ type ChannelPreviewPanelProps = {
   readonly previewSubscriber?: PreviewSubscriber | null;
   readonly senderName?: string;
   readonly senderEmail?: string;
+  readonly smsSenderId?: string;
 };
 
 function PreviewHeader() {
@@ -57,16 +58,17 @@ export const ChannelPreviewPanel = ({
   previewSubscriber,
   senderName,
   senderEmail,
+  smsSenderId,
 }: ChannelPreviewPanelProps) => {
   const [mobileView, setMobileView] = useState(false);
   const [testEmailOpen, setTestEmailOpen] = useState(false);
-  const [sendStatus, setSendStatus] = useState<
-    'idle' | 'sending' | 'sent' | 'error'
-  >('idle');
-  const [sendError, setSendError] = useState('');
+  const [testSmsOpen, setTestSmsOpen] = useState(false);
+
+  const testSendMutation = useTestSend();
 
   // --- Data derivation ---
   const subscriberEmail = previewSubscriber?.email ?? '';
+  const subscriberPhone = previewSubscriber?.phone ?? '';
   const subscriberName = buildSubscriberDisplayName(
     previewSubscriber?.firstName,
     previewSubscriber?.lastName,
@@ -92,6 +94,16 @@ export const ChannelPreviewPanel = ({
     mailyHtml,
   );
 
+  // For SMS, renderedBody may contain HTML tags from renderPreview.
+  // Resolve variables as plain text so no <strong> tags leak into the bubble.
+  const smsRenderedBody = useMemo(() => {
+    if (channel !== 'sms') return renderedBody;
+    if (!body.trim()) return 'Start editing to see a live SMS preview.';
+    return previewContext
+      ? resolveTemplateVariables(body, previewContext)
+      : body;
+  }, [channel, body, previewContext, renderedBody]);
+
   const senderLine = formatSenderLine(senderName, senderEmail);
   const timeStr = formatTime();
   const dateStr = formatDate();
@@ -100,43 +112,58 @@ export const ChannelPreviewPanel = ({
   const displaySenderLine = getDisplaySenderLine(senderLine);
   const displaySubject = previewSubject || '(no subject)';
 
-  // --- Handlers ---
-  const handleSendTest = async () => {
-    if (!subscriberEmail) return;
-    setSendStatus('sending');
-    setSendError('');
+  // --- Unified test send handler ---
+  const handleSendTest = async (sms?: boolean) => {
+    const targetChannel = sms ? 'sms' : 'email';
+
+    if (targetChannel === 'email' && !subscriberEmail) return;
+    if (targetChannel === 'sms' && !subscriberPhone) return;
 
     const resolvedBody = previewContext
       ? resolveTemplateVariables(body, previewContext)
       : body;
-    const emailHtml = mailyHtml || resolvedBody;
 
     try {
-      await request('/api/notifications/test-send', {
-        method: 'POST',
-        body: {
-          recipient_email: subscriberEmail,
-          subject: previewSubject,
-          body: emailHtml,
-          sender_name: senderName,
-          sender_email: senderEmail,
-        },
-      });
-      setSendStatus('sent');
+      await testSendMutation.mutateAsync(
+        targetChannel === 'email'
+          ? {
+              channel: 'email',
+              recipient_email: subscriberEmail,
+              subject: previewSubject,
+              body: mailyHtml || resolvedBody,
+              sender_name: senderName,
+              sender_email: senderEmail,
+            }
+          : {
+              channel: 'sms',
+              recipient_phone: subscriberPhone,
+              body: resolvedBody,
+              sender_id: smsSenderId,
+            },
+      );
+
+      // Auto-close dialog after brief success display
       setTimeout(() => {
-        setTestEmailOpen(false);
-        setSendStatus('idle');
+        if (targetChannel === 'email') {
+          setTestEmailOpen(false);
+        } else {
+          setTestSmsOpen(false);
+        }
+        testSendMutation.reset();
       }, 2000);
-    } catch (err) {
-      setSendStatus('error');
-      setSendError(err instanceof Error ? err.message : 'Failed to send');
+    } catch {
+      // Error is surfaced via mutation state
     }
   };
 
   const handleCloseDialog = () => {
     setTestEmailOpen(false);
-    setSendStatus('idle');
-    setSendError('');
+    testSendMutation.reset();
+  };
+
+  const handleCloseSmsDialog = () => {
+    setTestSmsOpen(false);
+    testSendMutation.reset();
   };
 
   return (
@@ -149,17 +176,52 @@ export const ChannelPreviewPanel = ({
           onMobileViewChange={setMobileView}
           testEmailOpen={testEmailOpen}
           onTestEmailOpenChange={setTestEmailOpen}
+          testSmsOpen={testSmsOpen}
+          onTestSmsOpenChange={setTestSmsOpen}
           subscriberEmail={subscriberEmail}
+          subscriberPhone={subscriberPhone}
           subscriberName={subscriberName}
           previewSubject={previewSubject}
           labelsSubject={labels.subject}
           senderLine={senderLine}
           senderName={senderName}
           senderEmail={senderEmail}
-          sendStatus={sendStatus}
-          sendError={sendError}
-          onSendTest={handleSendTest}
+          sendStatus={
+            testSendMutation.isPending
+              ? 'sending'
+              : testSendMutation.isSuccess
+                ? 'sent'
+                : testSendMutation.isError
+                  ? 'error'
+                  : 'idle'
+          }
+          sendError={
+            testSendMutation.isError
+              ? testSendMutation.error instanceof Error
+                ? testSendMutation.error.message
+                : 'Failed to send'
+              : ''
+          }
+          onSendTest={() => handleSendTest(false)}
           onCloseDialog={handleCloseDialog}
+          onSendTestSms={() => handleSendTest(true)}
+          onCloseSmsDialog={handleCloseSmsDialog}
+          smsSendStatus={
+            testSendMutation.isPending
+              ? 'sending'
+              : testSendMutation.isSuccess
+                ? 'sent'
+                : testSendMutation.isError
+                  ? 'error'
+                  : 'idle'
+          }
+          smsSendError={
+            testSendMutation.isError
+              ? testSendMutation.error instanceof Error
+                ? testSendMutation.error.message
+                : 'Failed to send SMS'
+              : ''
+          }
         />
       </div>
 
@@ -172,9 +234,10 @@ export const ChannelPreviewPanel = ({
         displaySubject={displaySubject}
         timeStr={timeStr}
         dateStr={dateStr}
-        renderedBody={renderedBody}
+        renderedBody={channel === 'sms' ? smsRenderedBody : renderedBody}
         renderedBodyDesktop={renderedBodyDesktop}
         loading={mailyLoading}
+        smsSenderId={smsSenderId}
       />
     </div>
   );

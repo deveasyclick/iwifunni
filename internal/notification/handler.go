@@ -54,11 +54,14 @@ type createRequest struct {
 }
 
 type testSendRequest struct {
-	RecipientEmail string `json:"recipient_email"`
-	Subject        string `json:"subject"`
+	Channel        string `json:"channel"`
+	RecipientEmail string `json:"recipient_email,omitempty"`
+	RecipientPhone string `json:"recipient_phone,omitempty"`
+	Subject        string `json:"subject,omitempty"`
 	Body           string `json:"body"`
 	SenderName     string `json:"sender_name,omitempty"`
 	SenderEmail    string `json:"sender_email,omitempty"`
+	SenderID       string `json:"sender_id,omitempty"`
 }
 
 func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +74,28 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.RecipientEmail == "" || payload.Body == "" {
-		log.Warn().Str("recipient_email", payload.RecipientEmail).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields")
-		http.Error(w, "recipient_email and body are required", http.StatusBadRequest)
+	// Determine channel; default to email
+	channel := payload.Channel
+	if channel == "" {
+		channel = "email"
+	}
+
+	switch channel {
+	case "email":
+		if payload.RecipientEmail == "" || payload.Body == "" {
+			log.Warn().Str("recipient_email", payload.RecipientEmail).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields for email")
+			http.Error(w, "recipient_email and body are required for email", http.StatusBadRequest)
+			return
+		}
+	case "sms":
+		if payload.RecipientPhone == "" || payload.Body == "" {
+			log.Warn().Str("recipient_phone", payload.RecipientPhone).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields for sms")
+			http.Error(w, "recipient_phone and body are required for sms", http.StatusBadRequest)
+			return
+		}
+	default:
+		log.Warn().Str("channel", channel).Msg("test-send: unsupported channel")
+		http.Error(w, "unsupported channel; use 'email' or 'sms'", http.StatusBadRequest)
 		return
 	}
 
@@ -84,52 +106,66 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject := payload.Subject
-	if subject == "" {
-		subject = "(no subject)"
+	metadata := map[string]string{}
+	recipient := types.Recipient{}
+	title := payload.Body
+
+	switch channel {
+	case "email":
+		title = payload.Subject
+		if title == "" {
+			title = "(no subject)"
+		}
+		recipient.Email = payload.RecipientEmail
+		if payload.SenderName != "" {
+			metadata["sender_name"] = payload.SenderName
+		}
+		if payload.SenderEmail != "" {
+			metadata["sender_email"] = payload.SenderEmail
+		}
+	case "sms":
+		title = "Test SMS"
+		recipient.PhoneNumber = payload.RecipientPhone
+		if payload.SenderID != "" {
+			metadata["sender_id"] = payload.SenderID
+		}
 	}
 
 	job := &types.NotificationJob{
 		ProjectID: environmentID.String(),
-		Title:     subject,
+		Title:     title,
 		Message:   payload.Body,
-		Channels:  []string{"email"},
-		Recipient: types.Recipient{
-			Email: payload.RecipientEmail,
-		},
-		Metadata: map[string]string{
-			"sender_name":  payload.SenderName,
-			"sender_email": payload.SenderEmail,
-		},
+		Channels:  []string{channel},
+		Recipient: recipient,
+		Metadata:  metadata,
 	}
 
 	log.Info().
-		Str("recipient", payload.RecipientEmail).
-		Str("subject", subject).
+		Str("channel", channel).
 		Str("environment_id", environmentID.String()).
 		Msg("test-send: preparing job")
 
 	preparedJob, err := h.service.PrepareJob(r.Context(), job)
 	if err != nil {
-		log.Error().Err(err).Str("recipient", payload.RecipientEmail).Msg("test-send: prepare job failed")
+		log.Error().Err(err).Str("channel", channel).Msg("test-send: prepare job failed")
 		h.respondSendError(w, err)
 		return
 	}
 
 	log.Info().
 		Str("job_id", preparedJob.JobID).
-		Str("recipient", payload.RecipientEmail).
+		Str("channel", channel).
 		Msg("test-send: enqueuing job")
 
 	if err := h.producer.Enqueue(r.Context(), preparedJob); err != nil {
-		log.Error().Err(err).Str("recipient", payload.RecipientEmail).Msg("test-send: enqueue failed")
+		log.Error().Err(err).Str("channel", channel).Msg("test-send: enqueue failed")
 		http.Error(w, "failed to enqueue test notification", http.StatusInternalServerError)
 		return
 	}
 
 	log.Info().
 		Str("job_id", preparedJob.JobID).
-		Str("recipient", payload.RecipientEmail).
+		Str("channel", channel).
 		Msg("test-send: successfully queued")
 
 	w.WriteHeader(http.StatusAccepted)

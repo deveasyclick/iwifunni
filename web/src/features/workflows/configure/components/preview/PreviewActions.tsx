@@ -1,6 +1,7 @@
 import type { WorkflowChannel } from '@/app/types/workflow';
 import { ViewToggle } from './ViewToggle';
 import { SendTestEmailDialog } from './SendTestEmailDialog';
+import { SendTestSmsDialog } from './SendTestSmsDialog';
 
 interface PreviewActionsProps {
   readonly channel: WorkflowChannel;
@@ -8,7 +9,10 @@ interface PreviewActionsProps {
   readonly onMobileViewChange: (mobile: boolean) => void;
   readonly testEmailOpen: boolean;
   readonly onTestEmailOpenChange: (open: boolean) => void;
+  readonly testSmsOpen: boolean;
+  readonly onTestSmsOpenChange: (open: boolean) => void;
   readonly subscriberEmail: string;
+  readonly subscriberPhone: string;
   readonly subscriberName: string;
   readonly previewSubject: string;
   readonly labelsSubject: string;
@@ -19,16 +23,23 @@ interface PreviewActionsProps {
   readonly sendError: string;
   readonly onSendTest: () => void;
   readonly onCloseDialog: () => void;
+  readonly onSendTestSms: () => void;
+  readonly onCloseSmsDialog: () => void;
+  readonly smsSendStatus: 'idle' | 'sending' | 'sent' | 'error';
+  readonly smsSendError: string;
 }
 
-/** Renders the view toggle and test email button for email channels. */
+/** Renders the view toggle and test send buttons for each channel type. */
 export const PreviewActions = ({
   channel,
   mobileView,
   onMobileViewChange,
   testEmailOpen,
   onTestEmailOpenChange,
+  testSmsOpen,
+  onTestSmsOpenChange,
   subscriberEmail,
+  subscriberPhone,
   subscriberName,
   previewSubject,
   labelsSubject,
@@ -39,27 +50,50 @@ export const PreviewActions = ({
   sendError,
   onSendTest,
   onCloseDialog,
+  onSendTestSms,
+  onCloseSmsDialog,
+  smsSendStatus,
+  smsSendError,
 }: PreviewActionsProps) => {
-  if (channel !== 'email') return null;
+  if (channel === 'email') {
+    return (
+      <div className="flex items-center gap-2">
+        <ViewToggle mobileView={mobileView} onChange={onMobileViewChange} />
+        <SendTestEmailDialog
+          open={testEmailOpen}
+          onOpenChange={onTestEmailOpenChange}
+          subscriberEmail={subscriberEmail}
+          subscriberName={subscriberName}
+          previewSubject={previewSubject}
+          labelsSubject={labelsSubject}
+          senderLine={senderLine}
+          senderName={senderName}
+          senderEmail={senderEmail}
+          sendStatus={sendStatus}
+          sendError={sendError}
+          onSend={onSendTest}
+          onClose={onCloseDialog}
+        />
+      </div>
+    );
+  }
 
-  return (
-    <div className="flex items-center gap-2">
-      <ViewToggle mobileView={mobileView} onChange={onMobileViewChange} />
-      <SendTestEmailDialog
-        open={testEmailOpen}
-        onOpenChange={onTestEmailOpenChange}
-        subscriberEmail={subscriberEmail}
-        subscriberName={subscriberName}
-        previewSubject={previewSubject}
-        labelsSubject={labelsSubject}
-        senderLine={senderLine}
-        senderName={senderName}
-        senderEmail={senderEmail}
-        sendStatus={sendStatus}
-        sendError={sendError}
-        onSend={onSendTest}
-        onClose={onCloseDialog}
-      />
-    </div>
-  );
+  if (channel === 'sms') {
+    return (
+      <div className="flex items-center gap-2">
+        <SendTestSmsDialog
+          open={testSmsOpen}
+          onOpenChange={onTestSmsOpenChange}
+          subscriberPhone={subscriberPhone}
+          subscriberName={subscriberName}
+          sendStatus={smsSendStatus}
+          sendError={smsSendError}
+          onSend={onSendTestSms}
+          onClose={onCloseSmsDialog}
+        />
+      </div>
+    );
+  }
+
+  return null;
 };

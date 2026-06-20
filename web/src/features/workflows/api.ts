@@ -1,3 +1,18 @@
+export type TestSendPayload = {
+  channel: 'email' | 'sms';
+  recipient_email?: string;
+  recipient_phone?: string;
+  subject?: string;
+  body: string;
+  sender_name?: string;
+  sender_email?: string;
+  sender_id?: string;
+};
+
+export type TestSendResponse = {
+  status: 'queued';
+};
+
 import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
 import type {
   CreateWorkflowPayload,
@@ -65,6 +80,12 @@ export const workflowApi = {
   },
   upsertTemplate(payload: CreateTemplatePayload) {
     return request<TemplateItem>('/api/templates/upsert', {
+      method: 'POST',
+      body: payload,
+    });
+  },
+  testSend(payload: TestSendPayload) {
+    return request<TestSendResponse>('/api/notifications/test-send', {
       method: 'POST',
       body: payload,
     });
