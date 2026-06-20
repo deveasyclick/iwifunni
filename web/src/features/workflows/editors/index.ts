@@ -1,1 +1,1 @@
-export { default as MailyEmailEditor } from './maily-email-editor';
+export { default as MailyEmailEditor } from './EmailEditor';

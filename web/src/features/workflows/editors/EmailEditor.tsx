@@ -4,26 +4,12 @@ import { Editor as MailyEditor } from '@maily-to/core';
 import {
   VariableExtension,
   getVariableSuggestions,
-  type Variable,
 } from '@maily-to/core/extensions';
 import '@maily-to/core/style.css';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { JSONContent } from '@tiptap/core';
 import type { VariableDefinition } from '../types/data-panel';
-
-/**
- * Custom renderer for variable chips in the editor.
- * Shows `{{subscriber.firstName}}` instead of the default braces icon + label.
- */
-function VariableChipView({ variable }: Readonly<{ variable: Variable }>) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-muted/30 px-1.5 py-0.5 text-xs font-mono leading-none text-foreground/90 select-none">
-      {'{{'}
-      {variable.name}
-      {'}}'}
-    </span>
-  );
-}
+import { VariableChip } from './VariableChip';
 
 type Props = {
   readonly initialValue?: string;
@@ -92,9 +78,7 @@ const MailyEmailEditor = ({
       renderLabel: ({ node }) => {
         return `{{${node.attrs.id}}}`;
       },
-      renderVariable: ({ variable }) => (
-        <VariableChipView variable={variable} />
-      ),
+      renderVariable: ({ variable }) => <VariableChip variable={variable} />,
       variables: ({ query }: { query: string }) => {
         const defs = variableDefsRef.current;
         const all: Array<{
