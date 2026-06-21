@@ -9,7 +9,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/crypto"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
-	"github.com/deveasyclick/iwifunni/internal/providers/defaults"
+	"github.com/deveasyclick/iwifunni/internal/providers"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +23,7 @@ type Service struct {
 }
 
 func NewService(repo *Repository, encryptionKey string) *Service {
-	return &Service{repo: repo, encryptionKey: encryptionKey, catalog: defaults.NewCatalog()}
+	return &Service{repo: repo, encryptionKey: encryptionKey, catalog: providers.NewCatalog()}
 }
 
 type CreateInput struct {
@@ -126,7 +126,7 @@ func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error
 
 func (s *Service) prepareProviderInput(name, channel string, credentials, config map[string]any, current *db.Provider) (string, string, []byte, []byte, error) {
 	if s.catalog == nil {
-		s.catalog = defaults.NewCatalog()
+		s.catalog = providers.NewCatalog()
 	}
 
 	normalizedName := strings.ToLower(strings.TrimSpace(name))

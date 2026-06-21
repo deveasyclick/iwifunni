@@ -71,26 +71,4 @@ func (c *Catalog) Get(name string) (Definition, bool) {
 	return definition, ok
 }
 
-type Registry struct {
-	providers map[string]RuntimeProvider
-}
 
-func NewRegistry(providers ...RuntimeProvider) *Registry {
-	r := &Registry{providers: make(map[string]RuntimeProvider, len(providers))}
-	for _, provider := range providers {
-		r.Register(provider)
-	}
-	return r
-}
-
-func (r *Registry) Register(provider RuntimeProvider) {
-	if provider == nil {
-		return
-	}
-	r.providers[provider.Name()] = provider
-}
-
-func (r *Registry) Get(name string) (RuntimeProvider, bool) {
-	provider, ok := r.providers[name]
-	return provider, ok
-}
