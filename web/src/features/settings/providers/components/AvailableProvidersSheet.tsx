@@ -9,7 +9,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Icon } from '@iconify/react';
-import { CHANNEL_GROUPS } from '../constants';
+import { CHANNEL_GROUPS } from '../constants/supported-providers';
 import type { ProviderCard } from '../types';
 
 type AvailableProvidersSheetProps = {

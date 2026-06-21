@@ -8,7 +8,10 @@ import { useProviders } from '../queries';
 import { AvailableProvidersSheet } from './components/AvailableProvidersSheet';
 import { ConnectedProviderCard } from './components/ConnectedProviderCard';
 import { ProviderConnectDialog } from './components/ProviderConnectDialog';
-import { CHANNEL_GROUPS, SUPPORTED_PROVIDERS } from './constants';
+import {
+  CHANNEL_GROUPS,
+  SUPPORTED_PROVIDERS,
+} from './constants/supported-providers';
 import { useProviderForm } from './hooks/use-provider-form';
 import type { ProviderCard } from './types';
 

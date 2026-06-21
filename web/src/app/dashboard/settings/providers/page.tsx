@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
+import ProviderManagement from '../../../../features/settings/providers/ProviderManagement';
 import BreadcrumbComp from '../../layout/shared/breadcrumb/BreadcrumbComp';
-import ProviderManagement from '../../../../features/settings/providers';
 
 export const metadata: Metadata = {
   title: 'Settings - Providers',
