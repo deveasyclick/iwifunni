@@ -138,7 +138,21 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 	return &prepared, nil
 }
 
+// SendSync delivers a notification synchronously and returns an error if
+// any channel delivery fails. Unlike Send, it does not swallow delivery
+// failures — useful for test sends where the caller needs to know the result.
+func (s *Service) SendSync(ctx context.Context, job *types.NotificationJob) error {
+	return s.send(ctx, job, true)
+}
+
+// Send delivers a notification asynchronously, recording delivery attempts
+// in the database but swallowing per-channel errors. Returns nil after all
+// deliveries are attempted regardless of individual failures.
 func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
+	return s.send(ctx, job, false)
+}
+
+func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportErrors bool) error {
 	if job == nil {
 		return invalidSend("notification payload is required")
 	}
@@ -158,67 +172,75 @@ func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
 	nowTs := pgtype.Timestamptz{Time: now(), Valid: true}
 
 	// Project-based path
-	if job.ProjectID != "" {
-		projectID, err := uuid.Parse(job.ProjectID)
-		if err != nil {
-			return fmt.Errorf("invalid project_id: %w", err)
-		}
-		notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByEnvironmentJobParams{
-			ID:            uuid.New(),
-			JobID:         &job.JobID,
-			EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
-			Title:         job.Title,
-			Message:       job.Message,
-			Channels:      job.Channels,
-			Recipient:     recipient,
-			Metadata:      metadata,
-			Status:        "pending",
-			CreatedAt:     nowTs,
-			UpdatedAt:     nowTs,
-		})
-		if err != nil {
-			return err
-		}
-		notificationID := notificationRecord.ID
-		if isTerminalNotificationStatus(notificationRecord.Status) {
-			return nil
-		}
-
-		successCount, failureCount, skippedCount := 0, 0, len(job.SkippedChannels)
-		for _, skipped := range job.SkippedChannels {
-			if err := s.recordSkipped(ctx, notificationID, skipped.Channel, skipped.Reason); err != nil {
-				logger.Get().Warn().Err(err).Str("channel", skipped.Channel).Msg("failed to record skipped delivery attempt")
-			}
-		}
-		for _, channel := range job.Channels {
-			if err := s.deliverProjectChannel(ctx, projectID, notificationID, channel, job); err != nil {
-				logger.Get().Warn().Err(err).Str("channel", channel).Msg("delivery attempt failed")
-				failureCount++
-			} else {
-				successCount++
-			}
-		}
-
-		status := finalNotificationStatus(successCount, failureCount, skippedCount)
-		if err := s.repo.UpdateStatus(ctx, notificationID, status, pgtype.Timestamptz{Time: now(), Valid: true}); err != nil {
-			return err
-		}
-		if s.dispatcher != nil {
-			event := "notification.sent"
-			if status == "failed" || status == "skipped" {
-				event = "notification.failed"
-			}
-			s.dispatcher.Dispatch(ctx, projectID, event, webhooks.EventPayload{
-				Event:          event,
-				NotificationID: notificationID.String(),
-				EnvironmentID:  projectID.String(),
-				Timestamp:      now().Format(time.RFC3339),
-			})
-		}
+	if job.ProjectID == "" {
 		return nil
 	}
 
+	projectID, err := uuid.Parse(job.ProjectID)
+	if err != nil {
+		return fmt.Errorf("invalid project_id: %w", err)
+	}
+	notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByEnvironmentJobParams{
+		ID:            uuid.New(),
+		JobID:         &job.JobID,
+		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
+		Title:         job.Title,
+		Message:       job.Message,
+		Channels:      job.Channels,
+		Recipient:     recipient,
+		Metadata:      metadata,
+		Status:        "pending",
+		CreatedAt:     nowTs,
+		UpdatedAt:     nowTs,
+	})
+	if err != nil {
+		return err
+	}
+	notificationID := notificationRecord.ID
+	if isTerminalNotificationStatus(notificationRecord.Status) {
+		return nil
+	}
+
+	var deliveryErrors []string
+	successCount, failureCount, skippedCount := 0, 0, len(job.SkippedChannels)
+	for _, skipped := range job.SkippedChannels {
+		if err := s.recordSkipped(ctx, notificationID, skipped.Channel, skipped.Reason); err != nil {
+			logger.Get().Warn().Err(err).Str("channel", skipped.Channel).Msg("failed to record skipped delivery attempt")
+		}
+	}
+	for _, channel := range job.Channels {
+		if err := s.deliverProjectChannel(ctx, projectID, notificationID, channel, job); err != nil {
+			logger.Get().Warn().Err(err).Str("channel", channel).Msg("delivery attempt failed")
+			failureCount++
+			if reportErrors {
+				deliveryErrors = append(deliveryErrors, fmt.Sprintf("%s: %s", channel, err.Error()))
+			}
+		} else {
+			successCount++
+		}
+	}
+
+	status := finalNotificationStatus(successCount, failureCount, skippedCount)
+	if err := s.repo.UpdateStatus(ctx, notificationID, status, pgtype.Timestamptz{Time: now(), Valid: true}); err != nil {
+		return err
+	}
+	if s.dispatcher != nil {
+		event := "notification.sent"
+		if status == "failed" || status == "skipped" {
+			event = "notification.failed"
+		}
+		s.dispatcher.Dispatch(ctx, projectID, event, webhooks.EventPayload{
+			Event:          event,
+			NotificationID: notificationID.String(),
+			EnvironmentID:  projectID.String(),
+			Timestamp:      now().Format(time.RFC3339),
+		})
+	}
+	if reportErrors && len(deliveryErrors) > 0 {
+		return errors.New(strings.Join(deliveryErrors, "; "))
+	}
 	return nil
+
 }
 
 func invalidSend(message string) error {

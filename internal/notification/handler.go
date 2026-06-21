@@ -152,24 +152,31 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if preparedJob.JobID == "" {
+		preparedJob.JobID = uuid.NewString()
+	}
+
 	log.Info().
 		Str("job_id", preparedJob.JobID).
 		Str("channel", channel).
-		Msg("test-send: enqueuing job")
+		Msg("test-send: delivering synchronously")
 
-	if err := h.producer.Enqueue(r.Context(), preparedJob); err != nil {
-		log.Error().Err(err).Str("channel", channel).Msg("test-send: enqueue failed")
-		http.Error(w, "failed to enqueue test notification", http.StatusInternalServerError)
+	if err := h.service.SendSync(r.Context(), preparedJob); err != nil {
+		log.Error().Err(err).Str("channel", channel).Msg("test-send: delivery failed")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	log.Info().
 		Str("job_id", preparedJob.JobID).
 		Str("channel", channel).
-		Msg("test-send: successfully queued")
+		Msg("test-send: delivered successfully")
 
-	w.WriteHeader(http.StatusAccepted)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "queued"})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
