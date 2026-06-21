@@ -27,6 +27,8 @@ interface PreviewActionsProps {
   readonly onCloseSmsDialog: () => void;
   readonly smsSendStatus: 'idle' | 'sending' | 'sent' | 'error';
   readonly smsSendError: string;
+  readonly smsBodyLength?: number;
+  readonly smsSenderId?: string;
 }
 
 /** Renders the view toggle and test send buttons for each channel type. */
@@ -54,6 +56,8 @@ export const PreviewActions = ({
   onCloseSmsDialog,
   smsSendStatus,
   smsSendError,
+  smsBodyLength,
+  smsSenderId,
 }: PreviewActionsProps) => {
   if (channel === 'email') {
     return (
@@ -86,6 +90,8 @@ export const PreviewActions = ({
           onOpenChange={onTestSmsOpenChange}
           subscriberPhone={subscriberPhone}
           subscriberName={subscriberName}
+          bodyLength={smsBodyLength}
+          smsSenderId={smsSenderId}
           sendStatus={smsSendStatus}
           sendError={smsSendError}
           onSend={onSendTestSms}

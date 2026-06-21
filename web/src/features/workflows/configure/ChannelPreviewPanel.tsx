@@ -204,6 +204,8 @@ export const ChannelPreviewPanel = ({
           }
           onSendTest={() => handleSendTest(false)}
           onCloseDialog={handleCloseDialog}
+          smsBodyLength={(smsRenderedBody || '').length}
+          smsSenderId={smsSenderId}
           onSendTestSms={() => handleSendTest(true)}
           onCloseSmsDialog={handleCloseSmsDialog}
           smsSendStatus={

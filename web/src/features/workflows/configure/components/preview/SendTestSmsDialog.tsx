@@ -1,4 +1,4 @@
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, PhoneOff, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,6 +16,8 @@ interface SendTestSmsDialogProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly subscriberPhone: string;
   readonly subscriberName: string;
+  readonly bodyLength?: number;
+  readonly smsSenderId?: string;
   readonly sendStatus: 'idle' | 'sending' | 'sent' | 'error';
   readonly sendError: string;
   readonly onSend: () => void;
@@ -28,6 +30,8 @@ export const SendTestSmsDialog = ({
   onOpenChange,
   subscriberPhone,
   subscriberName,
+  bodyLength,
+  smsSenderId,
   sendStatus,
   sendError,
   onSend,
@@ -72,10 +76,21 @@ export const SendTestSmsDialog = ({
               </div>
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-center text-sm text-muted-foreground">
-              Select a preview subscriber with a phone number from the{' '}
-              <span className="font-medium text-foreground">Data</span> panel to
-              send a test SMS.
+            <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-border/40 bg-muted/15 px-4 py-5 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/50">
+                <PhoneOff className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-foreground">
+                  No recipient selected
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Open the{' '}
+                  <span className="font-medium text-foreground">Data</span>{' '}
+                  panel and pick a subscriber with a phone number to send a test
+                  SMS.
+                </p>
+              </div>
             </div>
           )}
 
@@ -83,9 +98,16 @@ export const SendTestSmsDialog = ({
             <p className="font-medium text-foreground">Preview info</p>
             <p className="mt-1">
               Body length:{' '}
-              {sendStatus === 'sending' ? '...' : 'Sent from template'}
+              {bodyLength !== undefined
+                ? `${bodyLength} characters`
+                : '—'}
+              {bodyLength !== undefined && bodyLength > 160 && (
+                <span className="ml-1 text-amber-500">
+                  (will be sent as {Math.ceil(bodyLength / 160)} messages)
+                </span>
+              )}
             </p>
-            <p>Channel: SMS</p>
+            {smsSenderId && <p>Sender ID: {smsSenderId}</p>}
           </div>
 
           {sendStatus === 'sent' && (
