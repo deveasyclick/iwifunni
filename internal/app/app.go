@@ -11,6 +11,7 @@ import (
 	"github.com/deveasyclick/iwifunni/internal/organization"
 	"github.com/deveasyclick/iwifunni/internal/provider"
 	"github.com/deveasyclick/iwifunni/internal/queue"
+	"github.com/deveasyclick/iwifunni/internal/stats"
 	"github.com/deveasyclick/iwifunni/internal/subscriber"
 	"github.com/deveasyclick/iwifunni/internal/templates"
 	"github.com/deveasyclick/iwifunni/internal/webhooks"
@@ -116,6 +117,11 @@ func (a *App) Router() http.Handler {
 		workflowRepo := workflow.NewRepository(a.queries)
 		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
 		workflow.NewHandler(workflowSvc).RegisterDashboardRoutes(r)
+
+		// Dashboard stats
+		statsRepo := stats.NewRepository(a.queries)
+		statsSvc := stats.NewService(statsRepo)
+		stats.NewHandler(statsSvc).Register(r)
 
 		// Webhook management (dashboard)
 		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
