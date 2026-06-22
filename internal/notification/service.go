@@ -30,13 +30,14 @@ type NotificationView struct {
 	Channels      []string       `json:"channels"`
 	Metadata      map[string]any `json:"metadata"`
 	Status        string         `json:"status"`
+	IsTest        bool           `json:"is_test"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 type notificationStore interface {
 	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error)
-	ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID, includeTest bool) ([]db.Notification, error)
 	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
 	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
@@ -190,6 +191,7 @@ func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportEr
 		Recipient:     recipient,
 		Metadata:      metadata,
 		Status:        "pending",
+		IsTest:        job.IsTest,
 		CreatedAt:     nowTs,
 		UpdatedAt:     nowTs,
 	})
@@ -646,8 +648,8 @@ func defaultProviderForChannel(channel string) string {
 	}
 }
 
-func (s *Service) ListByProject(ctx context.Context, projectID uuid.UUID) ([]NotificationView, error) {
-	items, err := s.repo.ListByProject(ctx, projectID)
+func (s *Service) ListByProject(ctx context.Context, projectID uuid.UUID, includeTest bool) ([]NotificationView, error) {
+	items, err := s.repo.ListByProject(ctx, projectID, includeTest)
 	if err != nil {
 		return nil, err
 	}
@@ -687,6 +689,7 @@ func notificationViewFromRecord(item db.Notification) NotificationView {
 		Channels:      item.Channels,
 		Metadata:      metadata,
 		Status:        item.Status,
+		IsTest:        item.IsTest,
 		CreatedAt:     item.CreatedAt.Time,
 		UpdatedAt:     item.UpdatedAt.Time,
 	}

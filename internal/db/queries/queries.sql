@@ -1,6 +1,6 @@
 -- name: UpsertNotificationByEnvironmentJob :one
-INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, is_test, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
 SET title = EXCLUDED.title,
 	message = EXCLUDED.message,
@@ -8,7 +8,7 @@ SET title = EXCLUDED.title,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
 	updated_at = EXCLUDED.updated_at
-RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at;
+RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at;
 
 -- name: GetActiveEnvironmentProvidersByChannel :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
@@ -17,18 +17,19 @@ WHERE environment_id = $1 AND channel = $2 AND is_active = true
 ORDER BY is_primary DESC, created_at ASC;
 
 -- name: ListEnvironmentNotifications :many
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE environment_id = $1
+  AND ($2::bool OR is_test = false)
 ORDER BY created_at DESC;
 
 -- name: GetEnvironmentNotificationByID :one
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND environment_id = $2;
 
 -- name: GetNotificationByJobID :one
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE job_id = $1;
 

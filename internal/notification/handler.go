@@ -109,6 +109,7 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	metadata := map[string]string{}
 	recipient := types.Recipient{}
 	title := payload.Body
+	isTest := true
 
 	switch channel {
 	case "email":
@@ -138,6 +139,7 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		Channels:  []string{channel},
 		Recipient: recipient,
 		Metadata:  metadata,
+		IsTest:    isTest,
 	}
 
 	log.Info().
@@ -236,7 +238,9 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, err := h.service.ListByProject(r.Context(), environmentID)
+	includeTest := r.URL.Query().Get("include_test") == "true"
+
+	items, err := h.service.ListByProject(r.Context(), environmentID, includeTest)
 	if err != nil {
 		http.Error(w, "failed to list notifications", http.StatusInternalServerError)
 		return

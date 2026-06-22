@@ -73,6 +73,7 @@ type Notification struct {
 	Metadata      []byte             `db:"metadata" json:"metadata"`
 	Status        string             `db:"status" json:"status"`
 	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	JobID         *string            `db:"job_id" json:"job_id"`

@@ -98,6 +98,7 @@ CREATE TABLE notifications (
     metadata JSONB,
     status TEXT NOT NULL,
     environment_id UUID REFERENCES environments(id) ON DELETE CASCADE,
+    is_test BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     job_id TEXT
@@ -106,6 +107,9 @@ CREATE TABLE notifications (
 CREATE UNIQUE INDEX idx_notifications_job_id
 ON notifications(job_id)
 WHERE job_id IS NOT NULL;
+
+CREATE INDEX idx_notifications_environment_id_is_test
+    ON notifications(environment_id, is_test);
 
 CREATE TABLE delivery_attempts (
     id UUID PRIMARY KEY,

@@ -71,7 +71,7 @@ func (s *fakeNotificationStore) UpsertByProjectJob(_ context.Context, arg db.Ups
 	return notification, nil
 }
 
-func (s *fakeNotificationStore) ListByProject(_ context.Context, _ uuid.UUID) ([]db.Notification, error) {
+func (s *fakeNotificationStore) ListByProject(_ context.Context, _ uuid.UUID, _ bool) ([]db.Notification, error) {
 	items := make([]db.Notification, 0, len(s.notifications))
 	for _, item := range s.notifications {
 		items = append(items, item)

@@ -1353,7 +1353,7 @@ func (q *Queries) GetEnvironmentByID(ctx context.Context, id uuid.UUID) (GetEnvi
 }
 
 const getEnvironmentNotificationByID = `-- name: GetEnvironmentNotificationByID :one
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE id = $1 AND environment_id = $2
 `
@@ -1373,6 +1373,7 @@ type GetEnvironmentNotificationByIDRow struct {
 	Status        string             `db:"status" json:"status"`
 	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
 	JobID         *string            `db:"job_id" json:"job_id"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
@@ -1390,6 +1391,7 @@ func (q *Queries) GetEnvironmentNotificationByID(ctx context.Context, arg GetEnv
 		&i.Status,
 		&i.EnvironmentID,
 		&i.JobID,
+		&i.IsTest,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1439,7 +1441,7 @@ func (q *Queries) GetFirstOrganizationMembershipByUser(ctx context.Context, user
 }
 
 const getNotificationByJobID = `-- name: GetNotificationByJobID :one
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE job_id = $1
 `
@@ -1454,6 +1456,7 @@ type GetNotificationByJobIDRow struct {
 	Status        string             `db:"status" json:"status"`
 	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
 	JobID         *string            `db:"job_id" json:"job_id"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
@@ -1471,6 +1474,7 @@ func (q *Queries) GetNotificationByJobID(ctx context.Context, jobID *string) (Ge
 		&i.Status,
 		&i.EnvironmentID,
 		&i.JobID,
+		&i.IsTest,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -2050,11 +2054,17 @@ func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActive
 }
 
 const listEnvironmentNotifications = `-- name: ListEnvironmentNotifications :many
-SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
 WHERE environment_id = $1
+  AND ($2::bool OR is_test = false)
 ORDER BY created_at DESC
 `
+
+type ListEnvironmentNotificationsParams struct {
+	EnvironmentID pgtype.UUID `db:"environment_id" json:"environment_id"`
+	Column2       bool        `db:"column_2" json:"column_2"`
+}
 
 type ListEnvironmentNotificationsRow struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
@@ -2066,12 +2076,13 @@ type ListEnvironmentNotificationsRow struct {
 	Status        string             `db:"status" json:"status"`
 	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
 	JobID         *string            `db:"job_id" json:"job_id"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
-func (q *Queries) ListEnvironmentNotifications(ctx context.Context, environmentID pgtype.UUID) ([]ListEnvironmentNotificationsRow, error) {
-	rows, err := q.db.Query(ctx, listEnvironmentNotifications, environmentID)
+func (q *Queries) ListEnvironmentNotifications(ctx context.Context, arg ListEnvironmentNotificationsParams) ([]ListEnvironmentNotificationsRow, error) {
+	rows, err := q.db.Query(ctx, listEnvironmentNotifications, arg.EnvironmentID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -2089,6 +2100,7 @@ func (q *Queries) ListEnvironmentNotifications(ctx context.Context, environmentI
 			&i.Status,
 			&i.EnvironmentID,
 			&i.JobID,
+			&i.IsTest,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -3214,8 +3226,8 @@ func (q *Queries) UpsertEmailVerification(ctx context.Context, arg UpsertEmailVe
 }
 
 const upsertNotificationByEnvironmentJob = `-- name: UpsertNotificationByEnvironmentJob :one
-INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+INSERT INTO notifications (id, job_id, environment_id, title, message, channels, recipient, metadata, status, is_test, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 ON CONFLICT (job_id) WHERE job_id IS NOT NULL DO UPDATE
 SET title = EXCLUDED.title,
 	message = EXCLUDED.message,
@@ -3223,7 +3235,7 @@ SET title = EXCLUDED.title,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
 	updated_at = EXCLUDED.updated_at
-RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, created_at, updated_at
+RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 `
 
 type UpsertNotificationByEnvironmentJobParams struct {
@@ -3236,6 +3248,7 @@ type UpsertNotificationByEnvironmentJobParams struct {
 	Recipient     []byte             `db:"recipient" json:"recipient"`
 	Metadata      []byte             `db:"metadata" json:"metadata"`
 	Status        string             `db:"status" json:"status"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
@@ -3250,6 +3263,7 @@ type UpsertNotificationByEnvironmentJobRow struct {
 	Status        string             `db:"status" json:"status"`
 	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
 	JobID         *string            `db:"job_id" json:"job_id"`
+	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
@@ -3265,6 +3279,7 @@ func (q *Queries) UpsertNotificationByEnvironmentJob(ctx context.Context, arg Up
 		arg.Recipient,
 		arg.Metadata,
 		arg.Status,
+		arg.IsTest,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -3279,6 +3294,7 @@ func (q *Queries) UpsertNotificationByEnvironmentJob(ctx context.Context, arg Up
 		&i.Status,
 		&i.EnvironmentID,
 		&i.JobID,
+		&i.IsTest,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -28,6 +28,7 @@ type NotificationJob struct {
 	Channels        []string                  `json:"channels,omitempty"`
 	ChannelContent  map[string]ChannelContent `json:"channel_content,omitempty"`
 	SkippedChannels []SkippedChannel          `json:"skipped_channels,omitempty"`
+	IsTest          bool                      `json:"is_test,omitempty"`
 	Recipient       Recipient                 `json:"recipient"`
 	Metadata        map[string]string         `json:"metadata,omitempty"`
 }

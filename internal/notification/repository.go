@@ -25,8 +25,11 @@ func (r *Repository) UpsertByProjectJob(ctx context.Context, arg db.UpsertNotifi
 	return notificationFromProjectUpsertRow(row), nil
 }
 
-func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]db.Notification, error) {
-	rows, err := r.q.ListEnvironmentNotifications(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
+func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID, includeTest bool) ([]db.Notification, error) {
+	rows, err := r.q.ListEnvironmentNotifications(ctx, db.ListEnvironmentNotificationsParams{
+		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
+		Column2:       includeTest,
+	})
 	if err != nil {
 		return nil, err
 	}
