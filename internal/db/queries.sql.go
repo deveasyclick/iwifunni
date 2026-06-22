@@ -808,7 +808,7 @@ const dashboardChannelBreakdown = `-- name: DashboardChannelBreakdown :many
 SELECT da.channel, COUNT(*)::bigint AS count
 FROM delivery_attempts da
 JOIN notifications n ON n.id = da.notification_id
-WHERE n.environment_id = $1
+WHERE n.environment_id = $1 AND n.is_test = false
 GROUP BY da.channel
 `
 
@@ -843,7 +843,7 @@ SELECT
     COUNT(*)::bigint AS total,
     COUNT(*) FILTER (WHERE status IN ('sent', 'partial_failed'))::bigint AS delivered
 FROM notifications
-WHERE environment_id = $1 AND created_at >= $2
+WHERE environment_id = $1 AND created_at >= $2 AND is_test = false
 GROUP BY DATE(created_at)
 ORDER BY day
 `
@@ -882,7 +882,7 @@ func (q *Queries) DashboardDailyActivity(ctx context.Context, arg DashboardDaily
 const dashboardNotificationCount = `-- name: DashboardNotificationCount :one
 SELECT COUNT(*)::bigint AS count
 FROM notifications
-WHERE environment_id = $1
+WHERE environment_id = $1 AND is_test = false
 `
 
 func (q *Queries) DashboardNotificationCount(ctx context.Context, environmentID pgtype.UUID) (int64, error) {
@@ -895,7 +895,7 @@ func (q *Queries) DashboardNotificationCount(ctx context.Context, environmentID 
 const dashboardNotificationStats = `-- name: DashboardNotificationStats :many
 SELECT status, COUNT(*)::bigint AS count
 FROM notifications
-WHERE environment_id = $1
+WHERE environment_id = $1 AND is_test = false
 GROUP BY status
 `
 
@@ -927,7 +927,7 @@ func (q *Queries) DashboardNotificationStats(ctx context.Context, environmentID 
 const dashboardRecentNotifications = `-- name: DashboardRecentNotifications :many
 SELECT id, title, message, channels, status, created_at
 FROM notifications
-WHERE environment_id = $1
+WHERE environment_id = $1 AND is_test = false
 ORDER BY created_at DESC
 LIMIT $2
 `

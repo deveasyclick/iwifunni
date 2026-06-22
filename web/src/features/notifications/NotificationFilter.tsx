@@ -11,10 +11,11 @@ const NotificationFilter: React.FC<NotificationFilterProps> = ({
   notifications,
   setFilter,
 }) => {
-  const sentC = notifications.filter((n) => n.status === 'sent').length;
-  const pendingC = notifications.filter((n) => n.status === 'pending').length;
-  const failedC = notifications.filter((n) => n.status === 'failed').length;
-  const partialFailedC = notifications.filter(
+  const productionNotifications = notifications.filter((n) => !n.is_test);
+  const sentC = productionNotifications.filter((n) => n.status === 'sent').length;
+  const pendingC = productionNotifications.filter((n) => n.status === 'pending').length;
+  const failedC = productionNotifications.filter((n) => n.status === 'failed').length;
+  const partialFailedC = productionNotifications.filter(
     (n) => n.status === 'partial_failed',
   ).length;
 
@@ -24,7 +25,7 @@ const NotificationFilter: React.FC<NotificationFilterProps> = ({
         className="lg:col-span-3 md:col-span-6 col-span-12 p-30 bg-lightprimary text-center rounded-md cursor-pointer"
         onClick={() => setFilter('total_notifications')}
       >
-        <h3 className="text-primary text-2xl">{notifications.length}</h3>
+        <h3 className="text-primary text-2xl">{productionNotifications.length}</h3>
         <h6 className="text-base text-primary">Total Notifications</h6>
       </div>
 

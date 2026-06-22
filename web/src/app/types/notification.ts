@@ -27,6 +27,7 @@ export interface NotificationType {
   metadata: JsonObject;
   status: NotificationStatus;
   retry_count?: number;
+  is_test?: boolean;
   created_at: Date | string;
   updated_at: Date | string;
   environment_id?: string;

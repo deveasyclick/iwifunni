@@ -46,6 +46,7 @@ const NotificationListing: React.FC<NotificationListingProps> = ({
 
     return records.filter(
       (notification) =>
+        !notification.is_test &&
         (selectedFilter === 'total_notifications' ||
           notification.status === selectedFilter) &&
         (notification.id.toLowerCase().includes(lowerSearch) ||

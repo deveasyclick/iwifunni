@@ -618,7 +618,7 @@ WHERE environment_id = $1 AND status <> 'archived';
 -- name: DashboardNotificationCount :one
 SELECT COUNT(*)::bigint AS count
 FROM notifications
-WHERE environment_id = $1;
+WHERE environment_id = $1 AND is_test = false;
 
 -- name: DashboardActiveProviderCount :one
 SELECT COUNT(*)::bigint AS count
@@ -628,7 +628,7 @@ WHERE environment_id = $1 AND is_active = true;
 -- name: DashboardNotificationStats :many
 SELECT status, COUNT(*)::bigint AS count
 FROM notifications
-WHERE environment_id = $1
+WHERE environment_id = $1 AND is_test = false
 GROUP BY status;
 
 -- name: DashboardDailyActivity :many
@@ -637,7 +637,7 @@ SELECT
     COUNT(*)::bigint AS total,
     COUNT(*) FILTER (WHERE status IN ('sent', 'partial_failed'))::bigint AS delivered
 FROM notifications
-WHERE environment_id = $1 AND created_at >= $2
+WHERE environment_id = $1 AND created_at >= $2 AND is_test = false
 GROUP BY DATE(created_at)
 ORDER BY day;
 
@@ -645,13 +645,13 @@ ORDER BY day;
 SELECT da.channel, COUNT(*)::bigint AS count
 FROM delivery_attempts da
 JOIN notifications n ON n.id = da.notification_id
-WHERE n.environment_id = $1
+WHERE n.environment_id = $1 AND n.is_test = false
 GROUP BY da.channel;
 
 -- name: DashboardRecentNotifications :many
 SELECT id, title, message, channels, status, created_at
 FROM notifications
-WHERE environment_id = $1
+WHERE environment_id = $1 AND is_test = false
 ORDER BY created_at DESC
 LIMIT $2;
 
