@@ -10,57 +10,43 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import CardBox from '@/components/card/CardBox';
+import { STATUS_BADGE, STATUS_LABEL } from '../constants';
+import { formatTime } from '../utils';
 
-export const RecentNotifications = () => {
-  const notifications = [
-    {
-      id: 1,
-      message: 'Welcome to Novu! 👋',
-      channel: 'In-App',
-      to: 'user_123',
-      status: 'Delivered',
-      time: 'Just now',
-    },
-    {
-      id: 2,
-      message: 'Welcome to Novu!',
-      channel: 'Email',
-      to: 'user_123@example.com',
-      status: 'Delivered',
-      time: '2m ago',
-    },
-    {
-      id: 3,
-      message: 'Your code is 123456',
-      channel: 'SMS',
-      to: '+1 (555) 123 4567',
-      status: 'Delivered',
-      time: '5m ago',
-    },
-    {
-      id: 4,
-      message: 'New message from John',
-      channel: 'Push',
-      to: 'user_123',
-      status: 'Failed',
-      time: '10m ago',
-    },
-    {
-      id: 5,
-      message: 'Reset your password',
-      channel: 'Email',
-      to: 'user_456@example.com',
-      status: 'Delivered',
-      time: '1h ago',
-    },
-  ];
+interface RecentNotificationsProps {
+  readonly data?: Array<{
+    id: string;
+    title: string;
+    message: string;
+    channels: string[];
+    status: string;
+    created_at: string;
+  }>;
+  readonly isLoading?: boolean;
+}
+
+function renderContent(
+  isLoading: boolean | undefined,
+  data: RecentNotificationsProps['data'],
+) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+        No notifications yet
+      </div>
+    );
+  }
 
   return (
-    <CardBox>
-      <div className="mb-3">
-        <h5 className="card-title">Recent notifications</h5>
-      </div>
-
+    <>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -69,13 +55,13 @@ export const RecentNotifications = () => {
                 Notification
               </TableHead>
               <TableHead className="text-muted-foreground">Channel</TableHead>
-              <TableHead className="text-muted-foreground">To</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Time</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {notifications.map((item, index) => (
+            {data.map((item, index) => (
               <motion.tr
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -86,14 +72,12 @@ export const RecentNotifications = () => {
                 transition={{ type: 'spring', stiffness: 300 }}
                 className="border-b border-border"
               >
-                <TableCell className="font-medium">{item.message}</TableCell>
-
-                <TableCell className="text-muted-foreground">
-                  {item.channel}
+                <TableCell className="font-medium max-w-[200px] truncate">
+                  {item.title || item.message}
                 </TableCell>
 
                 <TableCell className="text-muted-foreground">
-                  {item.to}
+                  {item.channels.join(', ')}
                 </TableCell>
 
                 <TableCell>
@@ -104,14 +88,17 @@ export const RecentNotifications = () => {
                   >
                     <Badge
                       className={`px-3 py-0.5 rounded-full text-xs ${
-                        item.status === 'Delivered'
-                          ? 'bg-success text-white'
-                          : 'bg-error text-white'
+                        STATUS_BADGE[item.status] ||
+                        'bg-muted text-muted-foreground'
                       }`}
                     >
-                      {item.status}
+                      {STATUS_LABEL[item.status] || item.status}
                     </Badge>
                   </motion.div>
+                </TableCell>
+
+                <TableCell className="text-muted-foreground text-xs">
+                  {formatTime(item.created_at)}
                 </TableCell>
               </motion.tr>
             ))}
@@ -124,6 +111,21 @@ export const RecentNotifications = () => {
           View all notifications →
         </button>
       </div>
+    </>
+  );
+}
+
+export const RecentNotifications = ({
+  data,
+  isLoading,
+}: RecentNotificationsProps) => {
+  return (
+    <CardBox>
+      <div className="mb-3">
+        <h5 className="card-title">Recent notifications</h5>
+      </div>
+
+      {renderContent(isLoading, data)}
     </CardBox>
   );
 };
