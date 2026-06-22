@@ -601,3 +601,61 @@ WHERE organization_id = $1 AND is_default = true;
 UPDATE environments
 SET is_default = $2, updated_at = $3
 WHERE id = $1;
+
+
+
+-- name: DashboardSubscriberCount :one
+SELECT COUNT(*)::bigint AS count
+FROM subscribers
+WHERE environment_id = $1 AND deleted_at IS NULL;
+
+-- name: DashboardWorkflowCount :one
+SELECT COUNT(*)::bigint AS count
+FROM workflows
+WHERE environment_id = $1 AND status <> 'archived';
+
+-- name: DashboardNotificationCount :one
+SELECT COUNT(*)::bigint AS count
+FROM notifications
+WHERE environment_id = $1;
+
+-- name: DashboardActiveProviderCount :one
+SELECT COUNT(*)::bigint AS count
+FROM providers
+WHERE environment_id = $1 AND is_active = true;
+
+-- name: DashboardNotificationStats :many
+SELECT status, COUNT(*)::bigint AS count
+FROM notifications
+WHERE environment_id = $1
+GROUP BY status;
+
+-- name: DashboardDailyActivity :many
+SELECT
+    DATE(created_at)::date AS day,
+    COUNT(*)::bigint AS total,
+    COUNT(*) FILTER (WHERE status IN ('sent', 'partial_failed'))::bigint AS delivered
+FROM notifications
+WHERE environment_id = $1 AND created_at >= $2
+GROUP BY DATE(created_at)
+ORDER BY day;
+
+-- name: DashboardChannelBreakdown :many
+SELECT da.channel, COUNT(*)::bigint AS count
+FROM delivery_attempts da
+JOIN notifications n ON n.id = da.notification_id
+WHERE n.environment_id = $1
+GROUP BY da.channel;
+
+-- name: DashboardRecentNotifications :many
+SELECT id, title, message, channels, status, created_at
+FROM notifications
+WHERE environment_id = $1
+ORDER BY created_at DESC
+LIMIT $2;
+
+-- name: DashboardActiveProviders :many
+SELECT name, channel
+FROM providers
+WHERE environment_id = $1 AND is_active = true
+ORDER BY name;

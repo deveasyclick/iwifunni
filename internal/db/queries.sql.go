@@ -759,6 +759,246 @@ func (q *Queries) CreateWorkflowStepExecution(ctx context.Context, arg CreateWor
 	return i, err
 }
 
+const dashboardActiveProviderCount = `-- name: DashboardActiveProviderCount :one
+SELECT COUNT(*)::bigint AS count
+FROM providers
+WHERE environment_id = $1 AND is_active = true
+`
+
+func (q *Queries) DashboardActiveProviderCount(ctx context.Context, environmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, dashboardActiveProviderCount, environmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const dashboardActiveProviders = `-- name: DashboardActiveProviders :many
+SELECT name, channel
+FROM providers
+WHERE environment_id = $1 AND is_active = true
+ORDER BY name
+`
+
+type DashboardActiveProvidersRow struct {
+	Name    string `db:"name" json:"name"`
+	Channel string `db:"channel" json:"channel"`
+}
+
+func (q *Queries) DashboardActiveProviders(ctx context.Context, environmentID uuid.UUID) ([]DashboardActiveProvidersRow, error) {
+	rows, err := q.db.Query(ctx, dashboardActiveProviders, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DashboardActiveProvidersRow{}
+	for rows.Next() {
+		var i DashboardActiveProvidersRow
+		if err := rows.Scan(&i.Name, &i.Channel); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardChannelBreakdown = `-- name: DashboardChannelBreakdown :many
+SELECT da.channel, COUNT(*)::bigint AS count
+FROM delivery_attempts da
+JOIN notifications n ON n.id = da.notification_id
+WHERE n.environment_id = $1
+GROUP BY da.channel
+`
+
+type DashboardChannelBreakdownRow struct {
+	Channel string `db:"channel" json:"channel"`
+	Count   int64  `db:"count" json:"count"`
+}
+
+func (q *Queries) DashboardChannelBreakdown(ctx context.Context, environmentID pgtype.UUID) ([]DashboardChannelBreakdownRow, error) {
+	rows, err := q.db.Query(ctx, dashboardChannelBreakdown, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DashboardChannelBreakdownRow{}
+	for rows.Next() {
+		var i DashboardChannelBreakdownRow
+		if err := rows.Scan(&i.Channel, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardDailyActivity = `-- name: DashboardDailyActivity :many
+SELECT
+    DATE(created_at)::date AS day,
+    COUNT(*)::bigint AS total,
+    COUNT(*) FILTER (WHERE status IN ('sent', 'partial_failed'))::bigint AS delivered
+FROM notifications
+WHERE environment_id = $1 AND created_at >= $2
+GROUP BY DATE(created_at)
+ORDER BY day
+`
+
+type DashboardDailyActivityParams struct {
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+type DashboardDailyActivityRow struct {
+	Day       pgtype.Date `db:"day" json:"day"`
+	Total     int64       `db:"total" json:"total"`
+	Delivered int64       `db:"delivered" json:"delivered"`
+}
+
+func (q *Queries) DashboardDailyActivity(ctx context.Context, arg DashboardDailyActivityParams) ([]DashboardDailyActivityRow, error) {
+	rows, err := q.db.Query(ctx, dashboardDailyActivity, arg.EnvironmentID, arg.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DashboardDailyActivityRow{}
+	for rows.Next() {
+		var i DashboardDailyActivityRow
+		if err := rows.Scan(&i.Day, &i.Total, &i.Delivered); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardNotificationCount = `-- name: DashboardNotificationCount :one
+SELECT COUNT(*)::bigint AS count
+FROM notifications
+WHERE environment_id = $1
+`
+
+func (q *Queries) DashboardNotificationCount(ctx context.Context, environmentID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, dashboardNotificationCount, environmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const dashboardNotificationStats = `-- name: DashboardNotificationStats :many
+SELECT status, COUNT(*)::bigint AS count
+FROM notifications
+WHERE environment_id = $1
+GROUP BY status
+`
+
+type DashboardNotificationStatsRow struct {
+	Status string `db:"status" json:"status"`
+	Count  int64  `db:"count" json:"count"`
+}
+
+func (q *Queries) DashboardNotificationStats(ctx context.Context, environmentID pgtype.UUID) ([]DashboardNotificationStatsRow, error) {
+	rows, err := q.db.Query(ctx, dashboardNotificationStats, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DashboardNotificationStatsRow{}
+	for rows.Next() {
+		var i DashboardNotificationStatsRow
+		if err := rows.Scan(&i.Status, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardRecentNotifications = `-- name: DashboardRecentNotifications :many
+SELECT id, title, message, channels, status, created_at
+FROM notifications
+WHERE environment_id = $1
+ORDER BY created_at DESC
+LIMIT $2
+`
+
+type DashboardRecentNotificationsParams struct {
+	EnvironmentID pgtype.UUID `db:"environment_id" json:"environment_id"`
+	Limit         int32       `db:"limit" json:"limit"`
+}
+
+type DashboardRecentNotificationsRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Status    string             `db:"status" json:"status"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+func (q *Queries) DashboardRecentNotifications(ctx context.Context, arg DashboardRecentNotificationsParams) ([]DashboardRecentNotificationsRow, error) {
+	rows, err := q.db.Query(ctx, dashboardRecentNotifications, arg.EnvironmentID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DashboardRecentNotificationsRow{}
+	for rows.Next() {
+		var i DashboardRecentNotificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Message,
+			&i.Channels,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const dashboardSubscriberCount = `-- name: DashboardSubscriberCount :one
+SELECT COUNT(*)::bigint AS count
+FROM subscribers
+WHERE environment_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) DashboardSubscriberCount(ctx context.Context, environmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, dashboardSubscriberCount, environmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const dashboardWorkflowCount = `-- name: DashboardWorkflowCount :one
+SELECT COUNT(*)::bigint AS count
+FROM workflows
+WHERE environment_id = $1 AND status <> 'archived'
+`
+
+func (q *Queries) DashboardWorkflowCount(ctx context.Context, environmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, dashboardWorkflowCount, environmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteEmailVerificationByUserID = `-- name: DeleteEmailVerificationByUserID :exec
 DELETE FROM email_verifications
 WHERE user_id = $1

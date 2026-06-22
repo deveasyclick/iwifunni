@@ -1,3 +1,7 @@
+'use client';
+
+import { useDashboardStats } from '../../features/dashboard/queries';
+import { useUserProfile } from '../../features/auth/queries';
 import Activities from '../../features/dashboard/components/Activities';
 import ChannelBreakdown from '../../features/dashboard/components/ChannelBreakdown';
 import { TopCards } from '../../features/dashboard/components/TopCards';
@@ -7,35 +11,51 @@ import { TopWorkflows } from '../../features/dashboard/components/TopWorkflow';
 import DeliveryPerformance from '../../features/dashboard/components/DeliveryPerformance';
 import IntegrationsCard from '../../features/dashboard/components/Integrations';
 
-const page = () => {
+const DashboardPage = () => {
+  const { data: profile } = useUserProfile();
+  const { data: stats, isLoading } = useDashboardStats();
+
   return (
     <div className="grid grid-cols-12 gap-6">
       <div className="col-span-12">
-        <ProfileWelcome />
+        <ProfileWelcome firstName={profile?.first_name} isLoading={!profile} />
       </div>
       <div className="col-span-12">
-        <TopCards />
+        <TopCards stats={stats?.counts} isLoading={isLoading} />
       </div>
       <div className="lg:col-span-8 col-span-12">
-        <Activities />
+        <Activities data={stats?.daily_activity} isLoading={isLoading} />
       </div>
       <div className="lg:col-span-4 col-span-12">
-        <ChannelBreakdown />
+        <ChannelBreakdown
+          data={stats?.channel_breakdown}
+          isLoading={isLoading}
+        />
       </div>
       <div className="lg:col-span-7 col-span-12">
-        <RecentNotifications />
+        <RecentNotifications
+          data={stats?.recent_notifications}
+          isLoading={isLoading}
+        />
       </div>
       <div className="lg:col-span-5 col-span-12 flex">
         <TopWorkflows />
       </div>
       <div className="lg:col-span-8 col-span-12">
-        <DeliveryPerformance />
+        <DeliveryPerformance
+          stats={stats?.notification_stats}
+          totalNotifications={stats?.counts.total_notifications}
+          isLoading={isLoading}
+        />
       </div>
       <div className="lg:col-span-4 col-span-12">
-        <IntegrationsCard />
+        <IntegrationsCard
+          activeProviders={stats?.active_providers}
+          count={stats?.counts.active_providers}
+        />
       </div>
     </div>
   );
 };
 
-export default page;
+export default DashboardPage;
