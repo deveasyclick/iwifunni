@@ -9,8 +9,30 @@ type Props = {
  * Live SMS character counter showing char count, segment count, charset
  * (GSM-7 / UCS-2), and a progress bar that changes colour as segments grow.
  */
+function barColor(segments: number): string {
+  if (segments >= 3) return 'bg-destructive';
+  if (segments === 2) return 'bg-amber-500';
+  return 'bg-primary';
+}
+
+function maxSegmentChars(
+  segments: number,
+  perSegment: number,
+  charset: string,
+): number {
+  if (segments <= 1) return perSegment;
+  return charset === 'GSM-7' ? 153 : 67;
+}
+
 export function SmsCharacterCounter({ body }: Props) {
   const info = getSmsSegmentInfo(body);
+
+  const barWidth = Math.min(
+    (info.chars /
+      maxSegmentChars(info.segments, info.perSegment, info.charset)) *
+      100,
+    100,
+  );
 
   return (
     <div className="flex items-center justify-between text-xs">
@@ -26,25 +48,8 @@ export function SmsCharacterCounter({ body }: Props) {
       <div className="flex items-center gap-1">
         <div className="h-1.5 w-20 rounded-full bg-muted-foreground/20 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${
-              info.segments >= 3
-                ? 'bg-destructive'
-                : info.segments === 2
-                  ? 'bg-amber-500'
-                  : 'bg-primary'
-            }`}
-            style={{
-              width: `${Math.min(
-                (info.chars /
-                  (info.segments <= 1
-                    ? info.perSegment
-                    : info.charset === 'GSM-7'
-                      ? 153
-                      : 67)) *
-                  100,
-                100,
-              )}%`,
-            }}
+            className={`h-full rounded-full transition-all ${barColor(info.segments)}`}
+            style={{ width: `${barWidth}%` }}
           />
         </div>
         {info.segments >= 3 ? (

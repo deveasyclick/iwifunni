@@ -36,6 +36,60 @@ const parseError = async (res: Response): Promise<string> => {
   }
 };
 
+function templateTableBody(
+  loading: boolean,
+  items: TemplateItem[],
+  deleteTemplate: (id: string) => Promise<void>,
+  mutatingID: string | null,
+) {
+  if (loading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={6} className="text-center text-muted-foreground">
+          Loading templates...
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={6} className="text-center text-muted-foreground">
+          No templates found.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return items.map((item) => (
+    <TableRow key={item.id}>
+      <TableCell>{item.name}</TableCell>
+      <TableCell>{item.channel}</TableCell>
+      <TableCell>
+        <Badge
+          variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
+          className="rounded-md"
+        >
+          {item.is_active ? 'active' : 'inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell>{item.version}</TableCell>
+      <TableCell>{format(new Date(item.created_at), 'E, MMM d')}</TableCell>
+      <TableCell className="text-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={mutatingID === item.id}
+          onClick={() => void deleteTemplate(item.id)}
+        >
+          {mutatingID === item.id ? 'Deleting...' : 'Delete'}
+        </Button>
+      </TableCell>
+    </TableRow>
+  ));
+}
+
 const TemplateManagement = () => {
   const [items, setItems] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,53 +350,11 @@ const TemplateManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-muted-foreground"
-                >
-                  Loading templates...
-                </TableCell>
-              </TableRow>
-            ) : visibleItems.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-muted-foreground"
-                >
-                  No templates found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.channel}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
-                      className="rounded-md"
-                    >
-                      {item.is_active ? 'active' : 'inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{item.version}</TableCell>
-                  <TableCell>
-                    {format(new Date(item.created_at), 'E, MMM d')}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={mutatingID === item.id}
-                      onClick={() => void deleteTemplate(item.id)}
-                    >
-                      {mutatingID === item.id ? 'Deleting...' : 'Delete'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+            {templateTableBody(
+              loading,
+              visibleItems,
+              deleteTemplate,
+              mutatingID,
             )}
           </TableBody>
         </Table>

@@ -48,6 +48,23 @@ function PreviewHeader() {
   );
 }
 
+function sendStatusValue(
+  isPending: boolean,
+  isSuccess: boolean,
+  isError: boolean,
+): 'sending' | 'sent' | 'error' | 'idle' {
+  if (isPending) return 'sending';
+  if (isSuccess) return 'sent';
+  if (isError) return 'error';
+  return 'idle';
+}
+
+function sendErrorMessage(error: unknown, fallback: string): string {
+  if (!error) return '';
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
 export const ChannelPreviewPanel = ({
   channel,
   subject,
@@ -186,44 +203,30 @@ export const ChannelPreviewPanel = ({
           senderLine={senderLine}
           senderName={senderName}
           senderEmail={senderEmail}
-          sendStatus={
-            testSendMutation.isPending
-              ? 'sending'
-              : testSendMutation.isSuccess
-                ? 'sent'
-                : testSendMutation.isError
-                  ? 'error'
-                  : 'idle'
-          }
-          sendError={
-            testSendMutation.isError
-              ? testSendMutation.error instanceof Error
-                ? testSendMutation.error.message
-                : 'Failed to send'
-              : ''
-          }
+          sendStatus={sendStatusValue(
+            testSendMutation.isPending,
+            testSendMutation.isSuccess,
+            testSendMutation.isError,
+          )}
+          sendError={sendErrorMessage(
+            testSendMutation.isError ? testSendMutation.error : null,
+            'Failed to send',
+          )}
           onSendTest={() => handleSendTest(false)}
           onCloseDialog={handleCloseDialog}
           smsBodyLength={(smsRenderedBody || '').length}
           smsSenderId={smsSenderId}
           onSendTestSms={() => handleSendTest(true)}
           onCloseSmsDialog={handleCloseSmsDialog}
-          smsSendStatus={
-            testSendMutation.isPending
-              ? 'sending'
-              : testSendMutation.isSuccess
-                ? 'sent'
-                : testSendMutation.isError
-                  ? 'error'
-                  : 'idle'
-          }
-          smsSendError={
-            testSendMutation.isError
-              ? testSendMutation.error instanceof Error
-                ? testSendMutation.error.message
-                : 'Failed to send SMS'
-              : ''
-          }
+          smsSendStatus={sendStatusValue(
+            testSendMutation.isPending,
+            testSendMutation.isSuccess,
+            testSendMutation.isError,
+          )}
+          smsSendError={sendErrorMessage(
+            testSendMutation.isError ? testSendMutation.error : null,
+            'Failed to send SMS',
+          )}
         />
       </div>
 

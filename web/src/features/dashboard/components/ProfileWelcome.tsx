@@ -1,6 +1,18 @@
 import Image from 'next/image';
 
-const ProfileWelcome = () => {
+interface ProfileWelcomeProps {
+  readonly firstName?: string;
+  readonly isLoading?: boolean;
+}
+
+function greetingContent(isLoading: boolean | undefined, displayName: string) {
+  if (isLoading) return 'Loading...';
+  return <>Welcome back! {displayName} 👋</>;
+}
+
+const ProfileWelcome = ({ firstName, isLoading }: ProfileWelcomeProps) => {
+  const displayName = firstName || 'there';
+
   return (
     <div className="relative flex items-center justify-between bg-lightsecondary rounded-lg p-6">
       <div className="flex items-center gap-3">
@@ -14,9 +26,11 @@ const ProfileWelcome = () => {
           />
         </div>
         <div className="flex flex-col gap-0.5">
-          <h5 className="card-title">Welcome back! John 👋</h5>
+          <h5 className="card-title">
+            {greetingContent(isLoading, displayName)}
+          </h5>
           <p className="text-muted-foreground">
-            Here's what's happening with your notifications
+            Here&apos;s what&apos;s happening with your notifications
           </p>
         </div>
       </div>

@@ -64,6 +64,14 @@ const MOCK_NOTIFICATIONS: NotificationType[] = [
   },
 ];
 
+function parseNotificationResponse(
+  json: { data?: NotificationType[] } | NotificationType[],
+): NotificationType[] {
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json.data)) return json.data;
+  return [];
+}
+
 const NotificationList = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [filter, setFilter] = useState<string>('total_notifications');
@@ -86,11 +94,7 @@ const NotificationList = () => {
         const json = (await res.json()) as
           | { data?: NotificationType[] }
           | NotificationType[];
-        const apiNotifications = Array.isArray(json)
-          ? json
-          : Array.isArray(json.data)
-            ? (json as { data: NotificationType[] }).data
-            : [];
+        const apiNotifications = parseNotificationResponse(json);
 
         setNotifications(apiNotifications);
       } catch (err) {

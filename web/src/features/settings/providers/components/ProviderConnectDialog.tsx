@@ -32,6 +32,16 @@ type ProviderConnectDialogProps = {
   readonly onClose: () => void;
 };
 
+function submitButtonLabel(
+  mutatingKey: string | null,
+  providerKey: string,
+  editingItem: unknown,
+): string {
+  if (mutatingKey === `save:${providerKey}`) return 'Saving...';
+  if (editingItem) return 'Save changes';
+  return 'Connect provider';
+}
+
 export const ProviderConnectDialog = ({
   open,
   onOpenChange,
@@ -82,13 +92,20 @@ export const ProviderConnectDialog = ({
                 </label>
                 <Input
                   id={field.key}
-                  type={
-                    field.type === 'number' ? 'text' : (field.type ?? 'text')
+                  type="password"
+                  placeholder={
+                    editingItem
+                      ? 'Leave empty to keep existing'
+                      : field.placeholder
                   }
-                  placeholder={field.placeholder}
                   value={fieldValues[field.key] ?? ''}
                   onChange={(e) => onFieldChange(field.key, e.target.value)}
                 />
+                {editingItem && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Leave empty to keep the currently stored credentials.
+                  </p>
+                )}
               </div>
             ))}
 
@@ -173,11 +190,11 @@ export const ProviderConnectDialog = ({
                 className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 disabled={mutatingKey === `save:${selectedProvider.key}`}
               >
-                {mutatingKey === `save:${selectedProvider.key}`
-                  ? 'Saving...'
-                  : editingItem
-                    ? 'Save changes'
-                    : 'Connect provider'}
+                {submitButtonLabel(
+                  mutatingKey,
+                  selectedProvider.key,
+                  editingItem,
+                )}
               </Button>
             </DialogFooter>
           </form>

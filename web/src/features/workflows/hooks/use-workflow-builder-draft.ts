@@ -18,6 +18,11 @@ import { validateWorkflowDefinitionDraft } from '@/features/workflows/utils';
 import { buildSaveSignature } from '@/features/workflows/utils/signature';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'Failed to load workflow draft';
+}
+
 export type UseWorkflowBuilderDraftResult = {
   workflow: WorkflowItem | null;
   definitionDraft: WorkflowBuilderDraft;
@@ -50,9 +55,7 @@ export const useWorkflowBuilderDraft = (
   const workflowQuery = useWorkflowQuery(workflowId);
   const loading = workflowQuery.isLoading && !workflowQuery.data;
   const error = workflowQuery.error
-    ? workflowQuery.error instanceof Error
-      ? workflowQuery.error.message
-      : 'Failed to load workflow draft'
+    ? extractErrorMessage(workflowQuery.error)
     : null;
 
   // Sync query data into local state on initial load (per workflow ID)

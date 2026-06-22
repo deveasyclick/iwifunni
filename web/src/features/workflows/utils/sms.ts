@@ -21,16 +21,21 @@ export interface SmsSegmentInfo {
  * - GSM-7: 160 chars per segment, 153 for multi-segment messages
  * - UCS-2: 70 chars per segment, 67 for multi-segment messages
  */
+function calcSegments(
+  chars: number,
+  perSegment: number,
+  multiPerSegment: number,
+): number {
+  if (chars === 0) return 0;
+  if (chars <= perSegment) return 1;
+  return Math.ceil(chars / multiPerSegment);
+}
+
 export function getSmsSegmentInfo(text: string): SmsSegmentInfo {
   const charset = getSmsCharset(text);
   const perSegment = charset === 'GSM-7' ? 160 : 70;
   const multiPerSegment = charset === 'GSM-7' ? 153 : 67;
   const chars = text.length;
-  const segments =
-    chars === 0
-      ? 0
-      : chars <= perSegment
-        ? 1
-        : Math.ceil(chars / multiPerSegment);
+  const segments = calcSegments(chars, perSegment, multiPerSegment);
   return { chars, segments, perSegment, charset };
 }

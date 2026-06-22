@@ -105,6 +105,7 @@ const eslintConfig = [
     rules: {
       'react/jsx-no-useless-fragment': 'error',
       'react/prefer-read-only-props': 'error',
+      'no-nested-ternary': 'error',
     },
     settings: {
       react: {

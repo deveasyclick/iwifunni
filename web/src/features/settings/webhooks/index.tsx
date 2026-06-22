@@ -35,6 +35,67 @@ const parseError = async (res: Response): Promise<string> => {
   }
 };
 
+function webhookTableBody(
+  loading: boolean,
+  items: WebhookItem[],
+  deleteWebhook: (id: string) => Promise<void>,
+  mutatingID: string | null,
+) {
+  if (loading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
+          Loading webhooks...
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
+          No webhooks found.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return items.map((item) => (
+    <TableRow key={item.id}>
+      <TableCell className="max-w-md truncate">{item.url}</TableCell>
+      <TableCell>
+        <div className="flex gap-1 flex-wrap">
+          {item.events.map((event) => (
+            <Badge key={event} variant="outline" className="text-xs">
+              {event}
+            </Badge>
+          ))}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge
+          variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
+          className="rounded-md"
+        >
+          {item.is_active ? 'active' : 'inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell>{format(new Date(item.created_at), 'E, MMM d')}</TableCell>
+      <TableCell className="text-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={mutatingID === item.id}
+          onClick={() => void deleteWebhook(item.id)}
+        >
+          {mutatingID === item.id ? 'Deleting...' : 'Delete'}
+        </Button>
+      </TableCell>
+    </TableRow>
+  ));
+}
+
 const WebhookManagement = () => {
   const [items, setItems] = useState<WebhookItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -268,67 +329,7 @@ const WebhookManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-muted-foreground"
-                >
-                  Loading webhooks...
-                </TableCell>
-              </TableRow>
-            ) : visibleItems.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-muted-foreground"
-                >
-                  No webhooks found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="max-w-md truncate">
-                    {item.url}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 flex-wrap">
-                      {item.events.map((event) => (
-                        <Badge
-                          key={event}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {event}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={item.is_active ? 'lightSuccess' : 'lightWarning'}
-                      className="rounded-md"
-                    >
-                      {item.is_active ? 'active' : 'inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(item.created_at), 'E, MMM d')}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={mutatingID === item.id}
-                      onClick={() => void deleteWebhook(item.id)}
-                    >
-                      {mutatingID === item.id ? 'Deleting...' : 'Delete'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            {webhookTableBody(loading, visibleItems, deleteWebhook, mutatingID)}
           </TableBody>
         </Table>
       </div>

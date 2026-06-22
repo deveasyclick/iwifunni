@@ -83,6 +83,85 @@ const MOCK_KEYS: ApiKeyItem[] = [
   },
 ];
 
+function keyTableBody(
+  loading: boolean,
+  keys: ApiKeyItem[],
+  statusVariant: (
+    s: string,
+  ) => 'lightSuccess' | 'lightWarning' | 'lightError' | 'lightInfo',
+  toggleKeyStatus: (id: string, status: string) => Promise<void>,
+  togglingKeyID: string | null,
+  rotateKey: (id: string) => Promise<void>,
+  revokeKey: (id: string) => Promise<void>,
+  mutatingKeyID: string | null,
+) {
+  if (loading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
+          Loading API keys...
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (keys.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={5} className="text-center text-muted-foreground">
+          No API keys found.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return keys.map((item) => (
+    <TableRow key={item.id}>
+      <TableCell className="font-medium">{item.name}</TableCell>
+      <TableCell>
+        <Badge
+          variant={statusVariant(item.status)}
+          className="rounded-md capitalize"
+        >
+          {item.status}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={item.status === 'active'}
+          onCheckedChange={() => void toggleKeyStatus(item.id, item.status)}
+          disabled={togglingKeyID === item.id}
+          aria-label="Enable/disable API key"
+        />
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {format(new Date(item.created_at), 'MMM d, yyyy')}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void rotateKey(item.id)}
+            disabled={mutatingKeyID === item.id}
+          >
+            Rotate
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hover:text-error"
+            onClick={() => void revokeKey(item.id)}
+            disabled={mutatingKeyID === item.id}
+          >
+            Revoke
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  ));
+}
+
 const ApiKeyManagement = () => {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
   const [search, setSearch] = useState('');
@@ -369,72 +448,15 @@ const ApiKeyManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-muted-foreground"
-                >
-                  Loading API keys...
-                </TableCell>
-              </TableRow>
-            ) : visibleKeys.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-muted-foreground"
-                >
-                  No API keys found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleKeys.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={statusVariant(item.status)}
-                      className="rounded-md capitalize"
-                    >
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={item.status === 'active'}
-                      onCheckedChange={() =>
-                        void toggleKeyStatus(item.id, item.status)
-                      }
-                      disabled={togglingKeyID === item.id}
-                      aria-label="Enable/disable API key"
-                    />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(item.created_at), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void rotateKey(item.id)}
-                        disabled={mutatingKeyID === item.id}
-                      >
-                        Rotate
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:text-error"
-                        onClick={() => void revokeKey(item.id)}
-                        disabled={mutatingKeyID === item.id}
-                      >
-                        Revoke
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+            {keyTableBody(
+              loading,
+              visibleKeys,
+              statusVariant,
+              toggleKeyStatus,
+              togglingKeyID,
+              rotateKey,
+              revokeKey,
+              mutatingKeyID,
             )}
           </TableBody>
         </Table>

@@ -4,18 +4,23 @@ import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { NotificationConfigProps } from '@/features/workflows/types/ui';
 
+function notificationContentHint(channel: string): string {
+  if (channel === 'sms') {
+    return 'SMS body is rendered from the linked SMS template body at send time.';
+  }
+  if (channel === 'push') {
+    return 'Push title and message are rendered from the linked push template at send time.';
+  }
+  return 'Email subject and body are rendered from the linked email template at send time.';
+}
+
 export const NotificationConfig = ({
   draft,
   onConfigureNotificationNode,
 }: NotificationConfigProps) => {
   const notificationChannel = draft.channel || 'email';
 
-  const contentHint =
-    notificationChannel === 'sms'
-      ? 'SMS body is rendered from the linked SMS template body at send time.'
-      : notificationChannel === 'push'
-        ? 'Push title and message are rendered from the linked push template at send time.'
-        : 'Email subject and body are rendered from the linked email template at send time.';
+  const contentHint = notificationContentHint(notificationChannel);
 
   return (
     <div className="space-y-4">
