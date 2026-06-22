@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
+import CardBox from '@/components/card/CardBox';
 import {
   Select,
   SelectContent,
@@ -10,25 +9,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ApexOptions } from 'apexcharts';
-import CardBox from '@/components/card/CardBox';
-import { ACTIVITY_CHART_OPTIONS } from '../constants';
+import dynamic from 'next/dynamic';
+import { ACTIVITY_CHART_OPTIONS, TIME_RANGES } from '../constants';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-interface ActivitiesProps {
+export interface ActivitiesProps {
   readonly data?: Array<{
     day: string;
     total: number;
     delivered: number;
   }>;
   readonly isLoading?: boolean;
+  readonly days: number;
+  readonly onDaysChange: (days: number) => void;
 }
 
 const baseChartOptions: ApexOptions = ACTIVITY_CHART_OPTIONS;
 
-const Activities: React.FC<ActivitiesProps> = ({ data, isLoading }) => {
-  const [range] = useState('Last 7 days');
-
+const Activities: React.FC<ActivitiesProps> = ({
+  data,
+  isLoading,
+  days,
+  onDaysChange,
+}) => {
   const emptySeries = [
     { name: 'Sent', data: [] },
     { name: 'Delivered', data: [] },
@@ -86,12 +90,19 @@ const Activities: React.FC<ActivitiesProps> = ({ data, isLoading }) => {
           <h5 className="text-lg font-semibold">Activity</h5>
         </div>
 
-        <Select value={range} onValueChange={() => {}}>
-          <SelectTrigger className="w-35 bg-transparent border border-border">
+        <Select
+          value={String(days)}
+          onValueChange={(v) => onDaysChange(Number(v))}
+        >
+          <SelectTrigger className="w-40 bg-transparent border border-border">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Last 7 days">Last 7 days</SelectItem>
+            {TIME_RANGES.map((r) => (
+              <SelectItem key={r.value} value={String(r.value)}>
+                {r.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

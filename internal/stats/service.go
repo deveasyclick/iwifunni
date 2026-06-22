@@ -62,10 +62,10 @@ func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) GetStats(ctx context.Context, environmentID uuid.UUID) (*StatsResponse, error) {
+func (s *Service) GetStats(ctx context.Context, environmentID uuid.UUID, days int) (*StatsResponse, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
-	since := time.Now().AddDate(0, 0, -7)
+	since := time.Now().AddDate(0, 0, -days)
 
 	var counts Counts
 	var notifStats []StatusCount

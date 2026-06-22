@@ -79,6 +79,16 @@ export const STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
 };
 
+export const TIME_RANGES = [
+  { value: 7, label: 'Last 7 days' },
+  { value: 14, label: 'Last 14 days' },
+  { value: 30, label: '1 month' },
+  { value: 90, label: '3 months' },
+  { value: 180, label: '6 months' },
+] as const satisfies readonly { value: number; label: string }[];
+
+export type TimeRangeDays = (typeof TIME_RANGES)[number]['value'];
+
 export interface StatCardDef {
   readonly key: string;
   readonly title: string;

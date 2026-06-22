@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useDashboardStats } from '../../features/dashboard/queries';
 import { useUserProfile } from '../../features/auth/queries';
 import Activities from '../../features/dashboard/components/Activities';
@@ -12,8 +13,9 @@ import DeliveryPerformance from '../../features/dashboard/components/DeliveryPer
 import IntegrationsCard from '../../features/dashboard/components/Integrations';
 
 const DashboardPage = () => {
+  const [days, setDays] = useState(7);
   const { data: profile } = useUserProfile();
-  const { data: stats, isLoading } = useDashboardStats();
+  const { data: stats, isLoading } = useDashboardStats(days);
 
   return (
     <div className="grid grid-cols-12 gap-6">
@@ -24,7 +26,12 @@ const DashboardPage = () => {
         <TopCards stats={stats?.counts} isLoading={isLoading} />
       </div>
       <div className="lg:col-span-8 col-span-12">
-        <Activities data={stats?.daily_activity} isLoading={isLoading} />
+        <Activities
+          data={stats?.daily_activity}
+          isLoading={isLoading}
+          days={days}
+          onDaysChange={setDays}
+        />
       </div>
       <div className="lg:col-span-4 col-span-12">
         <ChannelBreakdown
