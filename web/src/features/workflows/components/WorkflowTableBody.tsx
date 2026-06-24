@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -69,6 +69,12 @@ const WorkflowTableBody = ({
             <TableCell>{formatCreatedAt(item.createdAt)}</TableCell>
             <TableCell>
               <div className="flex gap-1">
+                <Button asChild variant="ghost" size="icon">
+                  <Link href={`/dashboard/workflows/${item.id}/activities`}>
+                    <Activity className="h-4 w-4" />
+                    <span className="sr-only">Activities</span>
+                  </Link>
+                </Button>
                 <Button asChild variant="ghost" size="icon">
                   <Link
                     href={`/dashboard/workflows/new/builder?workflowId=${item.id}`}
