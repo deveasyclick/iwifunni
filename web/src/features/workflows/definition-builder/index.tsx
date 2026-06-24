@@ -1,6 +1,6 @@
 'use client';
 
-import { WorkflowBuilderCanvas } from './canvas';
+import { WorkflowBuilderCanvas } from './WorkflowBuilderCanvas';
 import { WorkflowDefinitionInspector } from './inspector';
 import type { WorkflowDefinitionBuilderProps } from './types';
 import { useWorkflowBuilder } from '../hooks/use-workflow-builder';
@@ -50,6 +50,7 @@ export const WorkflowDefinitionBuilder = ({
 
         <WorkflowDefinitionInspector
           issues={issues}
+          builderNodes={value.nodes}
           selectedNode={builder.selectedNode}
           selectedEdge={builder.selectedEdge}
           selectedNodeIssues={builder.selectedNodeIssues}
