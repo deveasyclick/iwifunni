@@ -98,9 +98,7 @@ export const SendTestSmsDialog = ({
             <p className="font-medium text-foreground">Preview info</p>
             <p className="mt-1">
               Body length:{' '}
-              {bodyLength !== undefined
-                ? `${bodyLength} characters`
-                : '—'}
+              {bodyLength !== undefined ? `${bodyLength} characters` : '—'}
               {bodyLength !== undefined && bodyLength > 160 && (
                 <span className="ml-1 text-amber-500">
                   (will be sent as {Math.ceil(bodyLength / 160)} messages)

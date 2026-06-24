@@ -7,6 +7,8 @@ import nextPlugin from '@next/eslint-plugin-next';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
 import reactPlugin from 'eslint-plugin-react';
+import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
+import checkFilePlugin from 'eslint-plugin-check-file';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -96,7 +98,56 @@ const eslintConfig = [
     },
   },
 
-  // 5. React rules — only for source files to avoid ESLint 10 context issues
+  // Hook files are pure logic with no JSX. The no-unsafe-* rules are too
+  // strict with React Query's complex type inference, so we relax them here.
+  {
+    files: ['src/**/hooks/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+
+  // 5. jsx-a11y rules — Prefer native interactive elements (<button>, <a>)
+  // over divs/spans with onClick. If a non-interactive element must be
+  // interactive, it needs an appropriate role and keyboard/touch support.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx'],
+    plugins: {
+      'jsx-a11y': jsxA11yPlugin,
+    },
+    rules: {
+      'jsx-a11y/no-static-element-interactions': 'warn',
+      'jsx-a11y/click-events-have-key-events': 'warn',
+    },
+  },
+
+  // 6. Filename conventions — React component files must use PascalCase.
+  // Only enforced in `features/` where custom components live.
+  // Barrel files (index.tsx) and known kebab-case config files are excluded.
+  {
+    files: ['src/features/**/*.tsx'],
+    ignores: [
+      'src/features/**/index.tsx',
+      'src/features/workflows/definition-builder/canvas-edge.tsx',
+      'src/features/workflows/definition-builder/canvas-node.tsx',
+    ],
+    plugins: {
+      'check-file': checkFilePlugin,
+    },
+    rules: {
+      'check-file/filename-naming-convention': [
+        'error',
+        {
+          '**/*.tsx': 'PASCAL_CASE',
+        },
+      ],
+    },
+  },
+
+  // 7. React rules — only for source files to avoid ESLint 10 context issues
   {
     files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx'],
     plugins: {

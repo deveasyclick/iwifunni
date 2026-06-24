@@ -82,6 +82,7 @@ export type WorkflowDefinitionInspectorProps = {
   onWorkflowSetupChange?: (
     values: Partial<Pick<WorkflowSetupSummary, 'name' | 'description'>>,
   ) => void;
+  builderNodes?: BuilderNodeDraft[];
 };
 
 export type DelayConfigProps = {
@@ -112,6 +113,8 @@ export type WorkflowSetupPanelProps = {
   onWorkflowSetupChange?: (
     values: Partial<Pick<WorkflowSetupSummary, 'name' | 'description'>>,
   ) => void;
+  issues?: WorkflowDefinitionIssue[];
+  builderNodes?: BuilderNodeDraft[];
 };
 
 export type CreateWorkflowBuilderProps = {
