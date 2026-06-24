@@ -2053,6 +2053,42 @@ func (q *Queries) ListActiveWebhooksForEvent(ctx context.Context, arg ListActive
 	return items, nil
 }
 
+const listDeliveryAttemptsByNotificationID = `-- name: ListDeliveryAttemptsByNotificationID :many
+SELECT id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at
+FROM delivery_attempts
+WHERE notification_id = $1
+ORDER BY attempted_at ASC
+`
+
+func (q *Queries) ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]DeliveryAttempt, error) {
+	rows, err := q.db.Query(ctx, listDeliveryAttemptsByNotificationID, notificationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DeliveryAttempt{}
+	for rows.Next() {
+		var i DeliveryAttempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.NotificationID,
+			&i.Channel,
+			&i.Destination,
+			&i.Status,
+			&i.ErrorMessage,
+			&i.ProviderMessageID,
+			&i.AttemptedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEnvironmentNotifications = `-- name: ListEnvironmentNotifications :many
 SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
@@ -2144,6 +2180,60 @@ func (q *Queries) ListEnvironmentsByOrganization(ctx context.Context, organizati
 			&i.OrganizationID,
 			&i.Name,
 			&i.IsDefault,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNotificationsByWorkflowID = `-- name: ListNotificationsByWorkflowID :many
+SELECT id, title, message, channels, status, is_test, created_at, updated_at
+FROM notifications
+WHERE environment_id = $1 AND metadata @> $2::jsonb
+ORDER BY created_at DESC
+LIMIT $3
+`
+
+type ListNotificationsByWorkflowIDParams struct {
+	EnvironmentID pgtype.UUID `db:"environment_id" json:"environment_id"`
+	Column2       []byte      `db:"column_2" json:"column_2"`
+	Limit         int32       `db:"limit" json:"limit"`
+}
+
+type ListNotificationsByWorkflowIDRow struct {
+	ID        uuid.UUID          `db:"id" json:"id"`
+	Title     string             `db:"title" json:"title"`
+	Message   string             `db:"message" json:"message"`
+	Channels  []string           `db:"channels" json:"channels"`
+	Status    string             `db:"status" json:"status"`
+	IsTest    bool               `db:"is_test" json:"is_test"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ListNotificationsByWorkflowID(ctx context.Context, arg ListNotificationsByWorkflowIDParams) ([]ListNotificationsByWorkflowIDRow, error) {
+	rows, err := q.db.Query(ctx, listNotificationsByWorkflowID, arg.EnvironmentID, arg.Column2, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNotificationsByWorkflowIDRow{}
+	for rows.Next() {
+		var i ListNotificationsByWorkflowIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Message,
+			&i.Channels,
+			&i.Status,
+			&i.IsTest,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -3234,6 +3324,7 @@ SET title = EXCLUDED.title,
 	channels = EXCLUDED.channels,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
+	status = EXCLUDED.status,
 	updated_at = EXCLUDED.updated_at
 RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 `

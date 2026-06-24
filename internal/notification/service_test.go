@@ -79,6 +79,14 @@ func (s *fakeNotificationStore) ListByProject(_ context.Context, _ uuid.UUID, _ 
 	return items, nil
 }
 
+func (s *fakeNotificationStore) ListByWorkflowID(_ context.Context, _, _ uuid.UUID, _ int32) ([]db.Notification, error) {
+	items := make([]db.Notification, 0, len(s.notifications))
+	for _, item := range s.notifications {
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (s *fakeNotificationStore) GetByProject(_ context.Context, id, _ uuid.UUID) (db.Notification, error) {
 	for _, item := range s.notifications {
 		if item.ID == id {
@@ -113,6 +121,14 @@ func (s *fakeNotificationStore) UpdateStatus(_ context.Context, id uuid.UUID, st
 func (s *fakeNotificationStore) InsertDeliveryAttempt(_ context.Context, _ db.InsertDeliveryAttemptParams) error {
 	s.attemptCount++
 	return nil
+}
+
+func (s *fakeNotificationStore) ListDeliveryAttemptsByNotificationID(_ context.Context, _ uuid.UUID) ([]db.DeliveryAttempt, error) {
+	return nil, nil
+}
+
+func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.GetUserByIDRow, error) {
+	return db.GetUserByIDRow{}, pgx.ErrNoRows
 }
 
 func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Provider, error) {

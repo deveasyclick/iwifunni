@@ -38,14 +38,17 @@ type NotificationView struct {
 type notificationStore interface {
 	UpsertByProjectJob(ctx context.Context, arg db.UpsertNotificationByEnvironmentJobParams) (db.Notification, error)
 	ListByProject(ctx context.Context, projectID uuid.UUID, includeTest bool) ([]db.Notification, error)
+	ListByWorkflowID(ctx context.Context, projectID uuid.UUID, workflowID uuid.UUID, limit int32) ([]db.Notification, error)
 	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
 	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
 	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
+	ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error)
 	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error)
 	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
 	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
 	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error)
 }
 
 // Service handles notification delivery logic.
@@ -75,24 +78,31 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 	prepared.WorkflowID = strings.TrimSpace(prepared.WorkflowID)
 	prepared.SubscriberID = strings.TrimSpace(prepared.SubscriberID)
 
+	// Workflow-based sends: title and message come from templates, skip direct validation
+	if prepared.WorkflowID != "" && prepared.SubscriberID != "" {
+		if prepared.ProjectID == "" {
+			return nil, invalidSend("workflow-based sends require project-scoped authentication")
+		}
+		// Defer to workflow preparation (resolves templates, channels, recipient)
+		return s.prepareWorkflowJob(ctx, &prepared)
+	}
+
+	// Direct sends: require title, message, and channels
 	if prepared.Title == "" || prepared.Message == "" {
 		return nil, invalidSend("title and message are required")
 	}
 
-	if prepared.WorkflowID == "" && prepared.SubscriberID == "" {
-		prepared.Channels = normalizeChannels(prepared.Channels)
-		if len(prepared.Channels) == 0 {
-			return nil, invalidSend("at least one channel is required")
-		}
-		if err := validateRecipientForChannels(prepared.Recipient, prepared.Channels); err != nil {
-			return nil, err
-		}
-		return &prepared, nil
+	prepared.Channels = normalizeChannels(prepared.Channels)
+	if len(prepared.Channels) == 0 {
+		return nil, invalidSend("at least one channel is required")
 	}
+	if err := validateRecipientForChannels(prepared.Recipient, prepared.Channels); err != nil {
+		return nil, err
+	}
+	return &prepared, nil
+}
 
-	if prepared.WorkflowID == "" || prepared.SubscriberID == "" {
-		return nil, invalidSend("workflow_id and subscriber_id must be provided together")
-	}
+func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.NotificationJob) (*types.NotificationJob, error) {
 	if prepared.ProjectID == "" {
 		return nil, invalidSend("workflow-based sends require project-scoped authentication")
 	}
@@ -117,32 +127,127 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 		}
 		return nil, err
 	}
-	if !workflowRecord.IsActive {
-		return nil, invalidSend("workflow is inactive")
-	}
 
-	subscriberRecord, err := s.repo.GetSubscriberByID(ctx, subscriberID, projectID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("subscriber not found: %w", err)
+	var subscriberRecord db.Subscriber
+
+	if prepared.IsSystemUser {
+		// System users are auth users, not subscriber records.
+		// Look up the user from the users table and build a virtual subscriber.
+		userRecord, err := s.repo.GetUserByID(ctx, subscriberID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("user not found: %w", err)
+			}
+			return nil, err
 		}
-		return nil, err
+
+		userEmail := userRecord.Email
+		userName := strings.TrimSpace(userRecord.FirstName + " " + userRecord.LastName)
+		if userName == "" {
+			userName = userEmail
+		}
+
+		subscriberRecord = db.Subscriber{
+			ID:    subscriberID,
+			Name:  userName,
+			Email: &userEmail,
+		}
+	} else {
+		subscriberRecord, err = s.repo.GetSubscriberByID(ctx, subscriberID, projectID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("subscriber not found: %w", err)
+			}
+			return nil, err
+		}
 	}
 
-	prepared.Channels = append([]string(nil), workflowRecord.Channels...)
-	prepared.Channels, prepared.ChannelContent, prepared.SkippedChannels, prepared.Recipient, err = s.prepareWorkflowDelivery(ctx, projectID, workflowRecord, subscriberRecord, prepared)
+	// Builder-created workflows store channels and template mappings in the
+	// definition JSON, not in the channels/template_ids columns (those are
+	// not updated by UpdateWorkflowDefinition). Extract them from the
+	// notification nodes if the columns are empty.
+	channels := workflowRecord.Channels
+	templateIDs, tmplErr := parseWorkflowTemplateIDs(workflowRecord.TemplateIds)
+	if tmplErr != nil {
+		templateIDs = map[string]string{}
+	}
+
+	if len(channels) == 0 && len(workflowRecord.DefinitionJson) > 0 {
+		type notificationNodeCfg struct {
+			TemplateID string   `json:"template_id,omitempty"`
+			Channels   []string `json:"channels"`
+		}
+		type defNode struct {
+			Type   string          `json:"type"`
+			Config json.RawMessage `json:"config,omitempty"`
+		}
+		type workflowDef struct {
+			Nodes []defNode `json:"nodes"`
+		}
+
+		var def workflowDef
+		if parseErr := json.Unmarshal(workflowRecord.DefinitionJson, &def); parseErr == nil {
+			seen := make(map[string]bool)
+			for _, node := range def.Nodes {
+				if node.Type == "notification" && len(node.Config) > 0 {
+					var cfg notificationNodeCfg
+					if parseErr := json.Unmarshal(node.Config, &cfg); parseErr == nil {
+						for _, ch := range cfg.Channels {
+							if !seen[ch] {
+								channels = append(channels, ch)
+								seen[ch] = true
+							}
+							if cfg.TemplateID != "" {
+								templateIDs[ch] = cfg.TemplateID
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// If the request specified specific channels, filter the extracted list.
+	// nil = not sent (use all channels from definition)
+	// []  = user disabled everything (send to none)
+	requestedChannels := prepared.Channels
+
+	// Write back the template IDs and channels so prepareWorkflowDelivery uses them
+	if len(templateIDs) > 0 {
+		templateIDsJSON, _ := json.Marshal(templateIDs)
+		workflowRecord.TemplateIds = templateIDsJSON
+	}
+
+	if requestedChannels != nil {
+		requested := make(map[string]bool, len(requestedChannels))
+		for _, ch := range requestedChannels {
+			requested[ch] = true
+		}
+		filtered := make([]string, 0, len(requestedChannels))
+		for _, ch := range channels {
+			if requested[ch] {
+				filtered = append(filtered, ch)
+			}
+		}
+		channels = filtered
+	}
+
+	workflowRecord.Channels = channels
+	prepared.Channels = channels
+	prepared.Channels, prepared.ChannelContent, prepared.SkippedChannels, prepared.Recipient, err = s.prepareWorkflowDelivery(ctx, projectID, workflowRecord, subscriberRecord, *prepared)
 	if err != nil {
 		return nil, err
 	}
 	prepared.Metadata = enrichMetadata(prepared.Metadata, workflowRecord, subscriberRecord)
 
-	return &prepared, nil
+	return prepared, nil
 }
 
-// SendSync delivers a notification synchronously and returns an error if
-// any channel delivery fails. Unlike Send, it does not swallow delivery
-// failures — useful for test sends where the caller needs to know the result.
-func (s *Service) SendSync(ctx context.Context, job *types.NotificationJob) error {
+// SendSync delivers a notification synchronously and returns the
+// notification ID if successful. Unlike Send, it does not swallow
+// delivery failures — useful for test sends where the caller needs
+// to know the result.
+func (s *Service) SendSync(ctx context.Context, job *types.NotificationJob) (uuid.UUID, error) {
 	return s.send(ctx, job, true)
 }
 
@@ -150,44 +255,50 @@ func (s *Service) SendSync(ctx context.Context, job *types.NotificationJob) erro
 // in the database but swallowing per-channel errors. Returns nil after all
 // deliveries are attempted regardless of individual failures.
 func (s *Service) Send(ctx context.Context, job *types.NotificationJob) error {
-	return s.send(ctx, job, false)
+	_, err := s.send(ctx, job, false)
+	return err
 }
 
-func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportErrors bool) error {
+func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportErrors bool) (uuid.UUID, error) {
 	if job == nil {
-		return invalidSend("notification payload is required")
+		return uuid.Nil, invalidSend("notification payload is required")
 	}
 	job.JobID = strings.TrimSpace(job.JobID)
 	if job.JobID == "" {
-		return invalidSend("job_id is required")
+		return uuid.Nil, invalidSend("job_id is required")
 	}
 
 	recipient, err := json.Marshal(job.Recipient)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	metadata, err := json.Marshal(job.Metadata)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	nowTs := pgtype.Timestamptz{Time: now(), Valid: true}
 
 	// Project-based path
 	if job.ProjectID == "" {
-		return nil
+		return uuid.Nil, nil
 	}
 
 	projectID, err := uuid.Parse(job.ProjectID)
 	if err != nil {
-		return fmt.Errorf("invalid project_id: %w", err)
+		return uuid.Nil, fmt.Errorf("invalid project_id: %w", err)
 	}
+	channels := job.Channels
+	if channels == nil {
+		channels = []string{}
+	}
+
 	notificationRecord, err := s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByEnvironmentJobParams{
 		ID:            uuid.New(),
 		JobID:         &job.JobID,
 		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
 		Title:         job.Title,
 		Message:       job.Message,
-		Channels:      job.Channels,
+		Channels:      channels,
 		Recipient:     recipient,
 		Metadata:      metadata,
 		Status:        "pending",
@@ -196,11 +307,11 @@ func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportEr
 		UpdatedAt:     nowTs,
 	})
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	notificationID := notificationRecord.ID
 	if isTerminalNotificationStatus(notificationRecord.Status) {
-		return nil
+		return notificationID, nil
 	}
 
 	var deliveryErrors []string
@@ -224,7 +335,7 @@ func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportEr
 
 	status := finalNotificationStatus(successCount, failureCount, skippedCount)
 	if err := s.repo.UpdateStatus(ctx, notificationID, status, pgtype.Timestamptz{Time: now(), Valid: true}); err != nil {
-		return err
+		return notificationID, err
 	}
 	if s.dispatcher != nil {
 		event := "notification.sent"
@@ -239,9 +350,9 @@ func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportEr
 		})
 	}
 	if reportErrors && len(deliveryErrors) > 0 {
-		return errors.New(strings.Join(deliveryErrors, "; "))
+		return notificationID, errors.New(strings.Join(deliveryErrors, "; "))
 	}
-	return nil
+	return notificationID, nil
 
 }
 
@@ -635,6 +746,89 @@ func (s *Service) recordFailed(ctx context.Context, notificationID uuid.UUID, ch
 
 var now = func() time.Time { return time.Now().UTC() }
 
+func (s *Service) GetDeliveryAttempts(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error) {
+	return s.repo.ListDeliveryAttemptsByNotificationID(ctx, notificationID)
+}
+
+func (s *Service) CreateQueuedNotification(ctx context.Context, job *types.NotificationJob, notificationID uuid.UUID) error {
+	recipient, err := json.Marshal(job.Recipient)
+	if err != nil {
+		return err
+	}
+	metadata, err := json.Marshal(job.Metadata)
+	if err != nil {
+		return err
+	}
+	nowTs := pgtype.Timestamptz{Time: now(), Valid: true}
+
+	projectID, err := uuid.Parse(job.ProjectID)
+	if err != nil {
+		return err
+	}
+
+	channels := job.Channels
+	if channels == nil {
+		channels = []string{}
+	}
+
+	_, err = s.repo.UpsertByProjectJob(ctx, db.UpsertNotificationByEnvironmentJobParams{
+		ID:            notificationID,
+		JobID:         &job.JobID,
+		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
+		Title:         job.Title,
+		Message:       job.Message,
+		Channels:      channels,
+		Recipient:     recipient,
+		Metadata:      metadata,
+		Status:        "queued",
+		IsTest:        job.IsTest,
+		CreatedAt:     nowTs,
+		UpdatedAt:     nowTs,
+	})
+	return err
+}
+
+// GetByProjectWithAttempts returns a notification with its delivery attempts.
+type NotificationWithAttempts struct {
+	Notification     *NotificationView  `json:"notification"`
+	DeliveryAttempts []map[string]any   `json:"delivery_attempts"`
+}
+
+func (s *Service) GetByProjectWithAttempts(ctx context.Context, notificationID, projectID uuid.UUID) (*NotificationWithAttempts, error) {
+	notification, err := s.GetByProject(ctx, notificationID, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	deliveryAttempts, err := s.GetDeliveryAttempts(ctx, notificationID)
+	if err != nil {
+		// Non-fatal: return notification without attempts
+		deliveryAttempts = nil
+	}
+
+	attempts := make([]map[string]any, 0, len(deliveryAttempts))
+	for _, a := range deliveryAttempts {
+		attrs := map[string]any{
+			"id":          a.ID.String(),
+			"channel":     a.Channel,
+			"destination": a.Destination,
+			"status":      a.Status,
+		}
+		if a.ErrorMessage != nil {
+			attrs["error_message"] = *a.ErrorMessage
+		}
+		if a.ProviderMessageID != nil {
+			attrs["provider_message_id"] = *a.ProviderMessageID
+		}
+		attempts = append(attempts, attrs)
+	}
+
+	return &NotificationWithAttempts{
+		Notification:     notification,
+		DeliveryAttempts: attempts,
+	}, nil
+}
+
 func defaultProviderForChannel(channel string) string {
 	switch channel {
 	case "email":
@@ -650,6 +844,18 @@ func defaultProviderForChannel(channel string) string {
 
 func (s *Service) ListByProject(ctx context.Context, projectID uuid.UUID, includeTest bool) ([]NotificationView, error) {
 	items, err := s.repo.ListByProject(ctx, projectID, includeTest)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NotificationView, 0, len(items))
+	for _, item := range items {
+		result = append(result, notificationViewFromRecord(item))
+	}
+	return result, nil
+}
+
+func (s *Service) ListByWorkflowID(ctx context.Context, projectID, workflowID uuid.UUID, limit int32) ([]NotificationView, error) {
+	items, err := s.repo.ListByWorkflowID(ctx, projectID, workflowID, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ SET title = EXCLUDED.title,
 	channels = EXCLUDED.channels,
 	recipient = EXCLUDED.recipient,
 	metadata = EXCLUDED.metadata,
+	status = EXCLUDED.status,
 	updated_at = EXCLUDED.updated_at
 RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at;
 
@@ -660,3 +661,16 @@ SELECT name, channel
 FROM providers
 WHERE environment_id = $1 AND is_active = true
 ORDER BY name;
+
+-- name: ListDeliveryAttemptsByNotificationID :many
+SELECT id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at
+FROM delivery_attempts
+WHERE notification_id = $1
+ORDER BY attempted_at ASC;
+
+-- name: ListNotificationsByWorkflowID :many
+SELECT id, title, message, channels, status, is_test, created_at, updated_at
+FROM notifications
+WHERE environment_id = $1 AND metadata @> $2::jsonb
+ORDER BY created_at DESC
+LIMIT $3;

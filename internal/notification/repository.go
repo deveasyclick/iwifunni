@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/google/uuid"
@@ -36,6 +37,26 @@ func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID, inc
 	items := make([]db.Notification, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, notificationFromListProjectRow(row))
+	}
+	return items, nil
+}
+
+func (r *Repository) ListByWorkflowID(ctx context.Context, projectID, workflowID uuid.UUID, limit int32) ([]db.Notification, error) {
+	metadataFilter, err := json.Marshal(map[string]string{"workflow_id": workflowID.String()})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.q.ListNotificationsByWorkflowID(ctx, db.ListNotificationsByWorkflowIDParams{
+		EnvironmentID: pgtype.UUID{Bytes: projectID, Valid: true},
+		Column2:       metadataFilter,
+		Limit:         limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]db.Notification, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, notificationFromListWorkflowRow(row))
 	}
 	return items, nil
 }
@@ -126,6 +147,19 @@ func notificationFromGetProjectRow(row db.GetEnvironmentNotificationByIDRow) db.
 	}
 }
 
+func notificationFromListWorkflowRow(row db.ListNotificationsByWorkflowIDRow) db.Notification {
+	return db.Notification{
+		ID:        row.ID,
+		Title:     row.Title,
+		Message:   row.Message,
+		Channels:  row.Channels,
+		Status:    row.Status,
+		IsTest:    row.IsTest,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
 func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error {
 	return r.q.UpdateNotificationStatus(ctx, db.UpdateNotificationStatusParams{
 		ID:        id,
@@ -136,6 +170,10 @@ func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status stri
 
 func (r *Repository) InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error {
 	return r.q.InsertDeliveryAttempt(ctx, arg)
+}
+
+func (r *Repository) ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error) {
+	return r.q.ListDeliveryAttemptsByNotificationID(ctx, notificationID)
 }
 
 func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error) {
@@ -155,4 +193,8 @@ func (r *Repository) GetSubscriberByID(ctx context.Context, id, projectID uuid.U
 
 func (r *Repository) GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error) {
 	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: projectID})
+}
+
+func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error) {
+	return r.q.GetUserByID(ctx, id)
 }
