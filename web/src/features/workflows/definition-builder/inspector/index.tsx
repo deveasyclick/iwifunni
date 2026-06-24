@@ -10,11 +10,11 @@ import {
   getNodeDisplayName,
 } from '@/features/workflows/utils/display';
 import type { WorkflowDefinitionInspectorProps } from '../../types/ui';
-import { DelayConfig } from './delay-config';
-import { NotificationConfig } from './notification-config';
-import { EdgeInfo } from './edge-info';
-import { NodeIssues } from './node-issues';
-import { WorkflowSetupPanel } from './workflow-setup-panel';
+import { DelayConfig } from './DelayConfig';
+import { NotificationConfig } from './NotificationConfig';
+import { EdgeInfo } from './EdgeInfo';
+import { NodeIssues } from './NodeIssues';
+import { WorkflowSetupPanel } from './WorkflowSetupPanel';
 
 function inspectorTitleText(
   selectedNode: unknown,
@@ -38,6 +38,7 @@ function inspectorDescription(
 export const WorkflowDefinitionInspector = ({
   selectedNode,
   selectedEdge,
+  issues,
   selectedNodeIssues,
   selectedNodeIncoming,
   selectedNodeOutgoing,
@@ -48,6 +49,7 @@ export const WorkflowDefinitionInspector = ({
   autosaveState,
   onConfigureNotificationNode,
   onWorkflowSetupChange,
+  builderNodes,
 }: WorkflowDefinitionInspectorProps) => {
   const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
 
@@ -196,6 +198,8 @@ export const WorkflowDefinitionInspector = ({
         workflowSetup={workflowSetup}
         autosaveState={autosaveState}
         onWorkflowSetupChange={onWorkflowSetupChange}
+        issues={issues}
+        builderNodes={builderNodes}
       />
     );
   }

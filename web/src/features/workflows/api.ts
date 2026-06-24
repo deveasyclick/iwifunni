@@ -1,18 +1,3 @@
-export type TestSendPayload = {
-  channel: 'email' | 'sms';
-  recipient_email?: string;
-  recipient_phone?: string;
-  subject?: string;
-  body: string;
-  sender_name?: string;
-  sender_email?: string;
-  sender_id?: string;
-};
-
-export type TestSendResponse = {
-  status: 'queued';
-};
-
 import type { CreateTemplatePayload, TemplateItem } from '@/app/types/template';
 import type {
   CreateWorkflowPayload,
@@ -20,7 +5,15 @@ import type {
   WorkflowExecutionItem,
   WorkflowItem,
 } from '@/app/types/workflow';
-import type { TemplateUpdatePayload, WorkflowEventPayload } from './types/api';
+import type {
+  NotificationPollResponse,
+  TemplateUpdatePayload,
+  TestSendPayload,
+  TestSendResponse,
+  TriggerWorkflowPayload,
+  TriggerWorkflowResponse,
+  WorkflowEventPayload,
+} from './types/api';
 import { request } from '@/lib/api-client';
 
 export const workflowApi = {
@@ -89,5 +82,26 @@ export const workflowApi = {
       method: 'POST',
       body: payload,
     });
+  },
+
+  getActivities(workflowId: string) {
+    return request<import('@/app/types/notification').NotificationType[]>(
+      `/api/workflows/${workflowId}/activities`,
+      { method: 'GET' },
+    );
+  },
+
+  triggerWorkflow(payload: TriggerWorkflowPayload) {
+    return request<TriggerWorkflowResponse>('/api/notifications/trigger', {
+      method: 'POST',
+      body: payload,
+    });
+  },
+
+  pollNotification(notificationId: string) {
+    return request<NotificationPollResponse>(
+      `/api/notifications/${notificationId}/poll`,
+      { method: 'GET' },
+    );
   },
 };
