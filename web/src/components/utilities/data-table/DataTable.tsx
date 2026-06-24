@@ -10,6 +10,7 @@ import {
   flexRender,
   CellContext,
 } from '@tanstack/react-table';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -209,7 +210,7 @@ const DataTable = <T extends Record<string, unknown>>({
               qrCode ||
               profileImage ||
               icon ? (
-                <img
+                <Image
                   src={
                     (image as string) ??
                     (imageUrl as string) ??
@@ -224,6 +225,8 @@ const DataTable = <T extends Record<string, unknown>>({
                   width={36}
                   height={36}
                   className="rounded-full"
+                  unoptimized
+                  alt=""
                 />
               ) : (
                 <Badge className="size-10 flex items-center justify-center rounded-full shrink-0">
@@ -286,7 +289,16 @@ const DataTable = <T extends Record<string, unknown>>({
             col.toLowerCase().includes('thumbnail') ||
             col.toLowerCase().includes('image')
           ) {
-            return <img src={value} className="size-10 rounded-md" />;
+            return (
+              <Image
+                src={value}
+                alt=""
+                width={40}
+                height={40}
+                className="size-10 rounded-md"
+                unoptimized
+              />
+            );
           }
         }
 

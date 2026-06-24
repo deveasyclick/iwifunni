@@ -45,22 +45,24 @@ const Header = () => {
           className={`rounded-none  py-4 sm:ps-6 max-w-full! sm:pe-10 dark:bg-dark flex justify-between items-center px-6`}
         >
           {/* Mobile Toggle Icon */}
-          <div
+          <button
+            type="button"
             onClick={() => {
               setIsOpen(true);
             }}
-            className="px-[15px] hover:text-primary dark:hover:text-primary text-foreground dark:text-muted-foreground relative after:absolute after:w-10 after:h-10 after:rounded-full hover:after:bg-lightprimary  after:bg-transparent rounded-full xl:hidden flex justify-center items-center cursor-pointer"
+            className="px-[15px] hover:text-primary dark:hover:text-primary text-foreground dark:text-muted-foreground relative after:absolute after:w-10 after:h-10 after:rounded-full hover:after:bg-lightprimary  after:bg-transparent rounded-full xl:hidden flex justify-center items-center"
           >
             <Icon icon="tabler:menu-2" height={20} width={20} />
-          </div>
+          </button>
 
           <div className="block xl:hidden">
             <FullLogo />
           </div>
 
           <div className="flex xl:hidden items-center">
-            <div
-              className="hover:text-primary px-2 md:px-15 group focus:ring-0 rounded-full flex justify-center items-center cursor-pointer relative"
+            <button
+              type="button"
+              className="hover:text-primary px-2 md:px-15 group focus:ring-0 rounded-full flex justify-center items-center relative"
               onClick={toggleMode}
             >
               <span className="flex items-center justify-center relative after:absolute after:w-10 after:h-10 after:rounded-full after:-top-1/2 group-hover:after:bg-lightprimary">
@@ -78,7 +80,7 @@ const Header = () => {
                   />
                 )}
               </span>
-            </div>
+            </button>
 
             <div className="xl:block">
               <div className="flex gap-0 items-center relative">
@@ -101,8 +103,9 @@ const Header = () => {
             <div className="flex w-full justify-end items-end">
               <div className="flex gap-0 items-center ">
                 {/* ✅ Dark/Light Toggle */}
-                <div
-                  className="hover:text-primary px-15 group focus:ring-0 rounded-full flex justify-center items-center cursor-pointer text-gray relative"
+                <button
+                  type="button"
+                  className="hover:text-primary px-15 group focus:ring-0 rounded-full flex justify-center items-center text-gray relative"
                   onClick={toggleMode}
                 >
                   <span className="flex items-center justify-center relative after:absolute after:w-10 after:h-10 after:rounded-full after:-top-1/2 group-hover:after:bg-lightprimary">
@@ -120,7 +123,7 @@ const Header = () => {
                       />
                     )}
                   </span>
-                </div>
+                </button>
 
                 <div className="xl:block ">
                   <div className="flex gap-0 items-center relative">

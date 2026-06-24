@@ -1,18 +1,19 @@
 'use client';
 
-import { Icon } from '@iconify/react';
-import Link from 'next/link';
-import * as MessagesData from './data';
-import SimpleBar from 'simplebar-react';
-import 'simplebar-react/dist/simplebar.min.css';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Icon } from '@iconify/react';
+import Image from 'next/image';
+import Link from 'next/link';
+import SimpleBar from 'simplebar-react';
+import 'simplebar-react/dist/simplebar.min.css';
+import * as MessagesData from './data';
 
 const Notifications = () => {
   return (
@@ -23,13 +24,13 @@ const Notifications = () => {
             <span className="relative after:absolute after:w-10 after:h-10 after:rounded-full text-foreground dark:text-muted-foreground hover:text-primary dark:hover:text-primary after:-top-1/2 hover:after:bg-lightprimary dark:hover:after:bg-lightprimary rounded-full flex justify-center items-center cursor-pointer group-hover/menu:after:bg-lightprimary group-hover/menu:text-primary">
               <Icon icon="tabler:bell-ringing" height={20} />
             </span>
-            <span className="rounded-full absolute -end-[6px] -top-[5px] text-[10px] h-2 w-2 bg-primary flex justify-center items-center"></span>
+            <span className="rounded-full absolute -inset-e-1.5 -top-1.25 text-[10px] h-2 w-2 bg-primary flex justify-center items-center"></span>
           </div>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
           align="end"
-          className="w-screen sm:w-[300px] py-6 rounded-sm border border-border"
+          className="w-screen sm:w-75 py-6 rounded-sm border border-border"
         >
           {/* Header */}
           <div className="flex items-center px-6 justify-between">
@@ -38,20 +39,21 @@ const Notifications = () => {
           </div>
           {/* Scrollable content */}
           <SimpleBar className="max-h-80 mt-3">
-            {MessagesData.Notifications.map((item, index) => (
+            {MessagesData.Notifications.map((item) => (
               <DropdownMenuItem
                 className="px-6 py-3 flex justify-between items-center bg-hover group/link w-full"
-                key={index}
+                key={item.title}
               >
                 <Link href="#">
                   <div className="flex items-center">
-                    <span className="flex-shrink-0 relative">
-                      <img
+                    <span className="shrink-0 relative">
+                      <Image
                         src={item.avatar}
                         width={45}
                         height={45}
                         alt="tailwindadmin"
                         className="rounded-full"
+                        unoptimized
                       />
                     </span>
                     <div className="ps-4">
