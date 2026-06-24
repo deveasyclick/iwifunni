@@ -1,8 +1,27 @@
 # Iwifunni Notification Platform
 
-A multi-tenant, API-driven notification platform in Go.
+A multi-tenant, API-driven notification platform in Go. It lets you send email, SMS, and push notifications through a single REST API, processed asynchronously via a Redis-backed queue.
 
-Iwifunni lets your backend services and dashboard clients work with project-scoped notifications, subscribers, workflows, providers, templates, API keys, and webhooks through a single backend. Notifications are processed asynchronously through a Redis-backed queue and delivered through pluggable channel providers. The active send contract now supports both direct sends and workflow-targeted sends, including workflow-linked template rendering and skip-aware subscriber delivery.
+Key features:
+
+- Multi-tenant project model — every resource is scoped  
+  to a project
+- Dual auth — API keys for machine-to-machine, JWT for  
+  dashboard users
+- Pluggable providers — SendGrid, SMTP, Termii, FCM, Web
+  Push, and more
+- Workflow engine — define multi-channel notification  
+  flows with templates, delays, and subscriber  
+  preferences
+- Template management — store and render notification  
+  templates per project
+- Subscriber management — store contacts, channel  
+  preferences, and tags
+- Webhook delivery — subscribe to notification.sent /  
+  notification.failed events
+- Dashboard — Next.js-based management UI for all  
+  resources
+- Built with Go (backend) + Next.js (frontend)
 
 ## Supported Delivery Channels
 
@@ -14,10 +33,10 @@ Iwifunni lets your backend services and dashboard clients work with project-scop
 
 Iwifunni currently uses two primary auth systems plus one legacy compatibility path:
 
-| Mechanism | Format | Purpose |
-|-----------|--------|---------|
-| API Key | `Bearer nk_live_<token>` | Machine-to-machine — sending notifications and managing resources |
-| JWT | `Bearer <jwt>` | Dashboard users — signup, signin, managing project settings |
+| Mechanism | Format                   | Purpose                                                           |
+| --------- | ------------------------ | ----------------------------------------------------------------- |
+| API Key   | `Bearer nk_live_<token>` | Machine-to-machine — sending notifications and managing resources |
+| JWT       | `Bearer <jwt>`           | Dashboard users — signup, signin, managing project settings       |
 
 Legacy compatibility mode: `Authorization: ApiKey <service_key>` is still active in code for older service-scoped sends.
 
@@ -127,20 +146,21 @@ docker compose up --build
 
 ### Auth
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/signup` | Create account and project |
-| POST | `/auth/signin` | Signin, receive JWT + refresh token |
-| POST | `/auth/refresh` | Exchange refresh token for new access token |
-| POST | `/auth/logout` | Revoke refresh token |
+| Method | Path            | Description                                 |
+| ------ | --------------- | ------------------------------------------- |
+| POST   | `/auth/signup`  | Create account and project                  |
+| POST   | `/auth/signin`  | Signin, receive JWT + refresh token         |
+| POST   | `/auth/refresh` | Exchange refresh token for new access token |
+| POST   | `/auth/logout`  | Revoke refresh token                        |
 
 ### Notifications
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/notifications` | API Key | Enqueue a notification |
+| Method | Path             | Auth    | Description            |
+| ------ | ---------------- | ------- | ---------------------- |
+| POST   | `/notifications` | API Key | Enqueue a notification |
 
 **Example request:**
+
 ```json
 {
   "title": "Welcome",
@@ -157,6 +177,7 @@ docker compose up --build
 ```
 
 Rules:
+
 - Current v1 accepts either:
   - direct `title`, `message`, `channels`, `recipient`, and optional `metadata`
   - or `workflow_id`, `subscriber_id`, `title`, `message`, and optional `metadata`
@@ -168,72 +189,73 @@ Rules:
 
 ### Subscribers
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/subscribers` | API Key or JWT | Create a subscriber |
-| GET | `/subscribers` | API Key or JWT | List subscribers |
-| GET | `/subscribers/{subscriberID}` | API Key or JWT | Get a subscriber |
-| PUT | `/subscribers/{subscriberID}` | API Key or JWT | Update a subscriber |
+| Method | Path                          | Auth           | Description         |
+| ------ | ----------------------------- | -------------- | ------------------- |
+| POST   | `/subscribers`                | API Key or JWT | Create a subscriber |
+| GET    | `/subscribers`                | API Key or JWT | List subscribers    |
+| GET    | `/subscribers/{subscriberID}` | API Key or JWT | Get a subscriber    |
+| PUT    | `/subscribers/{subscriberID}` | API Key or JWT | Update a subscriber |
 | DELETE | `/subscribers/{subscriberID}` | API Key or JWT | Delete a subscriber |
 
 ### Workflows
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/workflows` | API Key or JWT | Create a workflow |
-| GET | `/workflows` | API Key or JWT | List workflows |
-| GET | `/workflows/{workflowID}` | API Key or JWT | Get a workflow |
-| PUT | `/workflows/{workflowID}` | API Key or JWT | Update a workflow |
+| Method | Path                      | Auth           | Description        |
+| ------ | ------------------------- | -------------- | ------------------ |
+| POST   | `/workflows`              | API Key or JWT | Create a workflow  |
+| GET    | `/workflows`              | API Key or JWT | List workflows     |
+| GET    | `/workflows/{workflowID}` | API Key or JWT | Get a workflow     |
+| PUT    | `/workflows/{workflowID}` | API Key or JWT | Update a workflow  |
 | DELETE | `/workflows/{workflowID}` | API Key or JWT | Archive a workflow |
 
 ### Templates
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/templates` | API Key | Create a template |
-| GET | `/templates` | API Key | List templates |
-| GET | `/templates/{templateID}` | API Key | Get a template |
-| PATCH | `/templates/{templateID}` | API Key | Update a template |
-| DELETE | `/templates/{templateID}` | API Key | Delete a template |
-| POST | `/templates/render` | API Key | Render a template with variables |
+| Method | Path                      | Auth    | Description                      |
+| ------ | ------------------------- | ------- | -------------------------------- |
+| POST   | `/templates`              | API Key | Create a template                |
+| GET    | `/templates`              | API Key | List templates                   |
+| GET    | `/templates/{templateID}` | API Key | Get a template                   |
+| PATCH  | `/templates/{templateID}` | API Key | Update a template                |
+| DELETE | `/templates/{templateID}` | API Key | Delete a template                |
+| POST   | `/templates/render`       | API Key | Render a template with variables |
 
 ### Providers
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/providers` | API Key | Register a channel provider |
-| GET | `/providers` | API Key | List providers |
-| GET | `/providers/{providerID}` | API Key | Get a provider |
-| PUT | `/providers/{providerID}` | API Key | Update a provider |
-| DELETE | `/providers/{providerID}` | API Key | Delete a provider |
+| Method | Path                      | Auth    | Description                 |
+| ------ | ------------------------- | ------- | --------------------------- |
+| POST   | `/providers`              | API Key | Register a channel provider |
+| GET    | `/providers`              | API Key | List providers              |
+| GET    | `/providers/{providerID}` | API Key | Get a provider              |
+| PUT    | `/providers/{providerID}` | API Key | Update a provider           |
+| DELETE | `/providers/{providerID}` | API Key | Delete a provider           |
 
 Provider `credentials` are encrypted with AES-GCM before storage.
 
 ### API Keys
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api-keys` | JWT | List API keys for the project |
-| POST | `/api-keys` | JWT | Create a new API key |
-| POST | `/api-keys/{keyID}/rotate` | JWT | Rotate (regenerate) an API key |
-| DELETE | `/api-keys/{keyID}` | JWT | Revoke an API key |
-| PATCH | `/api-keys/{keyID}` | JWT | Update API key status |
+| Method | Path                       | Auth | Description                    |
+| ------ | -------------------------- | ---- | ------------------------------ |
+| GET    | `/api-keys`                | JWT  | List API keys for the project  |
+| POST   | `/api-keys`                | JWT  | Create a new API key           |
+| POST   | `/api-keys/{keyID}/rotate` | JWT  | Rotate (regenerate) an API key |
+| DELETE | `/api-keys/{keyID}`        | JWT  | Revoke an API key              |
+| PATCH  | `/api-keys/{keyID}`        | JWT  | Update API key status          |
 
 API keys are in the format `nk_live_<token>`. Only the prefix is stored; the full key is shown once on creation.
 
 ### Webhooks
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/webhooks` | API Key | Register a webhook endpoint |
-| GET | `/webhooks` | API Key | List webhooks |
-| DELETE | `/webhooks/{webhookID}` | API Key | Deactivate a webhook |
+| Method | Path                    | Auth    | Description                 |
+| ------ | ----------------------- | ------- | --------------------------- |
+| POST   | `/webhooks`             | API Key | Register a webhook endpoint |
+| GET    | `/webhooks`             | API Key | List webhooks               |
+| DELETE | `/webhooks/{webhookID}` | API Key | Deactivate a webhook        |
 
 **Webhook events:** `notification.sent`, `notification.failed`
 
 Deliveries include an `X-Signature-256: sha256=<hex>` header. Verify it with HMAC-SHA256 using your webhook secret.
 
 **Example payload:**
+
 ```json
 {
   "event": "notification.sent",
@@ -256,7 +278,6 @@ sqlc generate
 ```bash
 go test ./...
 ```
-
 
 ### Example REST Request
 
