@@ -1,4 +1,4 @@
-package auth
+package apikeyutil
 
 import (
 	"crypto/rand"
