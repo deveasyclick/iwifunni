@@ -7,13 +7,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/config"
-	"github.com/deveasyclick/iwifunni/internal/notification"
+	"github.com/deveasyclick/iwifunni/internal/modules/notification"
+	"github.com/deveasyclick/iwifunni/internal/utils/ratelimit"
+	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
+	"github.com/deveasyclick/iwifunni/internal/modules/workflow"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/storage"
-	"github.com/deveasyclick/iwifunni/internal/webhooks"
-	"github.com/deveasyclick/iwifunni/internal/workflow"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -65,7 +65,7 @@ func main() {
 		},
 	)
 
-	_ = auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin) // keep redis warmed
+	_ = ratelimit.NewRateLimiter(redisClient, cfg.RateLimitPerMin) // keep redis warmed
 
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)

@@ -11,14 +11,16 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/app"
-	"github.com/deveasyclick/iwifunni/internal/auth"
 	"github.com/deveasyclick/iwifunni/internal/config"
+	modauth "github.com/deveasyclick/iwifunni/internal/modules/auth"
+	jwtutil "github.com/deveasyclick/iwifunni/internal/utils/jwt"
+	"github.com/deveasyclick/iwifunni/internal/utils/ratelimit"
+	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/storage"
-	"github.com/deveasyclick/iwifunni/internal/webhooks"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
-	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
@@ -99,33 +101,28 @@ func main() {
 		goth.UseProviders(providers...)
 	}
 
-	rateLimiter := auth.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
-	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
-	authService := auth.NewService(
-		store.Queries,
-		jwtManager,
-		cfg.JWTRefreshTokenTTL,
-		auth.WithVerificationTTL(cfg.AuthVerificationTTL),
-		auth.WithVerificationSender(func(_ context.Context, email, code string) error {
-			l.Info().Str("email", email).Str("verification_code", code).Msg("signup verification code generated")
-			return nil
-		}),
-	)
+	jwtutil.Init(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
+
+	rateLimiter := ratelimit.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
+	authService := modauth.NewService(store.Queries, cfg.JWTRefreshTokenTTL, cfg.AuthVerificationTTL)
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 
-	application := app.New(app.Config{
-		Queries:         store.Queries,
-		DBPool:          store.Pool,
-		RateLimiter:     rateLimiter,
-		AuthService:     authService,
-		JWTManager:      jwtManager,
+	authHandler := modauth.NewHandler(authService, modauth.Config{
 		FrontendBaseURL: cfg.WebBaseURL,
 		SocialProviders: socialProviders,
 		CookieSecure:    strings.HasPrefix(strings.ToLower(cfg.WebBaseURL), "https://"),
-		EncryptionKey:   cfg.EncryptionKey,
-		Producer:        producer,
-		Dispatcher:      dispatcher,
+		Queries:         store.Queries,
+	})
+
+	application := app.New(app.Config{
+		Queries:       store.Queries,
+		DBPool:        store.Pool,
+		RateLimiter:   rateLimiter,
+		AuthHandler:   authHandler,
+		EncryptionKey: cfg.EncryptionKey,
+		Producer:      producer,
+		Dispatcher:    dispatcher,
 	})
 
 	httpServer := &http.Server{

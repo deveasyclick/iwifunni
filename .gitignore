@@ -5,3 +5,5 @@ iwifunni
 logs/
 node_modules/
 worker
+api
+worker

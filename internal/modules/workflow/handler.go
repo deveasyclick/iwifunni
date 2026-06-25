@@ -1,0 +1,474 @@
+package workflow
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type Handler struct {
+	service handlerService
+}
+
+type handlerService interface {
+	Create(context.Context, CreateInput) (db.Workflow, error)
+	TriggerEvent(context.Context, uuid.UUID, TriggerEventInput) ([]db.WorkflowExecution, error)
+	List(context.Context, uuid.UUID) ([]db.Workflow, error)
+	GetByID(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error)
+	Update(context.Context, UpdateInput) (db.Workflow, error)
+	Publish(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error)
+	Delete(context.Context, uuid.UUID, uuid.UUID) error
+	ListExecutions(context.Context, uuid.UUID, *uuid.UUID) ([]db.WorkflowExecution, error)
+	GetExecutionByID(context.Context, uuid.UUID, uuid.UUID) (ExecutionDetail, error)
+}
+
+func NewHandler(service handlerService) *Handler {
+	return &Handler{service: service}
+}
+
+func (h *Handler) Register(r chi.Router) {
+	h.RegisterDashboardRoutes(r)
+	h.RegisterAPIRoutes(r)
+}
+
+func (h *Handler) RegisterDashboardRoutes(r chi.Router) {
+	r.Post("/workflows", h.create)
+	r.Get("/workflows", h.list)
+	r.Get("/workflows/{workflowID}", h.get)
+	r.Put("/workflows/{workflowID}", h.update)
+	r.Post("/workflows/{workflowID}/publish", h.publish)
+	r.Delete("/workflows/{workflowID}", h.delete)
+	r.Get("/workflow-executions", h.listExecutions)
+	r.Get("/workflow-executions/{executionID}", h.getExecution)
+}
+
+func (h *Handler) RegisterAPIRoutes(r chi.Router) {
+	r.Post("/events", h.triggerEvent)
+}
+
+type workflowRequest struct {
+	Key         string            `json:"key"`
+	Name        string            `json:"name"`
+	Description *string           `json:"description"`
+	Channels    []string          `json:"channels"`
+	TemplateIDs map[string]string `json:"templateIds"`
+	IsActive    bool              `json:"isActive"`
+	Definition  *Definition       `json:"definition,omitempty"`
+}
+
+type triggerEventRequest struct {
+	Event        string         `json:"event"`
+	SubscriberID string         `json:"subscriber_id,omitempty"`
+	Data         map[string]any `json:"data,omitempty"`
+}
+
+type workflowResponse struct {
+	ID          uuid.UUID         `json:"id"`
+	Key         string            `json:"key"`
+	Name        string            `json:"name"`
+	Description *string           `json:"description,omitempty"`
+	Channels    []string          `json:"channels"`
+	TemplateIDs map[string]string `json:"templateIds"`
+	IsActive    bool              `json:"isActive"`
+	Status      string            `json:"status"`
+	Version     int32             `json:"version"`
+	TriggerEvent *string          `json:"triggerEvent,omitempty"`
+	Definition  *Definition       `json:"definition,omitempty"`
+	CreatedAt   string            `json:"createdAt"`
+	UpdatedAt   string            `json:"updatedAt"`
+}
+
+type workflowExecutionResponse struct {
+	ID             uuid.UUID        `json:"id"`
+	WorkflowID     uuid.UUID        `json:"workflowId"`
+	SubscriberID   *string          `json:"subscriberId,omitempty"`
+	Status         string           `json:"status"`
+	CurrentStepID  *string          `json:"currentStepId,omitempty"`
+	TriggerPayload json.RawMessage  `json:"triggerPayload,omitempty"`
+	StartedAt      string           `json:"startedAt"`
+	CompletedAt    string           `json:"completedAt,omitempty"`
+	FailedAt       string           `json:"failedAt,omitempty"`
+	CreatedAt      string           `json:"createdAt"`
+	UpdatedAt      string           `json:"updatedAt"`
+}
+
+type workflowStepExecutionResponse struct {
+	ID          uuid.UUID       `json:"id"`
+	ExecutionID uuid.UUID       `json:"executionId"`
+	StepID      string          `json:"stepId"`
+	StepType    string          `json:"stepType"`
+	Status      string          `json:"status"`
+	Attempts    int32           `json:"attempts"`
+	Input       json.RawMessage `json:"input,omitempty"`
+	Output      json.RawMessage `json:"output,omitempty"`
+	Error       json.RawMessage `json:"error,omitempty"`
+	StartedAt   string          `json:"startedAt,omitempty"`
+	CompletedAt string          `json:"completedAt,omitempty"`
+	FailedAt    string          `json:"failedAt,omitempty"`
+	CreatedAt   string          `json:"createdAt"`
+	UpdatedAt   string          `json:"updatedAt"`
+}
+
+type workflowExecutionDetailResponse struct {
+	workflowExecutionResponse
+	Steps []workflowStepExecutionResponse `json:"steps"`
+}
+
+type triggerEventResponse struct {
+	Status     string                      `json:"status"`
+	Executions []workflowExecutionResponse `json:"executions"`
+}
+
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req workflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	item, err := h.service.Create(r.Context(), CreateInput{
+		EnvironmentID: environmentID,
+		Key:           req.Key,
+		Name:          req.Name,
+		Description:   req.Description,
+		Channels:      req.Channels,
+		TemplateIDs:   req.TemplateIDs,
+		Definition:    req.Definition,
+	})
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+	h.writeJSON(w, http.StatusCreated, workflowFromRecord(item))
+}
+
+func (h *Handler) triggerEvent(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req triggerEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	executions, err := h.service.TriggerEvent(r.Context(), environmentID, TriggerEventInput{
+		Event:        req.Event,
+		SubscriberID: req.SubscriberID,
+		Data:         req.Data,
+	})
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+
+	response := make([]workflowExecutionResponse, 0, len(executions))
+	for _, item := range executions {
+		response = append(response, workflowExecutionFromRecord(item))
+	}
+	h.writeJSON(w, http.StatusAccepted, triggerEventResponse{Status: "queued", Executions: response})
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	items, err := h.service.List(r.Context(), environmentID)
+	if err != nil {
+		http.Error(w, "failed to list workflows", http.StatusInternalServerError)
+		return
+	}
+	response := make([]workflowResponse, 0, len(items))
+	for _, item := range items {
+		response = append(response, workflowFromRecord(item))
+	}
+	h.writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
+	item, err := h.service.GetByID(r.Context(), id, environmentID)
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
+	var req workflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	item, err := h.service.Update(r.Context(), UpdateInput{
+		ID:            id,
+		EnvironmentID: environmentID,
+		Key:           req.Key,
+		Name:          req.Name,
+		Description:   req.Description,
+		Channels:      req.Channels,
+		TemplateIDs:   req.TemplateIDs,
+		IsActive:      req.IsActive,
+		Definition:    req.Definition,
+	})
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
+}
+
+func (h *Handler) publish(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.Publish(r.Context(), id, environmentID)
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
+	if err := h.service.Delete(r.Context(), id, environmentID); err != nil {
+		h.respondError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) listExecutions(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var workflowID *uuid.UUID
+	if raw := strings.TrimSpace(r.URL.Query().Get("workflow_id")); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			http.Error(w, "invalid workflow id", http.StatusBadRequest)
+			return
+		}
+		workflowID = &parsed
+	}
+
+	items, err := h.service.ListExecutions(r.Context(), environmentID, workflowID)
+	if err != nil {
+		http.Error(w, "failed to list workflow executions", http.StatusInternalServerError)
+		return
+	}
+
+	response := make([]workflowExecutionResponse, 0, len(items))
+	for _, item := range items {
+		response = append(response, workflowExecutionFromRecord(item))
+	}
+	h.writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) getExecution(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "executionID"))
+	if err != nil {
+		http.Error(w, "invalid execution id", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.service.GetExecutionByID(r.Context(), id, environmentID)
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, workflowExecutionDetailFromRecord(detail))
+}
+
+func (h *Handler) respondError(w http.ResponseWriter, err error) {
+	var pgErr *pgconn.PgError
+	switch {
+	case errors.Is(err, ErrInvalidWorkflow):
+		http.Error(w, "invalid workflow payload", http.StatusBadRequest)
+	case errors.Is(err, ErrPublishedWorkflowImmutable):
+		http.Error(w, "published workflows are immutable", http.StatusConflict)
+	case errors.Is(err, ErrInvalidWorkflowEvent):
+		http.Error(w, "invalid workflow event payload", http.StatusBadRequest)
+	case errors.Is(err, pgx.ErrNoRows):
+		http.Error(w, "workflow not found", http.StatusNotFound)
+	case errors.As(err, &pgErr) && pgErr.Code == "23505":
+		http.Error(w, "a workflow with this key already exists", http.StatusConflict)
+	default:
+		logger.Get().Error().Err(err).Msg("workflow: unhandled error")
+		http.Error(w, "workflow request failed", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func workflowFromRecord(item db.Workflow) workflowResponse {
+	templateIDs := make(map[string]string)
+	if len(item.TemplateIds) > 0 {
+		_ = json.Unmarshal(item.TemplateIds, &templateIDs)
+	}
+	var definition *Definition
+	if raw := strings.TrimSpace(string(item.DefinitionJson)); raw != "" && raw != "{}" && raw != "null" {
+		var parsed Definition
+		if err := json.Unmarshal(item.DefinitionJson, &parsed); err == nil {
+			definition = &parsed
+		}
+	}
+	return workflowResponse{
+		ID:          item.ID,
+		Key:         item.Key,
+		Name:        item.Name,
+		Description: item.Description,
+		Channels:    item.Channels,
+		TemplateIDs: templateIDs,
+		IsActive:    item.IsActive,
+		Status:      item.Status,
+		Version:     item.Version,
+		TriggerEvent: item.TriggerEvent,
+		Definition:  definition,
+		CreatedAt:   formatTime(item.CreatedAt),
+		UpdatedAt:   formatTime(item.UpdatedAt),
+	}
+}
+
+func workflowExecutionFromRecord(item db.WorkflowExecution) workflowExecutionResponse {
+	return workflowExecutionResponse{
+		ID:             item.ID,
+		WorkflowID:     item.WorkflowID,
+		SubscriberID:   formatUUID(item.SubscriberID),
+		Status:         item.Status,
+		CurrentStepID:  item.CurrentStepID,
+		TriggerPayload: rawJSON(item.TriggerPayload),
+		StartedAt:      formatTime(item.StartedAt),
+		CompletedAt:    formatTime(item.CompletedAt),
+		FailedAt:       formatTime(item.FailedAt),
+		CreatedAt:      formatTime(item.CreatedAt),
+		UpdatedAt:      formatTime(item.UpdatedAt),
+	}
+}
+
+func workflowExecutionDetailFromRecord(detail ExecutionDetail) workflowExecutionDetailResponse {
+	steps := make([]workflowStepExecutionResponse, 0, len(detail.Steps))
+	for _, step := range detail.Steps {
+		steps = append(steps, workflowStepExecutionFromRecord(step))
+	}
+
+	return workflowExecutionDetailResponse{
+		workflowExecutionResponse: workflowExecutionFromRecord(detail.Execution),
+		Steps:                     steps,
+	}
+}
+
+func workflowStepExecutionFromRecord(item db.WorkflowStepExecution) workflowStepExecutionResponse {
+	return workflowStepExecutionResponse{
+		ID:          item.ID,
+		ExecutionID: item.ExecutionID,
+		StepID:      item.StepID,
+		StepType:    item.StepType,
+		Status:      item.Status,
+		Attempts:    item.Attempts,
+		Input:       rawJSON(item.InputJson),
+		Output:      rawJSON(item.OutputJson),
+		Error:       rawJSON(item.ErrorJson),
+		StartedAt:   formatTime(item.StartedAt),
+		CompletedAt: formatTime(item.CompletedAt),
+		FailedAt:    formatTime(item.FailedAt),
+		CreatedAt:   formatTime(item.CreatedAt),
+		UpdatedAt:   formatTime(item.UpdatedAt),
+	}
+}
+
+func formatUUID(value pgtype.UUID) *string {
+	if !value.Valid {
+		return nil
+	}
+	formatted := uuid.UUID(value.Bytes).String()
+	return &formatted
+}
+
+func rawJSON(value []byte) json.RawMessage {
+	trimmed := strings.TrimSpace(string(value))
+	if trimmed == "" || trimmed == "null" || trimmed == "{}" {
+		return nil
+	}
+	return json.RawMessage(value)
+}
+
+func formatTime(value pgtype.Timestamptz) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.Time.UTC().Format(time.RFC3339)
+}
