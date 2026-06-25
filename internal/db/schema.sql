@@ -78,17 +78,6 @@ CREATE TABLE auth_identities (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE service_channel_configs (
-    id UUID PRIMARY KEY,
-    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    channel TEXT NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    provider TEXT NOT NULL,
-    config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE TABLE notifications (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
