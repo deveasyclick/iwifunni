@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/crypto"
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/modules/templates"
+	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/registry"
-	"github.com/deveasyclick/iwifunni/internal/templates"
 	"github.com/deveasyclick/iwifunni/internal/types"
-	"github.com/deveasyclick/iwifunni/internal/webhooks"
+	"github.com/deveasyclick/iwifunni/internal/utils/crypto"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -790,8 +790,8 @@ func (s *Service) CreateQueuedNotification(ctx context.Context, job *types.Notif
 
 // GetByProjectWithAttempts returns a notification with its delivery attempts.
 type NotificationWithAttempts struct {
-	Notification     *NotificationView  `json:"notification"`
-	DeliveryAttempts []map[string]any   `json:"delivery_attempts"`
+	Notification     *NotificationView `json:"notification"`
+	DeliveryAttempts []map[string]any  `json:"delivery_attempts"`
 }
 
 func (s *Service) GetByProjectWithAttempts(ctx context.Context, notificationID, projectID uuid.UUID) (*NotificationWithAttempts, error) {

@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
-	"github.com/deveasyclick/iwifunni/internal/providers/defaults"
+	"github.com/deveasyclick/iwifunni/internal/providers"
 )
 
 func TestPrepareProviderInputRejectsUnsupportedProvider(t *testing.T) {
 	t.Parallel()
 
-	service := &Service{catalog: defaults.NewCatalog()}
+	service := &Service{catalog: providers.NewCatalog()}
 
 	_, _, _, _, err := service.prepareProviderInput(
 		"ses",
@@ -29,7 +29,7 @@ func TestPrepareProviderInputRejectsUnsupportedProvider(t *testing.T) {
 func TestPrepareProviderInputNormalizesSendGridValues(t *testing.T) {
 	t.Parallel()
 
-	service := &Service{catalog: defaults.NewCatalog()}
+	service := &Service{catalog: providers.NewCatalog()}
 
 	name, channel, credentialsJSON, configJSON, err := service.prepareProviderInput(
 		" SendGrid ",
@@ -68,7 +68,7 @@ func TestPrepareProviderInputNormalizesSendGridValues(t *testing.T) {
 func TestPrepareProviderInputReusesStoredCredentialsOnUpdate(t *testing.T) {
 	t.Parallel()
 
-	service := &Service{catalog: defaults.NewCatalog()}
+	service := &Service{catalog: providers.NewCatalog()}
 	current := &db.Provider{
 		Credentials: []byte(`"encrypted"`),
 		Config:      []byte(`{"from_email":"no-reply@example.com"}`),
@@ -100,7 +100,7 @@ func TestPrepareProviderInputReusesStoredCredentialsOnUpdate(t *testing.T) {
 func TestPrepareProviderInputNormalizesBrevoValues(t *testing.T) {
 	t.Parallel()
 
-	service := &Service{catalog: defaults.NewCatalog()}
+	service := &Service{catalog: providers.NewCatalog()}
 
 	name, channel, credentialsJSON, configJSON, err := service.prepareProviderInput(
 		" Brevo ",

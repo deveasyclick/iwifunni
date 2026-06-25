@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
-	"github.com/deveasyclick/iwifunni/internal/templates"
+	"github.com/deveasyclick/iwifunni/internal/modules/templates"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
