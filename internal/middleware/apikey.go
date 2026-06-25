@@ -1,4 +1,4 @@
-package auth
+package middleware
 
 import (
 	"context"
@@ -8,15 +8,10 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	apikeyutil "github.com/deveasyclick/iwifunni/internal/utils/apikey"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-)
-
-type contextKey string
-
-const (
-	ProjectContextKey contextKey = "project_auth"
 )
 
 type authQueries interface {
@@ -26,22 +21,6 @@ type authQueries interface {
 
 type requestLimiter interface {
 	Allow(context.Context, string) (bool, error)
-}
-
-type AuthenticatedEnvironment struct {
-	EnvironmentID uuid.UUID
-	APIKeyID      uuid.UUID
-	APIKey        string
-	Scopes        []string
-	Status        string
-}
-
-type AuthenticatedProject struct {
-	ProjectID uuid.UUID
-	APIKeyID  uuid.UUID
-	APIKey    string
-	Scopes    []string
-	Status    string
 }
 
 func NewAuthMiddleware(queries authQueries, limiter requestLimiter) func(http.Handler) http.Handler {
@@ -70,7 +49,7 @@ func newAuthMiddleware(queries authQueries, limiter requestLimiter, now func() t
 
 func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, queries authQueries, limiter requestLimiter, now func() time.Time) {
 	apiKey := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
-	keyPrefix, err := APIKeyPrefix(apiKey)
+	keyPrefix, err := apikeyutil.APIKeyPrefix(apiKey)
 	if err != nil {
 		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
@@ -81,7 +60,7 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
 	}
-	if err := CompareAPIKeyHash(apiKey, keyRecord.KeyHash); err != nil {
+	if err := apikeyutil.CompareAPIKeyHash(apiKey, keyRecord.KeyHash); err != nil {
 		http.Error(w, "invalid environment api key", http.StatusUnauthorized)
 		return
 	}
@@ -127,7 +106,7 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), ProjectContextKey, &AuthenticatedEnvironment{
+	ctx := context.WithValue(r.Context(), authctx.ProjectContextKey, &authctx.AuthenticatedEnvironment{
 		EnvironmentID: keyRecord.EnvironmentID,
 		APIKeyID:      keyRecord.ID,
 		APIKey:        keyRecord.Name,
@@ -135,26 +114,6 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 		Status:        keyRecord.Status,
 	})
 	next.ServeHTTP(w, r.WithContext(ctx))
-}
-
-func GetAuthenticatedEnvironment(ctx context.Context) *AuthenticatedEnvironment {
-	if environment, ok := ctx.Value(ProjectContextKey).(*AuthenticatedEnvironment); ok {
-		return environment
-	}
-	return nil
-}
-
-func GetAuthenticatedProject(ctx context.Context) *AuthenticatedProject {
-	if environment := GetAuthenticatedEnvironment(ctx); environment != nil {
-		return &AuthenticatedProject{
-			ProjectID: environment.EnvironmentID,
-			APIKeyID:  environment.APIKeyID,
-			APIKey:    environment.APIKey,
-			Scopes:    environment.Scopes,
-			Status:    environment.Status,
-		}
-	}
-	return nil
 }
 
 func isUsableAPIKeyStatus(status string) bool {
