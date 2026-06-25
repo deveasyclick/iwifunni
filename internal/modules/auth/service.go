@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
+	jwtutil "github.com/deveasyclick/iwifunni/internal/utils/jwt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -98,11 +99,21 @@ type Service struct {
 	tenants            authProjectStore
 	identities         authIdentityStore
 	sessions           authSessionStore
-	jwtManager         *JWTManager
 	now                func() time.Time
 	refreshTTL         time.Duration
 	verificationTTL    time.Duration
 	verificationSender VerificationSender
+}
+
+// HandlerService is the interface consumed by the auth HTTP handler.
+type HandlerService interface {
+	Signup(ctx context.Context, input SignupInput) (*SignupResult, error)
+	VerifyEmail(ctx context.Context, input VerifyEmailInput) (*VerifyEmailResult, error)
+	SigninWithSocial(ctx context.Context, input SocialSigninInput) (*SocialSigninResult, error)
+	Signin(ctx context.Context, input SigninInput) (*SigninResult, error)
+	Refresh(ctx context.Context, input RefreshInput) (*RefreshResult, error)
+	CompleteOnboarding(ctx context.Context, input CompleteOnboardingInput) (*CompleteOnboardingResult, error)
+	Logout(ctx context.Context, input LogoutInput) error
 }
 
 type SignupInput struct {
@@ -181,14 +192,13 @@ type LogoutInput struct {
 	RefreshToken string
 }
 
-func NewService(store authStore, jwtManager *JWTManager, refreshTTL time.Duration, opts ...ServiceOption) *Service {
+func NewService(store authStore, refreshTTL time.Duration, opts ...ServiceOption) *Service {
 	service := &Service{
 		users:            store,
 		verifications:    store,
 		tenants:          store,
 		identities:       store,
 		sessions:         store,
-		jwtManager:       jwtManager,
 		now:              time.Now,
 		refreshTTL:       refreshTTL,
 		verificationTTL:  defaultVerificationTTL,
@@ -561,7 +571,7 @@ func (s *Service) Logout(ctx context.Context, input LogoutInput) error {
 }
 
 func (s *Service) issueSession(ctx context.Context, userID, organizationID uuid.UUID, role string, nowTs pgtype.Timestamptz) (string, string, error) {
-	accessToken, err := s.jwtManager.GenerateAccessToken(userID.String(), organizationID.String(), role)
+	accessToken, err := jwtutil.GenerateAccessToken(userID.String(), organizationID.String(), role)
 	if err != nil {
 		return "", "", err
 	}
