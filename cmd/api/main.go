@@ -104,15 +104,7 @@ func main() {
 	jwtutil.Init(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
 
 	rateLimiter := ratelimit.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
-	authService := modauth.NewService(
-		store.Queries,
-		cfg.JWTRefreshTokenTTL,
-		modauth.WithVerificationTTL(cfg.AuthVerificationTTL),
-		modauth.WithVerificationSender(func(_ context.Context, email, code string) error {
-			l.Info().Str("email", email).Str("verification_code", code).Msg("signup verification code generated")
-			return nil
-		}),
-	)
+	authService := modauth.NewService(store.Queries, cfg.JWTRefreshTokenTTL, cfg.AuthVerificationTTL)
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 
