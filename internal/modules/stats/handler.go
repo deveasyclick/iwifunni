@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -30,7 +30,7 @@ var supportedDays = map[int]bool{
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

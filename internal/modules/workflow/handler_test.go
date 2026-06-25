@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -91,7 +91,7 @@ func TestHandlerTriggerEvent(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(`{"event":"user.signup","subscriber_id":"`+subscriberID.String()+`","data":{"name":"Ada"}}`))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(context.WithValue(req.Context(), auth.ProjectContextKey, &auth.AuthenticatedEnvironment{EnvironmentID: environmentID}))
+	req = req.WithContext(context.WithValue(req.Context(), authctx.ProjectContextKey, &authctx.AuthenticatedEnvironment{EnvironmentID: environmentID}))
 	res := httptest.NewRecorder()
 
 	router.ServeHTTP(res, req)
@@ -154,7 +154,7 @@ func TestHandlerListExecutions(t *testing.T) {
 	handler.Register(router)
 
 	req := httptest.NewRequest(http.MethodGet, "/workflow-executions?workflow_id="+workflowID.String(), nil)
-	req = req.WithContext(context.WithValue(req.Context(), auth.ProjectContextKey, &auth.AuthenticatedEnvironment{EnvironmentID: environmentID}))
+	req = req.WithContext(context.WithValue(req.Context(), authctx.ProjectContextKey, &authctx.AuthenticatedEnvironment{EnvironmentID: environmentID}))
 	res := httptest.NewRecorder()
 
 	router.ServeHTTP(res, req)
@@ -215,7 +215,7 @@ func TestHandlerGetExecution(t *testing.T) {
 	handler.Register(router)
 
 	req := httptest.NewRequest(http.MethodGet, "/workflow-executions/"+executionID.String(), nil)
-	req = req.WithContext(context.WithValue(req.Context(), auth.ProjectContextKey, &auth.AuthenticatedEnvironment{EnvironmentID: environmentID}))
+	req = req.WithContext(context.WithValue(req.Context(), authctx.ProjectContextKey, &authctx.AuthenticatedEnvironment{EnvironmentID: environmentID}))
 	res := httptest.NewRecorder()
 
 	router.ServeHTTP(res, req)

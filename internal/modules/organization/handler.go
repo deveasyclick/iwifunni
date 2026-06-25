@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -85,7 +85,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 
 // getUserID extracts the authenticated user ID from the JWT context.
 func getUserID(r *http.Request) (uuid.UUID, bool) {
-	claims := auth.GetJWTClaims(r.Context())
+	claims := authctx.GetJWTClaims(r.Context())
 	if claims == nil {
 		return uuid.Nil, false
 	}

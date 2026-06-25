@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
@@ -270,7 +270,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Metadata:     payload.Metadata,
 	}
 
-	environment := auth.GetAuthenticatedEnvironment(r.Context())
+	environment := authctx.GetAuthenticatedEnvironment(r.Context())
 	if environment == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -400,7 +400,7 @@ func (h *Handler) listByWorkflow(w http.ResponseWriter, r *http.Request) {
 }
 
 func notificationProjectIDFromContext(r *http.Request) (uuid.UUID, bool) {
-	if environmentID, ok := auth.GetEnvironmentID(r.Context()); ok {
+	if environmentID, ok := authctx.GetEnvironmentID(r.Context()); ok {
 		return environmentID, true
 	}
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/deveasyclick/iwifunni/internal/auth"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -68,7 +68,7 @@ type templateResponse struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -114,7 +114,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -153,7 +153,7 @@ func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -176,7 +176,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -200,7 +200,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -233,7 +233,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -251,7 +251,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
-	environmentID, ok := auth.GetEnvironmentID(r.Context())
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
