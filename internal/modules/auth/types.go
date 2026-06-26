@@ -74,6 +74,7 @@ type authStore interface {
 type HandlerService interface {
 	Signup(ctx context.Context, input SignupInput) (*SignupResult, error)
 	VerifyEmail(ctx context.Context, input VerifyEmailInput) (*VerifyEmailResult, error)
+	ResendVerification(ctx context.Context, email string) (*ResendVerificationResult, error)
 	SigninWithSocial(ctx context.Context, input SocialSigninInput) (*SocialSigninResult, error)
 	Signin(ctx context.Context, input SigninInput) (*SigninResult, error)
 	Refresh(ctx context.Context, input RefreshInput) (*RefreshResult, error)
@@ -151,6 +152,14 @@ type CompleteOnboardingResult struct {
 	OrganizationName string    `json:"organization_name"`
 	EnvironmentID    uuid.UUID `json:"environment_id"`
 	NeedsOnboarding  bool      `json:"needs_onboarding"`
+}
+
+type ResendVerificationInput struct {
+	Email string
+}
+
+type ResendVerificationResult struct {
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type LogoutInput struct {

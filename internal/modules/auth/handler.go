@@ -47,6 +47,7 @@ func NewHandler(svc HandlerService, cfg Config) *Handler {
 func (h *Handler) Register(r chi.Router) {
 	r.Post("/auth/signup", h.signup)
 	r.Post("/auth/verify-email", h.verifyEmail)
+	r.Post("/auth/resend-verification", h.resendVerification)
 	r.Post("/auth/signin", h.signin)
 	r.Post("/auth/refresh", h.refresh)
 	r.Post("/auth/logout", h.logout)
@@ -123,6 +124,30 @@ func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+type resendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
+	var req resendVerificationRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
+		return
+	}
+
+	result, err := h.svc.ResendVerification(r.Context(), req.Email)
+	if err != nil {
+		if err.Error() == "email already verified" {
+			http.Error(w, err.Error(), http.StatusConflict)
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(result)
+}
+
 func (h *Handler) socialStart(w http.ResponseWriter, r *http.Request) {
 	provider := strings.ToLower(strings.TrimSpace(chi.URLParam(r, "provider")))
 	if !h.isConfiguredSocialProvider(provider) {
@@ -184,7 +209,9 @@ func (h *Handler) signin(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrInvalidCredentials) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 		} else if errors.Is(err, ErrEmailNotVerified) {
-			http.Error(w, err.Error(), http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error(), "email": req.Email})
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}

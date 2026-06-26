@@ -35,10 +35,16 @@ export const Login = () => {
 
       const payload = (await response.json().catch(() => null)) as {
         error?: string;
+        email?: string;
         needs_onboarding?: boolean;
       } | null;
 
       if (!response.ok) {
+        if (response.status === 403 && payload?.email) {
+          router.replace(`/auth/verify?email=${encodeURIComponent(payload.email)}`);
+          return;
+        }
+
         setError(payload?.error || 'Unable to sign in.');
         return;
       }

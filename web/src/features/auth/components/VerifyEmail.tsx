@@ -16,7 +16,9 @@ export const VerifyEmail = () => {
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,6 +52,34 @@ export const VerifyEmail = () => {
       setError('Unable to verify your email right now.');
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    setError(null);
+    setResendMessage(null);
+    setIsResending(true);
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(payload?.error || 'Failed to resend code.');
+        return;
+      }
+
+      setResendMessage('A new code has been sent to your email.');
+    } catch {
+      setError('Unable to resend code right now.');
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -108,13 +138,29 @@ export const VerifyEmail = () => {
                 {error}
               </p>
             ) : null}
-            <Button
-              className="w-full mt-6"
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Verifying...' : 'Verify Email'}
-            </Button>
+            {resendMessage ? (
+              <p className="mt-4 text-sm text-green-600" role="status">
+                {resendMessage}
+              </p>
+            ) : null}
+            <div className="flex gap-2 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={isResending}
+                onClick={() => void handleResend()}
+              >
+                {isResending ? 'Sending...' : 'Resend Code'}
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Verifying...' : 'Verify Email'}
+              </Button>
+            </div>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
