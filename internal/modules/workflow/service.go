@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"

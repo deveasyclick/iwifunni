@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	modauth "github.com/deveasyclick/iwifunni/internal/modules/auth"
 	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/queue"

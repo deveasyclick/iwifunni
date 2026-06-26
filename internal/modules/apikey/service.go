@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	apikeyutil "github.com/deveasyclick/iwifunni/internal/utils/apikey"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"

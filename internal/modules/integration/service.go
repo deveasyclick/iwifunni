@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/providers"
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
 	"github.com/deveasyclick/iwifunni/internal/utils/crypto"

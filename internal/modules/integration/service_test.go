@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/providers"
 )
 

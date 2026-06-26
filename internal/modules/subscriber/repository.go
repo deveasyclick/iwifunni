@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 )
 

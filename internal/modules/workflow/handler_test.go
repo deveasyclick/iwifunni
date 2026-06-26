@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"

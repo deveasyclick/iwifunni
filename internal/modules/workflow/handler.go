@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/deveasyclick/iwifunni/pkg/logger"

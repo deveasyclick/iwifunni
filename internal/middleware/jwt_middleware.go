@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	jwtutil "github.com/deveasyclick/iwifunni/internal/utils/jwt"
 	"github.com/google/uuid"

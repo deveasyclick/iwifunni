@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/google/uuid"

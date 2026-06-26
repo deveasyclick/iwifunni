@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	jwtutil "github.com/deveasyclick/iwifunni/internal/utils/jwt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

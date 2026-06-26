@@ -3,7 +3,7 @@ package integration
 import (
 	"context"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

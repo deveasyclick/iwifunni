@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/go-chi/chi/v5"

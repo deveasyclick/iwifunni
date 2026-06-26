@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/deveasyclick/iwifunni/internal/config"
-	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
