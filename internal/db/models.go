@@ -64,6 +64,19 @@ type Environment struct {
 	IsDefault      bool               `db:"is_default" json:"is_default"`
 }
 
+type Integration struct {
+	ID            uuid.UUID        `db:"id" json:"id"`
+	EnvironmentID uuid.UUID        `db:"environment_id" json:"environment_id"`
+	Name          string           `db:"name" json:"name"`
+	Channel       string           `db:"channel" json:"channel"`
+	Credentials   []byte           `db:"credentials" json:"credentials"`
+	Config        []byte           `db:"config" json:"config"`
+	IsActive      bool             `db:"is_active" json:"is_active"`
+	IsPrimary     bool             `db:"is_primary" json:"is_primary"`
+	CreatedAt     pgtype.Timestamp `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `db:"updated_at" json:"updated_at"`
+}
+
 type Notification struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
 	Title         string             `db:"title" json:"title"`
@@ -94,19 +107,6 @@ type OrganizationMember struct {
 	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
-type Provider struct {
-	ID            uuid.UUID        `db:"id" json:"id"`
-	EnvironmentID uuid.UUID        `db:"environment_id" json:"environment_id"`
-	Name          string           `db:"name" json:"name"`
-	Channel       string           `db:"channel" json:"channel"`
-	Credentials   []byte           `db:"credentials" json:"credentials"`
-	Config        []byte           `db:"config" json:"config"`
-	IsActive      bool             `db:"is_active" json:"is_active"`
-	IsPrimary     bool             `db:"is_primary" json:"is_primary"`
-	CreatedAt     pgtype.Timestamp `db:"created_at" json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `db:"updated_at" json:"updated_at"`
-}
-
 type RefreshToken struct {
 	ID        uuid.UUID          `db:"id" json:"id"`
 	UserID    uuid.UUID          `db:"user_id" json:"user_id"`
@@ -114,17 +114,6 @@ type RefreshToken struct {
 	ExpiresAt pgtype.Timestamptz `db:"expires_at" json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-type ServiceChannelConfig struct {
-	ID         uuid.UUID          `db:"id" json:"id"`
-	ServiceID  uuid.UUID          `db:"service_id" json:"service_id"`
-	Channel    string             `db:"channel" json:"channel"`
-	Enabled    bool               `db:"enabled" json:"enabled"`
-	Provider   string             `db:"provider" json:"provider"`
-	ConfigJson []byte             `db:"config_json" json:"config_json"`
-	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 type Subscriber struct {

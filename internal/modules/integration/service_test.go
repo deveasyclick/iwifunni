@@ -1,4 +1,4 @@
-package provider
+package integration
 
 import (
 	"encoding/json"
@@ -69,7 +69,7 @@ func TestPrepareProviderInputReusesStoredCredentialsOnUpdate(t *testing.T) {
 	t.Parallel()
 
 	service := &Service{catalog: providers.NewCatalog()}
-	current := &db.Provider{
+	current := &db.Integration{
 		Credentials: []byte(`"encrypted"`),
 		Config:      []byte(`{"from_email":"no-reply@example.com"}`),
 	}

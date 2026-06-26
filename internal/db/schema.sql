@@ -125,7 +125,7 @@ CREATE TABLE templates (
     UNIQUE (environment_id, name, channel)
 );
 
-CREATE TABLE providers (
+CREATE TABLE integrations (
     id UUID PRIMARY KEY,
     environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -137,11 +137,11 @@ CREATE TABLE providers (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (environment_id, name),
-    CONSTRAINT providers_primary_requires_active CHECK (NOT is_primary OR is_active)
+    CONSTRAINT integrations_primary_requires_active CHECK (NOT is_primary OR is_active)
 );
 
-CREATE UNIQUE INDEX idx_providers_primary_per_channel
-ON providers(environment_id, channel)
+CREATE UNIQUE INDEX idx_integrations_primary_per_channel
+ON integrations(environment_id, channel)
 WHERE is_primary = true;
 
 CREATE TABLE webhooks (

@@ -21,25 +21,25 @@ export interface ProviderConfig {
 
 export const providerApi = {
   listProviders() {
-    return request<ProviderItem[]>('/api/providers', { method: 'GET' });
+    return request<ProviderItem[]>('/api/integrations', { method: 'GET' });
   },
 
   createProvider(payload: CreateProviderPayload) {
-    return request<ProviderItem>('/api/providers', {
+    return request<ProviderItem>('/api/integrations', {
       method: 'POST',
       body: payload,
     });
   },
 
   updateProvider(id: string, payload: CreateProviderPayload) {
-    return request<ProviderItem>(`/api/providers/${id}`, {
+    return request<ProviderItem>(`/api/integrations/${id}`, {
       method: 'PUT',
       body: payload,
     });
   },
 
   updateProviderState(id: string, payload: UpdateProviderStatePayload) {
-    return request<ProviderItem>(`/api/providers/${id}`, {
+    return request<ProviderItem>(`/api/integrations/${id}`, {
       method: 'PATCH',
       body: payload,
     });

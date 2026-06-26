@@ -20,13 +20,13 @@ type fakeNotificationStore struct {
 	notificationCount int
 	statusUpdates     []string
 	attemptCount      int
-	providers         []db.Provider
+	providers         []db.Integration
 }
 
 func newFakeNotificationStore() *fakeNotificationStore {
 	return &fakeNotificationStore{
 		notifications: make(map[string]db.Notification),
-		providers: []db.Provider{{
+		providers: []db.Integration{{
 			ID:            uuid.New(),
 			EnvironmentID: uuid.New(),
 			Name:          "test-email",
@@ -131,7 +131,7 @@ func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.
 	return db.GetUserByIDRow{}, pgx.ErrNoRows
 }
 
-func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Provider, error) {
+func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Integration, error) {
 	return s.providers, nil
 }
 
@@ -230,7 +230,7 @@ func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
 	}
 
 	store := newFakeNotificationStore()
-	store.providers = []db.Provider{{
+	store.providers = []db.Integration{{
 		ID:            uuid.New(),
 		EnvironmentID: uuid.New(),
 		Name:          "sendgrid",

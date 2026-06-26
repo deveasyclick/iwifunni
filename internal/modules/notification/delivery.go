@@ -62,25 +62,25 @@ func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notifica
 	return s.recordFailed(ctx, notificationID, channel, "", lastErr)
 }
 
-func (s *Service) buildProjectProviderConfig(providerRecord db.Provider) ([]byte, error) {
+func (s *Service) buildProjectProviderConfig(providerRecord db.Integration) ([]byte, error) {
 	if len(providerRecord.Credentials) == 0 {
 		return providerRecord.Config, nil
 	}
 
 	var encrypted string
 	if err := json.Unmarshal(providerRecord.Credentials, &encrypted); err != nil {
-		return nil, fmt.Errorf("invalid provider credentials payload: %w", err)
+		return nil, fmt.Errorf("invalid integration credentials payload: %w", err)
 	}
 	if strings.TrimSpace(encrypted) == "" {
 		return providerRecord.Config, nil
 	}
 	if strings.TrimSpace(s.encryptionKey) == "" {
-		return nil, fmt.Errorf("provider encryption key is not configured")
+		return nil, fmt.Errorf("integration encryption key is not configured")
 	}
 
 	decrypted, err := crypto.Decrypt(encrypted, s.encryptionKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt provider credentials: %w", err)
+		return nil, fmt.Errorf("failed to decrypt integration credentials: %w", err)
 	}
 
 	merged := map[string]any{}

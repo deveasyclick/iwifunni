@@ -69,7 +69,7 @@ func (r *Repository) GetCounts(ctx context.Context, environmentID uuid.UUID) (Co
 	if err != nil {
 		return Counts{}, err
 	}
-	provs, err := r.q.DashboardActiveProviderCount(ctx, environmentID)
+	provs, err := r.q.DashboardActiveIntegrationCount(ctx, environmentID)
 	if err != nil {
 		return Counts{}, err
 	}
@@ -148,7 +148,7 @@ func (r *Repository) GetRecentNotifications(ctx context.Context, environmentID u
 }
 
 func (r *Repository) GetActiveProviders(ctx context.Context, environmentID uuid.UUID) ([]ActiveProvider, error) {
-	rows, err := r.q.DashboardActiveProviders(ctx, environmentID)
+	rows, err := r.q.DashboardActiveIntegrations(ctx, environmentID)
 	if err != nil {
 		return nil, err
 	}

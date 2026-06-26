@@ -47,7 +47,7 @@ type notificationStore interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
 	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
 	ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error)
-	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error)
+	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Integration, error)
 	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
 	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
 	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)

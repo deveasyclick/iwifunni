@@ -1,4 +1,4 @@
-package provider
+package integration
 
 import (
 	"context"
@@ -29,12 +29,12 @@ func NewHandler(service *Service, us userStore) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router) {
-	r.Post("/providers", h.create)
-	r.Get("/providers", h.list)
-	r.Get("/providers/{providerID}", h.get)
-	r.Put("/providers/{providerID}", h.update)
-	r.Patch("/providers/{providerID}", h.updateState)
-	r.Delete("/providers/{providerID}", h.delete)
+	r.Post("/integrations", h.create)
+	r.Get("/integrations", h.list)
+	r.Get("/integrations/{providerID}", h.get)
+	r.Put("/integrations/{providerID}", h.update)
+	r.Patch("/integrations/{providerID}", h.updateState)
+	r.Delete("/integrations/{providerID}", h.delete)
 }
 
 type createRequest struct {
@@ -112,13 +112,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	providers, err := h.service.List(r.Context(), environmentID)
+	integrations, err := h.service.List(r.Context(), environmentID)
 	if err != nil {
-		http.Error(w, "failed to list providers", http.StatusInternalServerError)
+		http.Error(w, "failed to list integrations", http.StatusInternalServerError)
 		return
 	}
-	result := make([]providerResponse, 0, len(providers))
-	for _, p := range providers {
+	result := make([]providerResponse, 0, len(integrations))
+	for _, p := range integrations {
 		result = append(result, providerResponseFromRecord(p))
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -133,12 +133,12 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	providerID, err := uuid.Parse(chi.URLParam(r, "providerID"))
 	if err != nil {
-		http.Error(w, "invalid provider id", http.StatusBadRequest)
+		http.Error(w, "invalid integration id", http.StatusBadRequest)
 		return
 	}
 	p, err := h.service.GetByID(r.Context(), providerID, environmentID)
 	if err != nil {
-		http.Error(w, "provider not found", http.StatusNotFound)
+		http.Error(w, "integration not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -184,11 +184,11 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 	providerID, err := uuid.Parse(chi.URLParam(r, "providerID"))
 	if err != nil {
-		http.Error(w, "invalid provider id", http.StatusBadRequest)
+		http.Error(w, "invalid integration id", http.StatusBadRequest)
 		return
 	}
 	if err := h.service.Delete(r.Context(), providerID, environmentID); err != nil {
-		http.Error(w, "failed to delete provider", http.StatusInternalServerError)
+		http.Error(w, "failed to delete integration", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -238,7 +238,7 @@ type providerResponse struct {
 	UpdatedAt      any            `json:"updated_at,omitempty"`
 }
 
-func providerResponseFromRecord(p db.Provider) providerResponse {
+func providerResponseFromRecord(p db.Integration) providerResponse {
 	var config map[string]any
 	if len(p.Config) > 0 {
 		_ = json.Unmarshal(p.Config, &config)

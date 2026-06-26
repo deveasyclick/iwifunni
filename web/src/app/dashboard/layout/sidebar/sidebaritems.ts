@@ -66,6 +66,13 @@ const SidebarContent: MenuItem[] = [
       },
       {
         id: uniqueId(),
+        name: 'Integrations',
+        icon: 'mdi:connection',
+        url: '/dashboard/integrations',
+        isPro: false,
+      },
+      {
+        id: uniqueId(),
         name: 'Setting',
         icon: 'mdi-light:settings',
         url: '/dashboard/settings',
@@ -80,11 +87,6 @@ const SidebarContent: MenuItem[] = [
             id: uniqueId(),
             name: 'Webhooks',
             url: '/dashboard/settings/webhook',
-          },
-          {
-            id: uniqueId(),
-            name: 'Providers',
-            url: '/dashboard/settings/providers',
           },
         ],
       },

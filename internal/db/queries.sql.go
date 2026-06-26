@@ -28,19 +28,19 @@ func (q *Queries) ClearDefaultEnvironmentByOrganization(ctx context.Context, arg
 	return err
 }
 
-const clearProviderPrimaryByChannel = `-- name: ClearProviderPrimaryByChannel :exec
-UPDATE providers
+const clearIntegrationPrimaryByChannel = `-- name: ClearIntegrationPrimaryByChannel :exec
+UPDATE integrations
 SET is_primary = false, updated_at = now()
 WHERE environment_id = $1 AND channel = $2 AND is_primary = true
 `
 
-type ClearProviderPrimaryByChannelParams struct {
+type ClearIntegrationPrimaryByChannelParams struct {
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 	Channel       string    `db:"channel" json:"channel"`
 }
 
-func (q *Queries) ClearProviderPrimaryByChannel(ctx context.Context, arg ClearProviderPrimaryByChannelParams) error {
-	_, err := q.db.Exec(ctx, clearProviderPrimaryByChannel, arg.EnvironmentID, arg.Channel)
+func (q *Queries) ClearIntegrationPrimaryByChannel(ctx context.Context, arg ClearIntegrationPrimaryByChannelParams) error {
+	_, err := q.db.Exec(ctx, clearIntegrationPrimaryByChannel, arg.EnvironmentID, arg.Channel)
 	return err
 }
 
@@ -198,6 +198,50 @@ func (q *Queries) CreateEnvironmentWithOrg(ctx context.Context, arg CreateEnviro
 	return i, err
 }
 
+const createIntegration = `-- name: CreateIntegration :one
+INSERT INTO integrations (id, environment_id, name, channel, credentials, config, is_active, is_primary)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+`
+
+type CreateIntegrationParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Credentials   []byte    `db:"credentials" json:"credentials"`
+	Config        []byte    `db:"config" json:"config"`
+	IsActive      bool      `db:"is_active" json:"is_active"`
+	IsPrimary     bool      `db:"is_primary" json:"is_primary"`
+}
+
+func (q *Queries) CreateIntegration(ctx context.Context, arg CreateIntegrationParams) (Integration, error) {
+	row := q.db.QueryRow(ctx, createIntegration,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Name,
+		arg.Channel,
+		arg.Credentials,
+		arg.Config,
+		arg.IsActive,
+		arg.IsPrimary,
+	)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $4)
@@ -250,50 +294,6 @@ func (q *Queries) CreateOrganizationMember(ctx context.Context, arg CreateOrgani
 		arg.CreatedAt,
 	)
 	return err
-}
-
-const createProvider = `-- name: CreateProvider :one
-INSERT INTO providers (id, environment_id, name, channel, credentials, config, is_active, is_primary)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-`
-
-type CreateProviderParams struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-	Name          string    `db:"name" json:"name"`
-	Channel       string    `db:"channel" json:"channel"`
-	Credentials   []byte    `db:"credentials" json:"credentials"`
-	Config        []byte    `db:"config" json:"config"`
-	IsActive      bool      `db:"is_active" json:"is_active"`
-	IsPrimary     bool      `db:"is_primary" json:"is_primary"`
-}
-
-func (q *Queries) CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, createProvider,
-		arg.ID,
-		arg.EnvironmentID,
-		arg.Name,
-		arg.Channel,
-		arg.Credentials,
-		arg.Config,
-		arg.IsActive,
-		arg.IsPrimary,
-	)
-	var i Provider
-	err := row.Scan(
-		&i.ID,
-		&i.EnvironmentID,
-		&i.Name,
-		&i.Channel,
-		&i.Credentials,
-		&i.Config,
-		&i.IsActive,
-		&i.IsPrimary,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const createRefreshToken = `-- name: CreateRefreshToken :exec
@@ -759,40 +759,40 @@ func (q *Queries) CreateWorkflowStepExecution(ctx context.Context, arg CreateWor
 	return i, err
 }
 
-const dashboardActiveProviderCount = `-- name: DashboardActiveProviderCount :one
+const dashboardActiveIntegrationCount = `-- name: DashboardActiveIntegrationCount :one
 SELECT COUNT(*)::bigint AS count
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND is_active = true
 `
 
-func (q *Queries) DashboardActiveProviderCount(ctx context.Context, environmentID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, dashboardActiveProviderCount, environmentID)
+func (q *Queries) DashboardActiveIntegrationCount(ctx context.Context, environmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, dashboardActiveIntegrationCount, environmentID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
-const dashboardActiveProviders = `-- name: DashboardActiveProviders :many
+const dashboardActiveIntegrations = `-- name: DashboardActiveIntegrations :many
 SELECT name, channel
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND is_active = true
 ORDER BY name
 `
 
-type DashboardActiveProvidersRow struct {
+type DashboardActiveIntegrationsRow struct {
 	Name    string `db:"name" json:"name"`
 	Channel string `db:"channel" json:"channel"`
 }
 
-func (q *Queries) DashboardActiveProviders(ctx context.Context, environmentID uuid.UUID) ([]DashboardActiveProvidersRow, error) {
-	rows, err := q.db.Query(ctx, dashboardActiveProviders, environmentID)
+func (q *Queries) DashboardActiveIntegrations(ctx context.Context, environmentID uuid.UUID) ([]DashboardActiveIntegrationsRow, error) {
+	rows, err := q.db.Query(ctx, dashboardActiveIntegrations, environmentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []DashboardActiveProvidersRow{}
+	items := []DashboardActiveIntegrationsRow{}
 	for rows.Next() {
-		var i DashboardActiveProvidersRow
+		var i DashboardActiveIntegrationsRow
 		if err := rows.Scan(&i.Name, &i.Channel); err != nil {
 			return nil, err
 		}
@@ -1009,18 +1009,18 @@ func (q *Queries) DeleteEmailVerificationByUserID(ctx context.Context, userID uu
 	return err
 }
 
-const deleteProvider = `-- name: DeleteProvider :exec
-DELETE FROM providers
+const deleteIntegration = `-- name: DeleteIntegration :exec
+DELETE FROM integrations
 WHERE id = $1 AND environment_id = $2
 `
 
-type DeleteProviderParams struct {
+type DeleteIntegrationParams struct {
 	ID            uuid.UUID `db:"id" json:"id"`
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 }
 
-func (q *Queries) DeleteProvider(ctx context.Context, arg DeleteProviderParams) error {
-	_, err := q.db.Exec(ctx, deleteProvider, arg.ID, arg.EnvironmentID)
+func (q *Queries) DeleteIntegration(ctx context.Context, arg DeleteIntegrationParams) error {
+	_, err := q.db.Exec(ctx, deleteIntegration, arg.ID, arg.EnvironmentID)
 	return err
 }
 
@@ -1127,27 +1127,27 @@ func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (ApiK
 	return i, err
 }
 
-const getActiveEnvironmentProvidersByChannel = `-- name: GetActiveEnvironmentProvidersByChannel :many
+const getActiveEnvironmentIntegrationsByChannel = `-- name: GetActiveEnvironmentIntegrationsByChannel :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND channel = $2 AND is_active = true
 ORDER BY is_primary DESC, created_at ASC
 `
 
-type GetActiveEnvironmentProvidersByChannelParams struct {
+type GetActiveEnvironmentIntegrationsByChannelParams struct {
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 	Channel       string    `db:"channel" json:"channel"`
 }
 
-func (q *Queries) GetActiveEnvironmentProvidersByChannel(ctx context.Context, arg GetActiveEnvironmentProvidersByChannelParams) ([]Provider, error) {
-	rows, err := q.db.Query(ctx, getActiveEnvironmentProvidersByChannel, arg.EnvironmentID, arg.Channel)
+func (q *Queries) GetActiveEnvironmentIntegrationsByChannel(ctx context.Context, arg GetActiveEnvironmentIntegrationsByChannelParams) ([]Integration, error) {
+	rows, err := q.db.Query(ctx, getActiveEnvironmentIntegrationsByChannel, arg.EnvironmentID, arg.Channel)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Provider{}
+	items := []Integration{}
 	for rows.Next() {
-		var i Provider
+		var i Integration
 		if err := rows.Scan(
 			&i.ID,
 			&i.EnvironmentID,
@@ -1440,6 +1440,35 @@ func (q *Queries) GetFirstOrganizationMembershipByUser(ctx context.Context, user
 	return i, err
 }
 
+const getIntegrationByID = `-- name: GetIntegrationByID :one
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+FROM integrations
+WHERE id = $1 AND environment_id = $2
+`
+
+type GetIntegrationByIDParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) GetIntegrationByID(ctx context.Context, arg GetIntegrationByIDParams) (Integration, error) {
+	row := q.db.QueryRow(ctx, getIntegrationByID, arg.ID, arg.EnvironmentID)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getNotificationByJobID = `-- name: GetNotificationByJobID :one
 SELECT id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at
 FROM notifications
@@ -1543,35 +1572,6 @@ func (q *Queries) GetOrganizationMembershipByUser(ctx context.Context, arg GetOr
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getProviderByID = `-- name: GetProviderByID :one
-SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
-WHERE id = $1 AND environment_id = $2
-`
-
-type GetProviderByIDParams struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-}
-
-func (q *Queries) GetProviderByID(ctx context.Context, arg GetProviderByIDParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, getProviderByID, arg.ID, arg.EnvironmentID)
-	var i Provider
-	err := row.Scan(
-		&i.ID,
-		&i.EnvironmentID,
-		&i.Name,
-		&i.Channel,
-		&i.Credentials,
-		&i.Config,
-		&i.IsActive,
-		&i.IsPrimary,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -2193,6 +2193,87 @@ func (q *Queries) ListEnvironmentsByOrganization(ctx context.Context, organizati
 	return items, nil
 }
 
+const listIntegrations = `-- name: ListIntegrations :many
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+FROM integrations
+WHERE environment_id = $1
+ORDER BY channel, is_primary DESC, name
+`
+
+func (q *Queries) ListIntegrations(ctx context.Context, environmentID uuid.UUID) ([]Integration, error) {
+	rows, err := q.db.Query(ctx, listIntegrations, environmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Integration{}
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Name,
+			&i.Channel,
+			&i.Credentials,
+			&i.Config,
+			&i.IsActive,
+			&i.IsPrimary,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listIntegrationsByChannel = `-- name: ListIntegrationsByChannel :many
+SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+FROM integrations
+WHERE environment_id = $1 AND channel = $2
+ORDER BY is_primary DESC, created_at ASC
+`
+
+type ListIntegrationsByChannelParams struct {
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Channel       string    `db:"channel" json:"channel"`
+}
+
+func (q *Queries) ListIntegrationsByChannel(ctx context.Context, arg ListIntegrationsByChannelParams) ([]Integration, error) {
+	rows, err := q.db.Query(ctx, listIntegrationsByChannel, arg.EnvironmentID, arg.Channel)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Integration{}
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.EnvironmentID,
+			&i.Name,
+			&i.Channel,
+			&i.Credentials,
+			&i.Config,
+			&i.IsActive,
+			&i.IsPrimary,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotificationsByWorkflowID = `-- name: ListNotificationsByWorkflowID :many
 SELECT id, title, message, channels, status, is_test, created_at, updated_at
 FROM notifications
@@ -2267,87 +2348,6 @@ func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID)
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProviders = `-- name: ListProviders :many
-SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
-WHERE environment_id = $1
-ORDER BY channel, is_primary DESC, name
-`
-
-func (q *Queries) ListProviders(ctx context.Context, environmentID uuid.UUID) ([]Provider, error) {
-	rows, err := q.db.Query(ctx, listProviders, environmentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Provider{}
-	for rows.Next() {
-		var i Provider
-		if err := rows.Scan(
-			&i.ID,
-			&i.EnvironmentID,
-			&i.Name,
-			&i.Channel,
-			&i.Credentials,
-			&i.Config,
-			&i.IsActive,
-			&i.IsPrimary,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProvidersByChannel = `-- name: ListProvidersByChannel :many
-SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
-WHERE environment_id = $1 AND channel = $2
-ORDER BY is_primary DESC, created_at ASC
-`
-
-type ListProvidersByChannelParams struct {
-	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-	Channel       string    `db:"channel" json:"channel"`
-}
-
-func (q *Queries) ListProvidersByChannel(ctx context.Context, arg ListProvidersByChannelParams) ([]Provider, error) {
-	rows, err := q.db.Query(ctx, listProvidersByChannel, arg.EnvironmentID, arg.Channel)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Provider{}
-	for rows.Next() {
-		var i Provider
-		if err := rows.Scan(
-			&i.ID,
-			&i.EnvironmentID,
-			&i.Name,
-			&i.Channel,
-			&i.Credentials,
-			&i.Config,
-			&i.IsActive,
-			&i.IsPrimary,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -2807,6 +2807,84 @@ func (q *Queries) UpdateEnvironmentName(ctx context.Context, arg UpdateEnvironme
 	return err
 }
 
+const updateIntegration = `-- name: UpdateIntegration :one
+UPDATE integrations
+SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+`
+
+type UpdateIntegrationParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Name          string    `db:"name" json:"name"`
+	Channel       string    `db:"channel" json:"channel"`
+	Credentials   []byte    `db:"credentials" json:"credentials"`
+	Config        []byte    `db:"config" json:"config"`
+}
+
+func (q *Queries) UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) (Integration, error) {
+	row := q.db.QueryRow(ctx, updateIntegration,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Name,
+		arg.Channel,
+		arg.Credentials,
+		arg.Config,
+	)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateIntegrationState = `-- name: UpdateIntegrationState :one
+UPDATE integrations
+SET is_active = $3, is_primary = $4, updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
+`
+
+type UpdateIntegrationStateParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	IsActive      bool      `db:"is_active" json:"is_active"`
+	IsPrimary     bool      `db:"is_primary" json:"is_primary"`
+}
+
+func (q *Queries) UpdateIntegrationState(ctx context.Context, arg UpdateIntegrationStateParams) (Integration, error) {
+	row := q.db.QueryRow(ctx, updateIntegrationState,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.IsActive,
+		arg.IsPrimary,
+	)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Name,
+		&i.Channel,
+		&i.Credentials,
+		&i.Config,
+		&i.IsActive,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateNotificationStatus = `-- name: UpdateNotificationStatus :exec
 UPDATE notifications
 SET status = $1, updated_at = $2
@@ -2839,84 +2917,6 @@ type UpdateOrganizationNameParams struct {
 func (q *Queries) UpdateOrganizationName(ctx context.Context, arg UpdateOrganizationNameParams) error {
 	_, err := q.db.Exec(ctx, updateOrganizationName, arg.ID, arg.Name, arg.UpdatedAt)
 	return err
-}
-
-const updateProvider = `-- name: UpdateProvider :one
-UPDATE providers
-SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
-WHERE id = $1 AND environment_id = $2
-RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-`
-
-type UpdateProviderParams struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-	Name          string    `db:"name" json:"name"`
-	Channel       string    `db:"channel" json:"channel"`
-	Credentials   []byte    `db:"credentials" json:"credentials"`
-	Config        []byte    `db:"config" json:"config"`
-}
-
-func (q *Queries) UpdateProvider(ctx context.Context, arg UpdateProviderParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, updateProvider,
-		arg.ID,
-		arg.EnvironmentID,
-		arg.Name,
-		arg.Channel,
-		arg.Credentials,
-		arg.Config,
-	)
-	var i Provider
-	err := row.Scan(
-		&i.ID,
-		&i.EnvironmentID,
-		&i.Name,
-		&i.Channel,
-		&i.Credentials,
-		&i.Config,
-		&i.IsActive,
-		&i.IsPrimary,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateProviderState = `-- name: UpdateProviderState :one
-UPDATE providers
-SET is_active = $3, is_primary = $4, updated_at = now()
-WHERE id = $1 AND environment_id = $2
-RETURNING id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-`
-
-type UpdateProviderStateParams struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
-	IsActive      bool      `db:"is_active" json:"is_active"`
-	IsPrimary     bool      `db:"is_primary" json:"is_primary"`
-}
-
-func (q *Queries) UpdateProviderState(ctx context.Context, arg UpdateProviderStateParams) (Provider, error) {
-	row := q.db.QueryRow(ctx, updateProviderState,
-		arg.ID,
-		arg.EnvironmentID,
-		arg.IsActive,
-		arg.IsPrimary,
-	)
-	var i Provider
-	err := row.Scan(
-		&i.ID,
-		&i.EnvironmentID,
-		&i.Name,
-		&i.Channel,
-		&i.Credentials,
-		&i.Config,
-		&i.IsActive,
-		&i.IsPrimary,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const updateSubscriber = `-- name: UpdateSubscriber :one

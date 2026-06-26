@@ -176,8 +176,8 @@ func (r *Repository) ListDeliveryAttemptsByNotificationID(ctx context.Context, n
 	return r.q.ListDeliveryAttemptsByNotificationID(ctx, notificationID)
 }
 
-func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Provider, error) {
-	return r.q.GetActiveEnvironmentProvidersByChannel(ctx, db.GetActiveEnvironmentProvidersByChannelParams{
+func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Integration, error) {
+	return r.q.GetActiveEnvironmentIntegrationsByChannel(ctx, db.GetActiveEnvironmentIntegrationsByChannelParams{
 		EnvironmentID: projectID,
 		Channel:       channel,
 	})

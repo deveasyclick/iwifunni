@@ -4,7 +4,7 @@ import CardBox from '@/components/card/CardBox';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@iconify/react';
 import { useMemo, useState } from 'react';
-import { useProviders } from '../queries';
+import { useProviders } from './queries';
 import { AvailableProvidersSheet } from './components/AvailableProvidersSheet';
 import { ConnectedProviderCard } from './components/ConnectedProviderCard';
 import { ProviderConnectDialog } from './components/ProviderConnectDialog';
@@ -15,7 +15,7 @@ import {
 import { useProviderForm } from './hooks/use-provider-form';
 import type { ProviderCard } from './types';
 
-const ProviderManagement = () => {
+const IntegrationManagement = () => {
   const providersQuery = useProviders();
   const form = useProviderForm();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -52,7 +52,7 @@ const ProviderManagement = () => {
       <CardBox className="p-6">
         <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
           <div className="flex flex-col gap-2">
-            <h5 className="card-title">Providers</h5>
+            <h5 className="card-title">Integrations</h5>
             <p className="text-sm text-muted-foreground">
               Connect notification providers and control which one is primary
               for each channel.
@@ -171,4 +171,4 @@ const ProviderManagement = () => {
   );
 };
 
-export default ProviderManagement;
+export default IntegrationManagement;

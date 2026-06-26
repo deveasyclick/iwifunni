@@ -1,7 +1,7 @@
 'use client';
 
 import type { CreateWorkflowPayload, WorkflowItem } from '@/app/types/workflow';
-import { useProviders } from '@/features/settings/queries';
+import { useProviders } from '@/features/integrations/queries';
 import { workflowApi } from '@/features/workflows/api';
 import {
   builderDraftFromDefinition,

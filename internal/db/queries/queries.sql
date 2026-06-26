@@ -11,9 +11,9 @@ SET title = EXCLUDED.title,
 	updated_at = EXCLUDED.updated_at
 RETURNING id, title, message, channels, recipient, metadata, status, environment_id, job_id, is_test, created_at, updated_at;
 
--- name: GetActiveEnvironmentProvidersByChannel :many
+-- name: GetActiveEnvironmentIntegrationsByChannel :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND channel = $2 AND is_active = true
 ORDER BY is_primary DESC, created_at ASC;
 
@@ -460,47 +460,47 @@ SET status = $3,
 WHERE execution_id = $1 AND step_id = $2
 RETURNING *;
 
--- name: CreateProvider :one
-INSERT INTO providers (id, environment_id, name, channel, credentials, config, is_active, is_primary)
+-- name: CreateIntegration :one
+INSERT INTO integrations (id, environment_id, name, channel, credentials, config, is_active, is_primary)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
--- name: ListProviders :many
+-- name: ListIntegrations :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
+FROM integrations
 WHERE environment_id = $1
 ORDER BY channel, is_primary DESC, name;
 
--- name: ListProvidersByChannel :many
+-- name: ListIntegrationsByChannel :many
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND channel = $2
 ORDER BY is_primary DESC, created_at ASC;
 
--- name: GetProviderByID :one
+-- name: GetIntegrationByID :one
 SELECT id, environment_id, name, channel, credentials, config, is_active, is_primary, created_at, updated_at
-FROM providers
+FROM integrations
 WHERE id = $1 AND environment_id = $2;
 
--- name: UpdateProvider :one
-UPDATE providers
+-- name: UpdateIntegration :one
+UPDATE integrations
 SET name = $3, channel = $4, credentials = $5, config = $6, updated_at = now()
 WHERE id = $1 AND environment_id = $2
 RETURNING *;
 
--- name: UpdateProviderState :one
-UPDATE providers
+-- name: UpdateIntegrationState :one
+UPDATE integrations
 SET is_active = $3, is_primary = $4, updated_at = now()
 WHERE id = $1 AND environment_id = $2
 RETURNING *;
 
--- name: ClearProviderPrimaryByChannel :exec
-UPDATE providers
+-- name: ClearIntegrationPrimaryByChannel :exec
+UPDATE integrations
 SET is_primary = false, updated_at = now()
 WHERE environment_id = $1 AND channel = $2 AND is_primary = true;
 
--- name: DeleteProvider :exec
-DELETE FROM providers
+-- name: DeleteIntegration :exec
+DELETE FROM integrations
 WHERE id = $1 AND environment_id = $2;
 
 -- name: CreateWebhook :one
@@ -621,9 +621,9 @@ SELECT COUNT(*)::bigint AS count
 FROM notifications
 WHERE environment_id = $1 AND is_test = false;
 
--- name: DashboardActiveProviderCount :one
+-- name: DashboardActiveIntegrationCount :one
 SELECT COUNT(*)::bigint AS count
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND is_active = true;
 
 -- name: DashboardNotificationStats :many
@@ -656,9 +656,9 @@ WHERE environment_id = $1 AND is_test = false
 ORDER BY created_at DESC
 LIMIT $2;
 
--- name: DashboardActiveProviders :many
+-- name: DashboardActiveIntegrations :many
 SELECT name, channel
-FROM providers
+FROM integrations
 WHERE environment_id = $1 AND is_active = true
 ORDER BY name;
 

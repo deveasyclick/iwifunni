@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import CardBox from '@/components/card/CardBox';
 import { Icon } from '@iconify/react';
-import { SUPPORTED_PROVIDERS } from '../../settings/providers/constants/supported-providers';
+import { SUPPORTED_PROVIDERS } from '../../integrations/constants/supported-providers';
 
 interface IntegrationsCardProps {
   readonly activeProviders?: Array<{
@@ -87,7 +87,7 @@ const IntegrationsCard = ({
       <div className="flex items-center justify-between mb-4">
         <h5 className="card-title">Providers</h5>
         <Link
-          href="/dashboard/settings/providers"
+          href="/dashboard/integrations"
           className="text-sm text-primary hover:underline flex items-center gap-1"
         >
           Manage

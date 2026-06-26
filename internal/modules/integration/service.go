@@ -1,4 +1,4 @@
-package provider
+package integration
 
 import (
 	"context"
@@ -43,17 +43,17 @@ type UpdateInput struct {
 	Config        map[string]any
 }
 
-func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, error) {
+func (s *Service) Create(ctx context.Context, in CreateInput) (db.Integration, error) {
 	name, channel, credJSON, configJSON, err := s.prepareProviderInput(in.Name, in.Channel, in.Credentials, in.Config, nil)
 	if err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 
 	var credentials []byte
 	if len(credJSON) > 0 {
 		encCreds, encErr := crypto.Encrypt(credJSON, s.encryptionKey)
 		if encErr != nil {
-			return db.Provider{}, encErr
+			return db.Integration{}, encErr
 		}
 		credentials = []byte(`"` + encCreds + `"`)
 	}
@@ -61,7 +61,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 	// Only set active+primary if no other active provider exists for this channel yet.
 	existing, err := s.repo.ListByChannel(ctx, in.EnvironmentID, channel)
 	if err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 	hasActive := false
 	for _, p := range existing {
@@ -73,7 +73,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 	isActive := !hasActive
 	isPrimary := !hasActive
 
-	return s.repo.Create(ctx, db.CreateProviderParams{
+	return s.repo.Create(ctx, db.CreateIntegrationParams{
 		ID:            uuid.New(),
 		EnvironmentID: in.EnvironmentID,
 		Name:          name,
@@ -85,32 +85,32 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Provider, erro
 	})
 }
 
-func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Provider, error) {
+func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Integration, error) {
 	return s.repo.GetByID(ctx, id, environmentID)
 }
 
-func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Provider, error) {
+func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Integration, error) {
 	return s.repo.List(ctx, environmentID)
 }
 
-func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Provider, error) {
+func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Integration, error) {
 	current, err := s.repo.GetByID(ctx, in.ID, in.EnvironmentID)
 	if err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 	name, channel, credJSON, configJSON, err := s.prepareProviderInput(in.Name, in.Channel, in.Credentials, in.Config, &current)
 	if err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 	credentials := current.Credentials
 	if credJSON != nil {
 		encCreds, encErr := crypto.Encrypt(credJSON, s.encryptionKey)
 		if encErr != nil {
-			return db.Provider{}, encErr
+			return db.Integration{}, encErr
 		}
 		credentials = []byte(`"` + encCreds + `"`)
 	}
-	return s.repo.Update(ctx, db.UpdateProviderParams{
+	return s.repo.Update(ctx, db.UpdateIntegrationParams{
 		ID:            in.ID,
 		EnvironmentID: in.EnvironmentID,
 		Name:          name,
@@ -124,7 +124,7 @@ func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error
 	return s.repo.Delete(ctx, id, environmentID)
 }
 
-func (s *Service) prepareProviderInput(name, channel string, credentials, config map[string]any, current *db.Provider) (string, string, []byte, []byte, error) {
+func (s *Service) prepareProviderInput(name, channel string, credentials, config map[string]any, current *db.Integration) (string, string, []byte, []byte, error) {
 	if s.catalog == nil {
 		s.catalog = providers.NewCatalog()
 	}
@@ -193,8 +193,8 @@ type StateInput struct {
 
 // UpdateState performs enable, disable, or set_primary on a provider,
 // enforcing all primary-per-channel rules inside a single transaction.
-func (s *Service) UpdateState(ctx context.Context, in StateInput) (db.Provider, error) {
-	var result db.Provider
+func (s *Service) UpdateState(ctx context.Context, in StateInput) (db.Integration, error) {
+	var result db.Integration
 	err := s.repo.WithinTx(ctx, func(repo *Repository) error {
 		p, err := repo.GetByID(ctx, in.ID, in.EnvironmentID)
 		if err != nil {
@@ -215,8 +215,8 @@ func (s *Service) UpdateState(ctx context.Context, in StateInput) (db.Provider, 
 	return result, err
 }
 
-func (s *Service) enable(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
-	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+func (s *Service) enable(ctx context.Context, repo *Repository, p db.Integration) (db.Integration, error) {
+	return repo.UpdateState(ctx, db.UpdateIntegrationStateParams{
 		ID:            p.ID,
 		EnvironmentID: p.EnvironmentID,
 		IsActive:      true,
@@ -224,16 +224,16 @@ func (s *Service) enable(ctx context.Context, repo *Repository, p db.Provider) (
 	})
 }
 
-func (s *Service) disable(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
+func (s *Service) disable(ctx context.Context, repo *Repository, p db.Integration) (db.Integration, error) {
 	if p.IsPrimary {
 		// Try to promote another active provider to primary before disabling.
 		promoted, err := s.promotePrimary(ctx, repo, p)
 		if err != nil {
-			return db.Provider{}, errors.New("cannot disable primary provider: no fallback active provider available")
+			return db.Integration{}, errors.New("cannot disable primary provider: no fallback active provider available")
 		}
 		_ = promoted
 	}
-	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+	return repo.UpdateState(ctx, db.UpdateIntegrationStateParams{
 		ID:            p.ID,
 		EnvironmentID: p.EnvironmentID,
 		IsActive:      false,
@@ -241,13 +241,13 @@ func (s *Service) disable(ctx context.Context, repo *Repository, p db.Provider) 
 	})
 }
 
-func (s *Service) setPrimary(ctx context.Context, repo *Repository, p db.Provider) (db.Provider, error) {
+func (s *Service) setPrimary(ctx context.Context, repo *Repository, p db.Integration) (db.Integration, error) {
 	// Clear existing primary for this channel.
 	if err := repo.ClearPrimaryByChannel(ctx, p.EnvironmentID, p.Channel); err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 	// Enable and mark as primary.
-	return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+	return repo.UpdateState(ctx, db.UpdateIntegrationStateParams{
 		ID:            p.ID,
 		EnvironmentID: p.EnvironmentID,
 		IsActive:      true,
@@ -256,10 +256,10 @@ func (s *Service) setPrimary(ctx context.Context, repo *Repository, p db.Provide
 }
 
 // promotePrimary finds another active non-primary provider in the same channel and sets it as primary.
-func (s *Service) promotePrimary(ctx context.Context, repo *Repository, exclude db.Provider) (db.Provider, error) {
+func (s *Service) promotePrimary(ctx context.Context, repo *Repository, exclude db.Integration) (db.Integration, error) {
 	providers, err := repo.ListByChannel(ctx, exclude.EnvironmentID, exclude.Channel)
 	if err != nil {
-		return db.Provider{}, err
+		return db.Integration{}, err
 	}
 	for _, candidate := range providers {
 		if candidate.ID == exclude.ID || !candidate.IsActive {
@@ -267,14 +267,14 @@ func (s *Service) promotePrimary(ctx context.Context, repo *Repository, exclude 
 		}
 		// Clear existing primary first, then promote.
 		if err := repo.ClearPrimaryByChannel(ctx, exclude.EnvironmentID, exclude.Channel); err != nil {
-			return db.Provider{}, err
+			return db.Integration{}, err
 		}
-		return repo.UpdateState(ctx, db.UpdateProviderStateParams{
+		return repo.UpdateState(ctx, db.UpdateIntegrationStateParams{
 			ID:            candidate.ID,
 			EnvironmentID: candidate.EnvironmentID,
 			IsActive:      true,
 			IsPrimary:     true,
 		})
 	}
-	return db.Provider{}, errors.New("no eligible fallback provider")
+	return db.Integration{}, errors.New("no eligible fallback provider")
 }

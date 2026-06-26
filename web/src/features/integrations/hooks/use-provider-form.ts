@@ -10,7 +10,7 @@ import {
   useCreateProvider,
   useUpdateProvider,
   useUpdateProviderState,
-} from '../../queries';
+} from '../queries';
 import type { ProviderDefinition } from '../types';
 
 export function useProviderForm() {

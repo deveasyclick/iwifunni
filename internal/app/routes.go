@@ -7,7 +7,7 @@ import (
 	apikey "github.com/deveasyclick/iwifunni/internal/modules/apikey"
 	"github.com/deveasyclick/iwifunni/internal/modules/notification"
 	"github.com/deveasyclick/iwifunni/internal/modules/organization"
-	"github.com/deveasyclick/iwifunni/internal/modules/provider"
+	"github.com/deveasyclick/iwifunni/internal/modules/integration"
 	"github.com/deveasyclick/iwifunni/internal/modules/stats"
 	"github.com/deveasyclick/iwifunni/internal/modules/subscriber"
 	"github.com/deveasyclick/iwifunni/internal/modules/templates"
@@ -47,10 +47,10 @@ func (a *App) registerRoutes(r chi.Router) {
 		notifHandler.RegisterReadRoutes(r)
 		notifHandler.RegisterDashboardSendRoutes(r)
 
-		// Provider management (dashboard)
-		providerRepo := provider.NewRepository(a.queries, a.dbPool)
-		providerSvc := provider.NewService(providerRepo, a.encryptionKey)
-		provider.NewHandler(providerSvc, a.queries).Register(r)
+		// Integration management (dashboard)
+		integrationRepo := integration.NewRepository(a.queries, a.dbPool)
+		integrationSvc := integration.NewService(integrationRepo, a.encryptionKey)
+		integration.NewHandler(integrationSvc, a.queries).Register(r)
 
 		// Template management (dashboard)
 		tplRepo := templates.NewRepository(a.queries)
