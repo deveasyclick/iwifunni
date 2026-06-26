@@ -17,13 +17,20 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/api  ./cmd/api   && \
 # Stage 2: Runtime — minimal alpine image
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S appgroup \
+    && adduser -S appuser -G appgroup \
+    && chown -R appuser:appgroup /home/appuser
 
 WORKDIR /app
 
 COPY --from=builder /app/bin/api     ./api
 COPY --from=builder /app/bin/worker  ./worker
 COPY --from=builder /app/migrations  ./migrations
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 8080
 
