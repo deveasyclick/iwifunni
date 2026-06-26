@@ -1,0 +1,17 @@
+# avoid sending dev artifacts to Docker daemon
+.git
+.gitignore
+.env
+node_modules
+web
+tmp
+*.md
+.vscode
+.air.toml
+Taskfile.yml
+docker-compose.yml
+sqlc.yaml
+AGENTS.md
+README.md
+iwifunni
+worker
