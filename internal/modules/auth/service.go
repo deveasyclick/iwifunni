@@ -20,7 +20,7 @@ type Service struct {
 }
 
 func defaultVerificationSender(_ context.Context, email, code string) error {
-	logger.Get().Info().Str("email", email).Str("verification_code", code).Msg("signup verification code generated")
+	logger.Get().Info("signup verification code generated", "email", email, "verification_code", code)
 	return nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 )
 
-// HTTPLogger is a zerolog-based HTTP request logging middleware.
+// HTTPLogger is an slog-based HTTP request logging middleware.
 // 4XX responses are logged at WARN level; 5XX at ERROR with the response body captured.
 func HTTPLogger(next http.Handler) http.Handler {
 	log := logger.Get()
@@ -16,25 +16,23 @@ func HTTPLogger(next http.Handler) http.Handler {
 		ww := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(ww, r)
 
-		ev := log.Info().
-			Str("method", r.Method).
-			Str("path", r.URL.Path).
-			Int("status", ww.status).
-			Dur("duration", time.Since(start)).
-			Str("remote", r.RemoteAddr)
+		attrs := []any{
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.status,
+			"duration", time.Since(start),
+			"remote", r.RemoteAddr,
+		}
 
 		switch {
 		case ww.status >= 500:
-			ev = log.Error().Str("error", string(ww.body)).Str("method", r.Method).
-				Str("path", r.URL.Path).Int("status", ww.status).
-				Dur("duration", time.Since(start)).Str("remote", r.RemoteAddr)
+			attrs = append(attrs, "error", string(ww.body))
+			log.Error("http request", attrs...)
 		case ww.status >= 400:
-			ev = log.Warn().Str("method", r.Method).Str("path", r.URL.Path).
-				Int("status", ww.status).Dur("duration", time.Since(start)).
-				Str("remote", r.RemoteAddr)
+			log.Warn("http request", attrs...)
+		default:
+			log.Info("http request", attrs...)
 		}
-
-		ev.Msg("http request")
 	})
 }
 

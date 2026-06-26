@@ -272,12 +272,12 @@ func (s *Service) send(ctx context.Context, job *types.NotificationJob, reportEr
 	successCount, failureCount, skippedCount := 0, 0, len(job.SkippedChannels)
 	for _, skipped := range job.SkippedChannels {
 		if err := s.recordSkipped(ctx, notificationID, skipped.Channel, skipped.Reason); err != nil {
-			logger.Get().Warn().Err(err).Str("channel", skipped.Channel).Msg("failed to record skipped delivery attempt")
+			logger.Get().Warn("failed to record skipped delivery attempt", "error", err, "channel", skipped.Channel)
 		}
 	}
 	for _, channel := range job.Channels {
 		if err := s.deliverProjectChannel(ctx, projectID, notificationID, channel, job); err != nil {
-			logger.Get().Warn().Err(err).Str("channel", channel).Msg("delivery attempt failed")
+			logger.Get().Warn("delivery attempt failed", "error", err, "channel", channel)
 			failureCount++
 			if reportErrors {
 				deliveryErrors = append(deliveryErrors, fmt.Sprintf("%s: %s", channel, err.Error()))

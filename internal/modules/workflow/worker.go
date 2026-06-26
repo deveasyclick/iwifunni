@@ -34,12 +34,12 @@ func (w *Worker) Run(ctx context.Context) error {
 func (w *Worker) handle(ctx context.Context, t *asynq.Task) error {
 	var job types.WorkflowStepJob
 	if err := json.Unmarshal(t.Payload(), &job); err != nil {
-		logger.Get().Error().Err(err).Msg("invalid workflow step job payload")
+		logger.Get().Error("invalid workflow step job payload", "error", err)
 		return errors.Join(asynq.SkipRetry, fmt.Errorf("invalid workflow step job payload: %w", err))
 	}
 	if err := w.service.ProcessStep(ctx, job); err != nil {
 		if errors.Is(err, ErrInvalidWorkflow) || errors.Is(err, ErrInvalidWorkflowEvent) {
-			logger.Get().Warn().Err(err).Str("execution_id", job.ExecutionID).Str("step_id", job.StepID).Msg("workflow step job is invalid and will not be retried")
+			logger.Get().Warn("workflow step job is invalid and will not be retried", "error", err, "execution_id", job.ExecutionID, "step_id", job.StepID)
 			return errors.Join(asynq.SkipRetry, err)
 		}
 		return err

@@ -26,11 +26,11 @@ func (SMSRuntimeProvider) Channel() string { return SMSChannel }
 func (SMSRuntimeProvider) Send(_ context.Context, job *types.NotificationJob, _ []byte) ([]catalog.DeliveryAttempt, error) {
 	content := job.ContentForChannel(SMSChannel)
 
-	logger.Get().Info().
-		Str("provider", SMSName).
-		Str("recipient", job.Recipient.PhoneNumber).
-		Str("title", content.Title).
-		Msg("[DEMO] SMS notification captured — no real message sent")
+	logger.Get().Info("[DEMO] SMS notification captured — no real message sent",
+		"provider", SMSName,
+		"recipient", job.Recipient.PhoneNumber,
+		"title", content.Title,
+	)
 
 	return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber}}, nil
 }

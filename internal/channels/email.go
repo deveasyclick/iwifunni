@@ -19,7 +19,7 @@ type EmailConfig struct {
 
 func SendEmail(ctx context.Context, emailConfig EmailConfig, recipient, title, message string, metadata map[string]string) error {
 	_ = ctx
-	logger.Get().Info().Str("recipient", recipient).Str("title", title).Msg("sending email")
+	logger.Get().Info("sending email", "recipient", recipient, "title", title)
 	if recipient == "" {
 		return fmt.Errorf("email recipient is required")
 	}

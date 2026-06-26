@@ -57,23 +57,24 @@ func (SMSRuntimeProvider) Send(ctx context.Context, job *types.NotificationJob, 
 	smsRes, res, err := client.TransactionalSMSApi.SendTransacSms(ctx, sms)
 	if err != nil {
 		userErr := fmt.Errorf("brevo: %s", brevoErrorMessage(err))
-		logger.Get().Error().Err(err).
-			Int("http_status", statusCode(res)).
-			Str("response_body", brevoResponseBody(err)).
-			Str("recipient", job.Recipient.PhoneNumber).
-			Str("sender", cfg.SenderID).
-			Int("content_length", len(content.Message)).
-			Msg("brevo sms send failed")
+		logger.Get().Error("brevo sms send failed",
+			"error", err,
+			"http_status", statusCode(res),
+			"response_body", brevoResponseBody(err),
+			"recipient", job.Recipient.PhoneNumber,
+			"sender", cfg.SenderID,
+			"content_length", len(content.Message),
+		)
 		return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber, Err: userErr}}, userErr
 	}
 
-	logger.Get().Info().
-		Int("http_status", statusCode(res)).
-		Str("message_id", fmt.Sprintf("%d", smsRes.MessageId)).
-		Str("reference", smsRes.Reference).
-		Int64("sms_count", smsRes.SmsCount).
-		Str("recipient", job.Recipient.PhoneNumber).
-		Msg("brevo sms sent successfully")
+	logger.Get().Info("brevo sms sent successfully",
+		"http_status", statusCode(res),
+		"message_id", fmt.Sprintf("%d", smsRes.MessageId),
+		"reference", smsRes.Reference,
+		"sms_count", smsRes.SmsCount,
+		"recipient", job.Recipient.PhoneNumber,
+	)
 
 	return []catalog.DeliveryAttempt{{Destination: job.Recipient.PhoneNumber}}, nil
 }

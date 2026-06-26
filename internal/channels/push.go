@@ -16,7 +16,7 @@ type PushConfig struct {
 }
 
 func SendFCM(ctx context.Context, serverKey, endpoint, title, message string, metadata map[string]string) error {
-	logger.Get().Info().Str("endpoint", endpoint).Str("title", title).Str("message", message).Msg("sending FCM push")
+	logger.Get().Info("sending FCM push", "endpoint", endpoint, "title", title, "message", message)
 	if serverKey == "" {
 		return fmt.Errorf("missing FCM server key")
 	}
@@ -25,7 +25,7 @@ func SendFCM(ctx context.Context, serverKey, endpoint, title, message string, me
 }
 
 func SendBrowserPush(ctx context.Context, publicKey, privateKey, endpoint, title, message string, metadata map[string]string) error {
-	logger.Get().Info().Str("endpoint", endpoint).Str("title", title).Str("message", message).Msg("sending browser push")
+	logger.Get().Info("sending browser push", "endpoint", endpoint, "title", title, "message", message)
 	if publicKey == "" || privateKey == "" {
 		return fmt.Errorf("missing Web Push keys")
 	}

@@ -27,13 +27,13 @@ func (w *Worker) Register(mux *asynq.ServeMux) {
 func (w *Worker) handle(ctx context.Context, t *asynq.Task) error {
 	var job types.WebhookDeliveryJob
 	if err := json.Unmarshal(t.Payload(), &job); err != nil {
-		logger.Get().Error().Err(err).Msg("invalid webhook job payload")
+		logger.Get().Error("invalid webhook job payload", "error", err)
 		return errors.Join(asynq.SkipRetry, fmt.Errorf("invalid webhook job payload: %w", err))
 	}
 
 	err := w.dispatcher.Execute(ctx, &job)
 	if err != nil && errors.Is(err, ErrInvalidWebhookJob) {
-		logger.Get().Warn().Err(err).Str("job_id", job.JobID).Msg("webhook job is invalid and will not be retried")
+		logger.Get().Warn("webhook job is invalid and will not be retried", "error", err, "job_id", job.JobID)
 		return errors.Join(asynq.SkipRetry, err)
 	}
 	return err

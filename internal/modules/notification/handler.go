@@ -96,25 +96,25 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	switch channel {
 	case "email":
 		if payload.RecipientEmail == "" || payload.Body == "" {
-			log.Warn().Str("recipient_email", payload.RecipientEmail).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields for email")
+			log.Warn("test-send: missing required fields for email", "recipient_email", payload.RecipientEmail, "has_body", payload.Body != "")
 			http.Error(w, "recipient_email and body are required for email", http.StatusBadRequest)
 			return
 		}
 	case "sms":
 		if payload.RecipientPhone == "" || payload.Body == "" {
-			log.Warn().Str("recipient_phone", payload.RecipientPhone).Bool("has_body", payload.Body != "").Msg("test-send: missing required fields for sms")
+			log.Warn("test-send: missing required fields for sms", "recipient_phone", payload.RecipientPhone, "has_body", payload.Body != "")
 			http.Error(w, "recipient_phone and body are required for sms", http.StatusBadRequest)
 			return
 		}
 	default:
-		log.Warn().Str("channel", channel).Msg("test-send: unsupported channel")
+		log.Warn("test-send: unsupported channel", "channel", channel)
 		http.Error(w, "unsupported channel; use 'email' or 'sms'", http.StatusBadRequest)
 		return
 	}
 
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
-		log.Warn().Msg("test-send: unauthorized — no environment in context")
+		log.Warn("test-send: unauthorized — no environment in context")
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -155,14 +155,14 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		IsTest:    isTest,
 	}
 
-	log.Info().
-		Str("channel", channel).
-		Str("environment_id", environmentID.String()).
-		Msg("test-send: preparing job")
+	log.Info("test-send: preparing job",
+		"channel", channel,
+		"environment_id", environmentID.String(),
+	)
 
 	preparedJob, err := h.service.PrepareJob(r.Context(), job)
 	if err != nil {
-		log.Error().Err(err).Str("channel", channel).Msg("test-send: prepare job failed")
+		log.Error("test-send: prepare job failed", "error", err, "channel", channel)
 		h.respondSendError(w, err)
 		return
 	}
@@ -171,23 +171,23 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 		preparedJob.JobID = uuid.NewString()
 	}
 
-	log.Info().
-		Str("job_id", preparedJob.JobID).
-		Str("channel", channel).
-		Msg("test-send: delivering synchronously")
+	log.Info("test-send: delivering synchronously",
+		"job_id", preparedJob.JobID,
+		"channel", channel,
+	)
 
 	if _, err := h.service.SendSync(r.Context(), preparedJob); err != nil {
-		log.Error().Err(err).Str("channel", channel).Msg("test-send: delivery failed")
+		log.Error("test-send: delivery failed", "error", err, "channel", channel)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	log.Info().
-		Str("job_id", preparedJob.JobID).
-		Str("channel", channel).
-		Msg("test-send: delivered successfully")
+	log.Info("test-send: delivered successfully",
+		"job_id", preparedJob.JobID,
+		"channel", channel,
+)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -232,13 +232,13 @@ func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 	// The worker will pick up the job and update the record via upsert by job_id.
 	notificationID := uuid.New()
 	if err := h.service.CreateQueuedNotification(r.Context(), preparedJob, notificationID); err != nil {
-		logger.Get().Error().Err(err).Msg("trigger-workflow: failed to create queued notification")
+		logger.Get().Error("trigger-workflow: failed to create queued notification", "error", err)
 		http.Error(w, "failed to create notification", http.StatusInternalServerError)
 		return
 	}
 
 	if err := h.producer.Enqueue(r.Context(), preparedJob); err != nil {
-		logger.Get().Error().Err(err).Msg("trigger-workflow: failed to enqueue job")
+		logger.Get().Error("trigger-workflow: failed to enqueue job", "error", err)
 		http.Error(w, "failed to enqueue notification", http.StatusInternalServerError)
 		return
 	}

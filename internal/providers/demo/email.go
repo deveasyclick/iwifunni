@@ -48,12 +48,12 @@ func (EmailRuntimeProvider) Send(_ context.Context, job *types.NotificationJob, 
 	content := job.ContentForChannel(EmailChannel)
 	originalRecipient := job.Recipient.Email
 
-	logger.Get().Info().
-		Str("provider", EmailName).
-		Str("original_recipient", originalRecipient).
-		Str("redirected_to", cfg.OwnerEmail).
-		Str("title", content.Title).
-		Msg("[DEMO] email notification captured — redirected to owner address")
+	logger.Get().Info("[DEMO] email notification captured — redirected to owner address",
+		"provider", EmailName,
+		"original_recipient", originalRecipient,
+		"redirected_to", cfg.OwnerEmail,
+		"title", content.Title,
+	)
 
 	return []catalog.DeliveryAttempt{{Destination: cfg.OwnerEmail}}, nil
 }

@@ -361,7 +361,7 @@ func (h *Handler) respondError(w http.ResponseWriter, err error) {
 	case errors.As(err, &pgErr) && pgErr.Code == "23505":
 		http.Error(w, "a workflow with this key already exists", http.StatusConflict)
 	default:
-		logger.Get().Error().Err(err).Msg("workflow: unhandled error")
+		logger.Get().Error("workflow: unhandled error", "error", err)
 		http.Error(w, "workflow request failed", http.StatusInternalServerError)
 	}
 }

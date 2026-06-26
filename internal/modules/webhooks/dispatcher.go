@@ -57,7 +57,7 @@ type EventPayload struct {
 
 func (d *Dispatcher) Dispatch(ctx context.Context, environmentID uuid.UUID, event string, payload EventPayload) {
 	if d.enqueuer == nil {
-		logger.Get().Warn().Str("event", event).Msg("webhook dispatcher has no queue producer")
+		logger.Get().Warn("webhook dispatcher has no queue producer", "event", event)
 		return
 	}
 
@@ -66,13 +66,13 @@ func (d *Dispatcher) Dispatch(ctx context.Context, environmentID uuid.UUID, even
 		Column2:       event,
 	})
 	if err != nil {
-		logger.Get().Warn().Err(err).Str("event", event).Msg("failed to list webhooks for event")
+		logger.Get().Warn("failed to list webhooks for event", "error", err, "event", event)
 		return
 	}
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		logger.Get().Warn().Err(err).Msg("failed to marshal webhook payload")
+		logger.Get().Warn("failed to marshal webhook payload", "error", err)
 		return
 	}
 
@@ -83,7 +83,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, environmentID uuid.UUID, even
 			Event:     event,
 			Payload:   payloadBytes,
 		}); err != nil {
-			logger.Get().Warn().Err(err).Str("event", event).Str("webhook_id", wh.ID.String()).Msg("failed to enqueue webhook delivery")
+			logger.Get().Warn("failed to enqueue webhook delivery", "error", err, "event", event, "webhook_id", wh.ID.String())
 		}
 	}
 }
@@ -181,7 +181,7 @@ func (d *Dispatcher) recordDelivery(ctx context.Context, webhookID uuid.UUID, ev
 		ErrorMessage: errMsgPtr,
 		AttemptedAt:  pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 	}); err != nil {
-		logger.Get().Warn().Err(err).Msg("failed to record webhook delivery")
+		logger.Get().Warn("failed to record webhook delivery", "error", err)
 	}
 }
 

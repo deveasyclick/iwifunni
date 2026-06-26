@@ -23,7 +23,8 @@ func main() {
 	l := logger.Get()
 	cfg, err := config.Load()
 	if err != nil {
-		l.Fatal().Err(err).Msg("failed to load configuration")
+		l.Error("failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -37,7 +38,8 @@ func main() {
 		Password: cfg.RedisPassword,
 	})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
-		l.Fatal().Err(err).Msg("failed to connect to redis")
+		l.Error("failed to connect to redis", "error", err)
+		os.Exit(1)
 	}
 	defer redisClient.Close()
 
@@ -81,8 +83,8 @@ func main() {
 	workflowWorker.Register(mux)
 	webhookWorker.Register(mux)
 
-	l.Info().Msg("starting notification worker")
+	l.Info("starting notification worker")
 	if err := asynqServer.Run(mux); err != nil {
-		l.Error().Err(err).Msg("worker stopped")
+		l.Error("worker stopped", "error", err)
 	}
 }

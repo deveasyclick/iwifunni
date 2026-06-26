@@ -16,7 +16,7 @@ type SMSConfig struct {
 func SendSMS(ctx context.Context, smsConfig SMSConfig, phoneNumber, title, message string, metadata map[string]string) error {
 	_ = ctx
 	_ = metadata
-	logger.Get().Info().Str("recipient", phoneNumber).Str("title", title).Msg("sending SMS")
+	logger.Get().Info("sending SMS", "recipient", phoneNumber, "title", title)
 	if phoneNumber == "" {
 		return fmt.Errorf("sms recipient is required")
 	}

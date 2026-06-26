@@ -33,7 +33,8 @@ func main() {
 	l := logger.Get()
 	cfg, err := config.Load()
 	if err != nil {
-		l.Fatal().Err(err).Msg("failed to load configuration")
+		l.Error("failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -47,7 +48,8 @@ func main() {
 		Password: cfg.RedisPassword,
 	})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
-		l.Fatal().Err(err).Msg("failed to connect to redis")
+		l.Error("failed to connect to redis", "error", err)
+		os.Exit(1)
 	}
 	defer redisClient.Close()
 
@@ -130,15 +132,16 @@ func main() {
 		Handler: application.Router(),
 	}
 
-	l.Info().Msgf("starting API server on %s", httpServer.Addr)
+	l.Info(fmt.Sprintf("starting API server on %s", httpServer.Addr))
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			l.Fatal().Err(err).Msg("API server failed")
+			l.Error("API server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-ctx.Done()
-	l.Info().Msg("shutting down API server")
+	l.Info("shutting down API server")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()

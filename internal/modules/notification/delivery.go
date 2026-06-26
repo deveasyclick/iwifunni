@@ -22,11 +22,11 @@ func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notifica
 
 	providerRecords, err := s.repo.GetActiveProvidersByChannel(ctx, projectID, channel)
 	if err != nil {
-		log.Error().Err(err).Str("channel", channel).Str("project_id", projectID.String()).Msg("delivery: failed to query active providers")
+		log.Error("delivery: failed to query active providers", "error", err, "channel", channel, "project_id", projectID.String())
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s: %w", channel, err))
 	}
 	if len(providerRecords) == 0 {
-		log.Warn().Str("channel", channel).Str("project_id", projectID.String()).Msg("delivery: no active provider found")
+		log.Warn("delivery: no active provider found", "channel", channel, "project_id", projectID.String())
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s", channel))
 	}
 

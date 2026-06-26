@@ -75,7 +75,7 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 
 	scopes, err := decodeScopes(keyRecord.Scopes)
 	if err != nil {
-		logger.Get().Error().Err(err).Msg("failed to decode api key scopes")
+		logger.Get().Error("failed to decode api key scopes", "error", err)
 		http.Error(w, "invalid api key scopes", http.StatusInternalServerError)
 		return
 	}
@@ -86,7 +86,7 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 
 	ok, err := limiter.Allow(r.Context(), keyRecord.ID.String())
 	if err != nil {
-		logger.Get().Error().Err(err).Msg("rate limiter error")
+		logger.Get().Error("rate limiter error", "error", err)
 		http.Error(w, "rate limiter unavailable", http.StatusInternalServerError)
 		return
 	}
@@ -101,7 +101,7 @@ func handleEnvironmentAPIKey(w http.ResponseWriter, r *http.Request, next http.H
 		UpdatedAt:  nowTs,
 		ID:         keyRecord.ID,
 	}); err != nil {
-		logger.Get().Error().Err(err).Msg("failed to update api key last_used_at")
+		logger.Get().Error("failed to update api key last_used_at", "error", err)
 		http.Error(w, "failed to update api key activity", http.StatusInternalServerError)
 		return
 	}
