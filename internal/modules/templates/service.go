@@ -31,23 +31,8 @@ type UpdateInput struct {
 	Body      string
 }
 
-func (s *Service) Create(ctx context.Context, in CreateInput) (db.Template, error) {
-	return s.repo.Create(ctx, db.CreateTemplateParams{
-		ID:            uuid.New(),
-		EnvironmentID: in.EnvironmentID,
-		Name:          in.Name,
-		Channel:       in.Channel,
-		Subject:       in.Subject,
-		Body:          in.Body,
-	})
-}
-
 func (s *Service) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Template, error) {
 	return s.repo.GetByID(ctx, id, environmentID)
-}
-
-func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]db.Template, error) {
-	return s.repo.List(ctx, environmentID)
 }
 
 func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Template, error) {
@@ -69,12 +54,4 @@ func (s *Service) Upsert(ctx context.Context, in CreateInput) (db.Template, erro
 		Subject:       in.Subject,
 		Body:          in.Body,
 	})
-}
-
-func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, environmentID)
-}
-
-func (s *Service) Render(subject, body string, vars map[string]any) (RenderedTemplate, error) {
-	return Render(subject, body, vars)
 }

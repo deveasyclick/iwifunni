@@ -85,11 +85,6 @@ func (a *App) registerRoutes(r chi.Router) {
 		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
 		notification.NewHandler(notifSvc, a.producer).RegisterSendRoutes(r)
 
-		// Templates
-		tplRepo := templates.NewRepository(a.queries)
-		tplSvc := templates.NewService(tplRepo)
-		templates.NewHandler(tplSvc).RegisterAPIRoutes(r)
-
 		// Workflows
 		workflowRepo := workflow.NewRepository(a.queries)
 		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
