@@ -1,10 +1,9 @@
 package auth
 
 import (
-	"context"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/pkg/logger"
+	"github.com/deveasyclick/iwifunni/internal/shared/mailer"
 )
 
 type Service struct {
@@ -16,15 +15,10 @@ type Service struct {
 	now                func() time.Time
 	refreshTTL         time.Duration
 	verificationTTL    time.Duration
-	verificationSender func(ctx context.Context, email, code string) error
+	mailer             *mailer.Mailer
 }
 
-func defaultVerificationSender(_ context.Context, email, code string) error {
-	logger.Get().Info("signup verification code generated", "email", email, "verification_code", code)
-	return nil
-}
-
-func NewService(store authStore, refreshTTL, verificationTTL time.Duration) *Service {
+func NewService(store authStore, refreshTTL, verificationTTL time.Duration, m *mailer.Mailer) *Service {
 	if verificationTTL <= 0 {
 		verificationTTL = defaultVerificationTTL
 	}
@@ -38,6 +32,6 @@ func NewService(store authStore, refreshTTL, verificationTTL time.Duration) *Ser
 		now:                time.Now,
 		refreshTTL:         refreshTTL,
 		verificationTTL:    verificationTTL,
-		verificationSender: defaultVerificationSender,
+		mailer:             m,
 	}
 }

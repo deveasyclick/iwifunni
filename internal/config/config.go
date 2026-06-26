@@ -15,6 +15,7 @@ type Config struct {
 	RedisPassword      string
 	APIServicePort     string
 	BrevoAPIKey        string
+	BrevoFromEmail     string
 	RateLimitPerMin    int
 	JWTSecret          string
 	JWTIssuer          string
@@ -79,6 +80,7 @@ func Load() (*Config, error) {
 		RedisPassword:      os.Getenv("REDIS_PASSWORD"),
 		APIServicePort:     getenvDefault("API_PORT", "8080"),
 		BrevoAPIKey:        os.Getenv("BREVO_API_KEY"),
+		BrevoFromEmail:     os.Getenv("BREVO_FROM_EMAIL"),
 		RateLimitPerMin:    rateLimit,
 		JWTSecret:          getenvDefault("JWT_SECRET", "development-jwt-secret-change-me"),
 		JWTIssuer:          getenvDefault("JWT_ISSUER", "iwifunni"),

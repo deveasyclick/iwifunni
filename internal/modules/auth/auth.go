@@ -17,9 +17,6 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 	lastName := strings.TrimSpace(input.LastName)
 	email := strings.ToLower(strings.TrimSpace(input.Email))
 	password := strings.TrimSpace(input.Password)
-	if firstName == "" || lastName == "" || email == "" || password == "" {
-		return nil, fmt.Errorf("first name, last name, email, and password are required")
-	}
 
 	if _, err := s.users.GetUserByEmail(ctx, email); err == nil {
 		return nil, ErrEmailAlreadyExists
@@ -53,24 +50,9 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 		return nil, err
 	}
 
-	verificationCode, verificationHash, err := GenerateVerificationCode()
+	verificationExpiresAt, err := s.createAndSendVerification(ctx, userID, email)
 	if err != nil {
 		return nil, err
-	}
-	verificationExpiresAt := pgtype.Timestamptz{Time: nowTs.Time.Add(s.verificationTTL), Valid: true}
-	if err := s.verifications.UpsertEmailVerification(ctx, db.UpsertEmailVerificationParams{
-		UserID:     userID,
-		CodeHash:   verificationHash,
-		ExpiresAt:  verificationExpiresAt,
-		ConsumedAt: pgtype.Timestamptz{},
-		CreatedAt:  nowTs,
-		UpdatedAt:  nowTs,
-	}); err != nil {
-		return nil, err
-	}
-
-	if s.verificationSender != nil {
-		_ = s.verificationSender(ctx, email, verificationCode)
 	}
 
 	return &SignupResult{
@@ -80,61 +62,9 @@ func (s *Service) Signup(ctx context.Context, input SignupInput) (*SignupResult,
 		Email:                 email,
 		Role:                  membership.Role,
 		VerificationRequired:  true,
-		VerificationExpiresAt: verificationExpiresAt.Time,
+		VerificationExpiresAt: verificationExpiresAt,
 		NeedsOnboarding:       true,
 	}, nil
-}
-
-func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) (*VerifyEmailResult, error) {
-	email := strings.ToLower(strings.TrimSpace(input.Email))
-	code := strings.TrimSpace(input.Code)
-	if email == "" || code == "" {
-		return nil, fmt.Errorf("email and verification code are required")
-	}
-
-	user, err := s.users.GetUserByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrInvalidVerificationCode
-		}
-		return nil, err
-	}
-
-	verification, err := s.verifications.GetEmailVerificationByUserID(ctx, user.ID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrInvalidVerificationCode
-		}
-		return nil, err
-	}
-	if verification.ConsumedAt.Valid {
-		return nil, ErrInvalidVerificationCode
-	}
-	if !verification.ExpiresAt.Valid || verification.ExpiresAt.Time.Before(s.now().UTC()) {
-		return nil, ErrVerificationCodeExpired
-	}
-	if !CompareVerificationCode(code, verification.CodeHash) {
-		return nil, ErrInvalidVerificationCode
-	}
-
-	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
-	if err := s.users.UpdateUserEmailVerifiedAt(ctx, db.UpdateUserEmailVerifiedAtParams{
-		ID:              user.ID,
-		EmailVerifiedAt: nowTs,
-		UpdatedAt:       nowTs,
-	}); err != nil {
-		return nil, err
-	}
-	if err := s.verifications.DeleteEmailVerificationByUserID(ctx, user.ID); err != nil {
-		return nil, err
-	}
-
-	membership, environment, err := s.ensurePrimaryTenant(ctx, user.ID, nowTs)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.newAuthResult(ctx, user.ID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
 
 func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput) (*SocialSigninResult, error) {
@@ -241,9 +171,6 @@ func (s *Service) SigninWithSocial(ctx context.Context, input SocialSigninInput)
 func (s *Service) Signin(ctx context.Context, input SigninInput) (*SigninResult, error) {
 	email := strings.ToLower(strings.TrimSpace(input.Email))
 	password := strings.TrimSpace(input.Password)
-	if email == "" || password == "" {
-		return nil, fmt.Errorf("email and password are required")
-	}
 
 	user, err := s.users.GetUserByEmail(ctx, email)
 	if err != nil {

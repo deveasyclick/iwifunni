@@ -12,6 +12,7 @@ import (
 
 	"github.com/deveasyclick/iwifunni/internal/app"
 	"github.com/deveasyclick/iwifunni/internal/config"
+	"github.com/deveasyclick/iwifunni/internal/shared/mailer"
 	modauth "github.com/deveasyclick/iwifunni/internal/modules/auth"
 	jwtutil "github.com/deveasyclick/iwifunni/internal/utils/jwt"
 	"github.com/deveasyclick/iwifunni/internal/utils/ratelimit"
@@ -106,7 +107,8 @@ func main() {
 	jwtutil.Init(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAccessTokenTTL)
 
 	rateLimiter := ratelimit.NewRateLimiter(redisClient, cfg.RateLimitPerMin)
-	authService := modauth.NewService(store.Queries, cfg.JWTRefreshTokenTTL, cfg.AuthVerificationTTL)
+	m := mailer.New(cfg.BrevoAPIKey, cfg.BrevoFromEmail)
+	authService := modauth.NewService(store.Queries, cfg.JWTRefreshTokenTTL, cfg.AuthVerificationTTL, m)
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 
