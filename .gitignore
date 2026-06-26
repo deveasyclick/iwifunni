@@ -4,6 +4,5 @@ tmp/
 iwifunni
 logs/
 node_modules/
-worker
-api
+/api
 worker
