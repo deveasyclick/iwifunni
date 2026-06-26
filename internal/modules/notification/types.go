@@ -51,5 +51,5 @@ type notificationStore interface {
 	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
 	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
 	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error)
 }

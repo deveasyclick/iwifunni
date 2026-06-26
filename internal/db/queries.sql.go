@@ -129,7 +129,7 @@ func (q *Queries) CreateAuthIdentity(ctx context.Context, arg CreateAuthIdentity
 const createEnvironment = `-- name: CreateEnvironment :one
 INSERT INTO environments (id, organization_id, name, is_default, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, organization_id, created_at, updated_at, is_default
+RETURNING id, organization_id, name, is_default, created_at, updated_at
 `
 
 type CreateEnvironmentParams struct {
@@ -153,11 +153,11 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 	var i Environment
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
 		&i.OrganizationID,
+		&i.Name,
+		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.IsDefault,
 	)
 	return i, err
 }
@@ -165,7 +165,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 const createEnvironmentWithOrg = `-- name: CreateEnvironmentWithOrg :one
 INSERT INTO environments (id, organization_id, name, is_default, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, organization_id, created_at, updated_at, is_default
+RETURNING id, organization_id, name, is_default, created_at, updated_at
 `
 
 type CreateEnvironmentWithOrgParams struct {
@@ -189,11 +189,11 @@ func (q *Queries) CreateEnvironmentWithOrg(ctx context.Context, arg CreateEnviro
 	var i Environment
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
 		&i.OrganizationID,
+		&i.Name,
+		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.IsDefault,
 	)
 	return i, err
 }
@@ -337,7 +337,7 @@ INSERT INTO subscribers (
 	preferences
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
 `
 
 type CreateSubscriberParams struct {
@@ -379,10 +379,10 @@ func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberPara
 		&i.Channels,
 		&i.Status,
 		&i.Tags,
+		&i.Preferences,
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
-		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1251,18 +1251,9 @@ WHERE organization_id = $1 AND is_default = true
 LIMIT 1
 `
 
-type GetDefaultEnvironmentByOrganizationRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	IsDefault      bool               `db:"is_default" json:"is_default"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetDefaultEnvironmentByOrganization(ctx context.Context, organizationID uuid.UUID) (GetDefaultEnvironmentByOrganizationRow, error) {
+func (q *Queries) GetDefaultEnvironmentByOrganization(ctx context.Context, organizationID uuid.UUID) (Environment, error) {
 	row := q.db.QueryRow(ctx, getDefaultEnvironmentByOrganization, organizationID)
-	var i GetDefaultEnvironmentByOrganizationRow
+	var i Environment
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -1300,18 +1291,9 @@ FROM environments
 WHERE id = $1
 `
 
-type GetEnvironmentRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	IsDefault      bool               `db:"is_default" json:"is_default"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetEnvironment(ctx context.Context, id uuid.UUID) (GetEnvironmentRow, error) {
+func (q *Queries) GetEnvironment(ctx context.Context, id uuid.UUID) (Environment, error) {
 	row := q.db.QueryRow(ctx, getEnvironment, id)
-	var i GetEnvironmentRow
+	var i Environment
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -1329,18 +1311,9 @@ FROM environments
 WHERE id = $1
 `
 
-type GetEnvironmentByIDRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	IsDefault      bool               `db:"is_default" json:"is_default"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetEnvironmentByID(ctx context.Context, id uuid.UUID) (GetEnvironmentByIDRow, error) {
+func (q *Queries) GetEnvironmentByID(ctx context.Context, id uuid.UUID) (Environment, error) {
 	row := q.db.QueryRow(ctx, getEnvironmentByID, id)
-	var i GetEnvironmentByIDRow
+	var i Environment
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -1597,7 +1570,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 }
 
 const getSubscriberByID = `-- name: GetSubscriberByID :one
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
 `
 
@@ -1619,10 +1592,10 @@ func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDPa
 		&i.Channels,
 		&i.Status,
 		&i.Tags,
+		&i.Preferences,
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
-		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1695,21 +1668,9 @@ FROM users
 WHERE email = $1
 `
 
-type GetUserByEmailRow struct {
-	ID                    uuid.UUID          `db:"id" json:"id"`
-	Email                 string             `db:"email" json:"email"`
-	PasswordHash          string             `db:"password_hash" json:"password_hash"`
-	FirstName             string             `db:"first_name" json:"first_name"`
-	LastName              string             `db:"last_name" json:"last_name"`
-	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
-	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
-	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -1730,21 +1691,9 @@ FROM users
 WHERE id = $1
 `
 
-type GetUserByIDRow struct {
-	ID                    uuid.UUID          `db:"id" json:"id"`
-	Email                 string             `db:"email" json:"email"`
-	PasswordHash          string             `db:"password_hash" json:"password_hash"`
-	FirstName             string             `db:"first_name" json:"first_name"`
-	LastName              string             `db:"last_name" json:"last_name"`
-	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
-	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
-	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i GetUserByIDRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -2157,24 +2106,15 @@ WHERE organization_id = $1
 ORDER BY created_at ASC
 `
 
-type ListEnvironmentsByOrganizationRow struct {
-	ID             uuid.UUID          `db:"id" json:"id"`
-	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
-	Name           string             `db:"name" json:"name"`
-	IsDefault      bool               `db:"is_default" json:"is_default"`
-	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) ListEnvironmentsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]ListEnvironmentsByOrganizationRow, error) {
+func (q *Queries) ListEnvironmentsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Environment, error) {
 	rows, err := q.db.Query(ctx, listEnvironmentsByOrganization, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListEnvironmentsByOrganizationRow{}
+	items := []Environment{}
 	for rows.Next() {
-		var i ListEnvironmentsByOrganizationRow
+		var i Environment
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -2362,7 +2302,7 @@ func (q *Queries) ListOrganizationsByUser(ctx context.Context, userID uuid.UUID)
 }
 
 const listSubscribersByEnvironment = `-- name: ListSubscribersByEnvironment :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
 ORDER BY subscription_date DESC
 `
@@ -2386,10 +2326,10 @@ func (q *Queries) ListSubscribersByEnvironment(ctx context.Context, environmentI
 			&i.Channels,
 			&i.Status,
 			&i.Tags,
+			&i.Preferences,
 			&i.SubscriptionDate,
 			&i.LastNotificationDate,
 			&i.Metadata,
-			&i.Preferences,
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -2685,7 +2625,7 @@ func (q *Queries) ListWorkflowsByEnvironment(ctx context.Context, environmentID 
 }
 
 const searchSubscribers = `-- name: SearchSubscribers :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
   AND (LOWER(name) LIKE LOWER($2) OR LOWER(COALESCE(email, '')) LIKE LOWER($2))
 ORDER BY subscription_date DESC
@@ -2715,10 +2655,10 @@ func (q *Queries) SearchSubscribers(ctx context.Context, arg SearchSubscribersPa
 			&i.Channels,
 			&i.Status,
 			&i.Tags,
+			&i.Preferences,
 			&i.SubscriptionDate,
 			&i.LastNotificationDate,
 			&i.Metadata,
-			&i.Preferences,
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -2932,7 +2872,7 @@ SET name = $3,
 	preferences = $11,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, subscription_date, last_notification_date, metadata, preferences, deleted_at, created_at, updated_at
+RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
 `
 
 type UpdateSubscriberParams struct {
@@ -2974,10 +2914,10 @@ func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberPara
 		&i.Channels,
 		&i.Status,
 		&i.Tags,
+		&i.Preferences,
 		&i.SubscriptionDate,
 		&i.LastNotificationDate,
 		&i.Metadata,
-		&i.Preferences,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,

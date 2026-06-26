@@ -16,7 +16,7 @@ import (
 )
 
 type userStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error)
 }
 
 type Handler struct {

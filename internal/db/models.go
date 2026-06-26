@@ -57,11 +57,11 @@ type EmailVerification struct {
 
 type Environment struct {
 	ID             uuid.UUID          `db:"id" json:"id"`
-	Name           string             `db:"name" json:"name"`
 	OrganizationID uuid.UUID          `db:"organization_id" json:"organization_id"`
+	Name           string             `db:"name" json:"name"`
+	IsDefault      bool               `db:"is_default" json:"is_default"`
 	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	IsDefault      bool               `db:"is_default" json:"is_default"`
 }
 
 type Integration struct {
@@ -79,17 +79,17 @@ type Integration struct {
 
 type Notification struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
+	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
 	Title         string             `db:"title" json:"title"`
 	Message       string             `db:"message" json:"message"`
 	Channels      []string           `db:"channels" json:"channels"`
 	Recipient     []byte             `db:"recipient" json:"recipient"`
 	Metadata      []byte             `db:"metadata" json:"metadata"`
 	Status        string             `db:"status" json:"status"`
-	EnvironmentID pgtype.UUID        `db:"environment_id" json:"environment_id"`
+	JobID         *string            `db:"job_id" json:"job_id"`
 	IsTest        bool               `db:"is_test" json:"is_test"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	JobID         *string            `db:"job_id" json:"job_id"`
 }
 
 type Organization struct {
@@ -126,10 +126,10 @@ type Subscriber struct {
 	Channels             []string           `db:"channels" json:"channels"`
 	Status               []byte             `db:"status" json:"status"`
 	Tags                 []string           `db:"tags" json:"tags"`
+	Preferences          []byte             `db:"preferences" json:"preferences"`
 	SubscriptionDate     pgtype.Timestamptz `db:"subscription_date" json:"subscription_date"`
 	LastNotificationDate pgtype.Timestamptz `db:"last_notification_date" json:"last_notification_date"`
 	Metadata             []byte             `db:"metadata" json:"metadata"`
-	Preferences          []byte             `db:"preferences" json:"preferences"`
 	DeletedAt            pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
 	CreatedAt            pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
@@ -152,12 +152,12 @@ type User struct {
 	ID                    uuid.UUID          `db:"id" json:"id"`
 	Email                 string             `db:"email" json:"email"`
 	PasswordHash          string             `db:"password_hash" json:"password_hash"`
-	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	FirstName             string             `db:"first_name" json:"first_name"`
 	LastName              string             `db:"last_name" json:"last_name"`
 	EmailVerifiedAt       pgtype.Timestamptz `db:"email_verified_at" json:"email_verified_at"`
 	OnboardingCompletedAt pgtype.Timestamptz `db:"onboarding_completed_at" json:"onboarding_completed_at"`
+	CreatedAt             pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
 type Webhook struct {

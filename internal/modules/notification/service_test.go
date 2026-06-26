@@ -127,8 +127,8 @@ func (s *fakeNotificationStore) ListDeliveryAttemptsByNotificationID(_ context.C
 	return nil, nil
 }
 
-func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.GetUserByIDRow, error) {
-	return db.GetUserByIDRow{}, pgx.ErrNoRows
+func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.User, error) {
+	return db.User{}, pgx.ErrNoRows
 }
 
 func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Integration, error) {

@@ -14,7 +14,7 @@ import (
 )
 
 type jwtEnvironmentResolver interface {
-	GetDefaultEnvironmentByOrganization(context.Context, uuid.UUID) (db.GetDefaultEnvironmentByOrganizationRow, error)
+	GetDefaultEnvironmentByOrganization(context.Context, uuid.UUID) (db.Environment, error)
 }
 
 func NewJWTMiddleware(resolver ...jwtEnvironmentResolver) func(http.Handler) http.Handler {

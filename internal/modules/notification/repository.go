@@ -195,6 +195,6 @@ func (r *Repository) GetTemplateByID(ctx context.Context, id, projectID uuid.UUI
 	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: projectID})
 }
 
-func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (db.GetUserByIDRow, error) {
+func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error) {
 	return r.q.GetUserByID(ctx, id)
 }

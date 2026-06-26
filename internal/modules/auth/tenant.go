@@ -95,7 +95,7 @@ func (s *Service) createSeedEnvironments(ctx context.Context, organizationID uui
 	return development, production, nil
 }
 
-func environmentFromDefaultRow(row db.GetDefaultEnvironmentByOrganizationRow) db.Environment {
+func environmentFromDefaultRow(row db.Environment) db.Environment {
 	return db.Environment{
 		ID:             row.ID,
 		OrganizationID: row.OrganizationID,

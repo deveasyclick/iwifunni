@@ -30,8 +30,8 @@ const (
 
 type authUserStore interface {
 	CreateUser(context.Context, db.CreateUserParams) error
-	GetUserByEmail(context.Context, string) (db.GetUserByEmailRow, error)
-	GetUserByID(context.Context, uuid.UUID) (db.GetUserByIDRow, error)
+	GetUserByEmail(context.Context, string) (db.User, error)
+	GetUserByID(context.Context, uuid.UUID) (db.User, error)
 	UpdateUserEmailVerifiedAt(context.Context, db.UpdateUserEmailVerifiedAtParams) error
 	UpdateUserOnboardingCompletedAt(context.Context, db.UpdateUserOnboardingCompletedAtParams) error
 }
@@ -48,7 +48,7 @@ type authProjectStore interface {
 	CreateOrganizationMember(context.Context, db.CreateOrganizationMemberParams) error
 	GetFirstOrganizationMembershipByUser(context.Context, uuid.UUID) (db.OrganizationMember, error)
 	CreateEnvironment(context.Context, db.CreateEnvironmentParams) (db.Environment, error)
-	GetDefaultEnvironmentByOrganization(context.Context, uuid.UUID) (db.GetDefaultEnvironmentByOrganizationRow, error)
+	GetDefaultEnvironmentByOrganization(context.Context, uuid.UUID) (db.Environment, error)
 }
 
 type authIdentityStore interface {
