@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -27,7 +28,7 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type createRequest struct {
-	Name   string   `json:"name"`
+	Name   string   `json:"name" validate:"required"`
 	Scopes []string `json:"scopes,omitempty"`
 }
 
@@ -71,12 +72,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	k, err := h.service.Create(r.Context(), environmentID, req.Name, req.Scopes)
@@ -134,7 +130,7 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateRequest struct {
-	Status string `json:"status"`
+	Status string `json:"status" validate:"required,oneof=active disabled"`
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
@@ -149,12 +145,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Status != "active" && req.Status != "disabled" {
-		http.Error(w, "invalid status", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	if err := h.service.UpdateStatus(r.Context(), environmentID, keyID, req.Status); err != nil {

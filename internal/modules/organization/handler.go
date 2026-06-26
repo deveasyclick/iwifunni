@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type createRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -35,8 +36,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	org, err := h.service.Create(r.Context(), CreateInput{Name: req.Name, UserID: userID})

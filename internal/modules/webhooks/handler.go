@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -25,9 +26,9 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type createRequest struct {
-	URL    string   `json:"url"`
-	Events []string `json:"events"`
-	Secret string   `json:"secret"`
+	URL    string   `json:"url" validate:"required,url"`
+	Events []string `json:"events" validate:"required,min=1"`
+	Secret string   `json:"secret" validate:"required"`
 }
 
 type webhookResponse struct {
@@ -45,12 +46,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.URL == "" || len(req.Events) == 0 || req.Secret == "" {
-		http.Error(w, "url, events, and secret are required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	wh, err := h.service.Create(r.Context(), CreateInput{

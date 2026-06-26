@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -38,19 +39,19 @@ func (h *Handler) RegisterAPIRoutes(r chi.Router) {
 }
 
 type createRequest struct {
-	Name    string  `json:"name"`
-	Channel string  `json:"channel"`
+	Name    string  `json:"name" validate:"required"`
+	Channel string  `json:"channel" validate:"required,oneof=email sms push"`
 	Subject *string `json:"subject"`
-	Body    string  `json:"body"`
+	Body    string  `json:"body" validate:"required"`
 }
 
 type updateRequest struct {
 	Subject *string `json:"subject"`
-	Body    string  `json:"body"`
+	Body    string  `json:"body" validate:"required"`
 }
 
 type renderRequest struct {
-	TemplateID uuid.UUID      `json:"template_id"`
+	TemplateID uuid.UUID      `json:"template_id" validate:"required"`
 	Variables  map[string]any `json:"variables"`
 }
 
@@ -74,18 +75,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" || req.Body == "" || req.Channel == "" {
-		http.Error(w, "name, body, and channel are required", http.StatusBadRequest)
-		return
-	}
-	switch req.Channel {
-	case "email", "sms", "push":
-	default:
-		http.Error(w, "channel must be email, sms, or push", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	t, err := h.service.Create(r.Context(), CreateInput{
@@ -120,16 +110,7 @@ func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" || req.Body == "" || req.Channel == "" {
-		http.Error(w, "name, body, and channel are required", http.StatusBadRequest)
-		return
-	}
-	if req.Channel != "email" && req.Channel != "sms" && req.Channel != "push" {
-		http.Error(w, "channel must be email, sms, or push", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -211,12 +192,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Body == "" {
-		http.Error(w, "body is required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	t, err := h.service.Update(r.Context(), UpdateInput{ID: id, EnvironmentID: environmentID, Subject: req.Subject, Body: req.Body})
@@ -257,12 +233,7 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req renderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.TemplateID == uuid.Nil {
-		http.Error(w, "template_id is required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	if req.Variables == nil {

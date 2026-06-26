@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
@@ -50,16 +51,16 @@ func (h *Handler) RegisterDashboardSendRoutes(r chi.Router) {
 type createRequest struct {
 	WorkflowID   string            `json:"workflow_id,omitempty"`
 	SubscriberID string            `json:"subscriber_id,omitempty"`
-	Title        string            `json:"title"`
-	Message      string            `json:"message"`
+	Title        string            `json:"title" validate:"required"`
+	Message      string            `json:"message" validate:"required"`
 	Channels     []string          `json:"channels,omitempty"`
-	Recipient    types.Recipient   `json:"recipient"`
+	Recipient    types.Recipient   `json:"recipient" validate:"required"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
 	Sync         bool              `json:"sync,omitempty"`
 }
 
 type triggerWorkflowRequest struct {
-	WorkflowID   string            `json:"workflow_id"`
+	WorkflowID   string            `json:"workflow_id" validate:"required"`
 	SubscriberID string            `json:"subscriber_id"`
 	Channels     []string          `json:"channels,omitempty"`
 	Recipient    types.Recipient   `json:"recipient,omitempty"`
@@ -68,11 +69,11 @@ type triggerWorkflowRequest struct {
 }
 
 type testSendRequest struct {
-	Channel        string `json:"channel"`
+	Channel        string `json:"channel" validate:"omitempty,oneof=email sms"`
 	RecipientEmail string `json:"recipient_email,omitempty"`
 	RecipientPhone string `json:"recipient_phone,omitempty"`
 	Subject        string `json:"subject,omitempty"`
-	Body           string `json:"body"`
+	Body           string `json:"body" validate:"required"`
 	SenderName     string `json:"sender_name,omitempty"`
 	SenderEmail    string `json:"sender_email,omitempty"`
 	SenderID       string `json:"sender_id,omitempty"`
@@ -82,9 +83,7 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 
 	var payload testSendRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		log.Warn().Err(err).Msg("test-send: invalid payload")
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &payload) {
 		return
 	}
 
@@ -205,8 +204,7 @@ func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload triggerWorkflowRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &payload) {
 		return
 	}
 
@@ -255,8 +253,7 @@ func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var payload createRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &payload) {
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -59,16 +60,17 @@ func (h *Handler) RegisterProtectedRoutes(r chi.Router) {
 	r.Post("/auth/onboarding", h.completeOnboarding)
 }
 
+type signupRequest struct {
+	FirstName  string `json:"first_name" validate:"required"`
+	LastName   string `json:"last_name" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required,min=8"`
+	APIKeyName string `json:"api_key_name,omitempty"`
+}
+
 func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		FirstName  string `json:"first_name"`
-		LastName   string `json:"last_name"`
-		Email      string `json:"email"`
-		Password   string `json:"password"`
-		APIKeyName string `json:"api_key_name,omitempty"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req signupRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -93,13 +95,14 @@ func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+type verifyEmailRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Code  string `json:"code" validate:"required"`
+}
+
 func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Email string `json:"email"`
-		Code  string `json:"code"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req verifyEmailRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -165,13 +168,14 @@ func (h *Handler) socialCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusTemporaryRedirect)
 }
 
+type signinRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
 func (h *Handler) signin(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req signinRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -191,6 +195,10 @@ func (h *Handler) signin(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+type completeOnboardingRequest struct {
+	OrganizationName string `json:"organization_name" validate:"required"`
+}
+
 func (h *Handler) completeOnboarding(w http.ResponseWriter, r *http.Request) {
 	claims := authctx.GetJWTClaims(r.Context())
 	if claims == nil {
@@ -204,11 +212,8 @@ func (h *Handler) completeOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		OrganizationName string `json:"organization_name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req completeOnboardingRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -253,12 +258,13 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type refreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req refreshTokenRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -277,11 +283,8 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	var req refreshTokenRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 

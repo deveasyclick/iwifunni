@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/internal/db"
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
+	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -138,8 +139,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workflowRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	item, err := h.service.Create(r.Context(), CreateInput{
@@ -165,8 +165,7 @@ func (h *Handler) triggerEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req triggerEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -236,8 +235,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workflowRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	item, err := h.service.Update(r.Context(), UpdateInput{

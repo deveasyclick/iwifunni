@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
@@ -37,21 +38,21 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 type createRequest struct {
-	Name        string         `json:"name"`
-	Channel     string         `json:"channel"`
-	Credentials map[string]any `json:"credentials"`
+	Name        string         `json:"name" validate:"required"`
+	Channel     string         `json:"channel" validate:"required"`
+	Credentials map[string]any `json:"credentials" validate:"required"`
 	Config      map[string]any `json:"config,omitempty"`
 }
 
 type updateRequest struct {
-	Name        string         `json:"name"`
-	Channel     string         `json:"channel"`
-	Credentials map[string]any `json:"credentials"`
+	Name        string         `json:"name" validate:"required"`
+	Channel     string         `json:"channel" validate:"required"`
+	Credentials map[string]any `json:"credentials" validate:"required"`
 	Config      map[string]any `json:"config,omitempty"`
 }
 
 type updateStateRequest struct {
-	Action string `json:"action"`
+	Action string `json:"action" validate:"required"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -61,12 +62,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" || req.Channel == "" {
-		http.Error(w, "name and channel are required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
@@ -161,12 +157,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" || req.Channel == "" {
-		http.Error(w, "name and channel are required", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 	p, err := h.service.Update(r.Context(), UpdateInput{
@@ -216,8 +207,7 @@ func (h *Handler) updateState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req updateStateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
+	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
 
