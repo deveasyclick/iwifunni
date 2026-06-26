@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/db"
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	apikeyutil "github.com/deveasyclick/iwifunni/internal/utils/apikey"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/jackc/pgx/v5/pgtype"

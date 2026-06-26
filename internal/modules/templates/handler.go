@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"

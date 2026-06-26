@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/pkg/logger"

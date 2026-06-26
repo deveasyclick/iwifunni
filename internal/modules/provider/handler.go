@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/deveasyclick/iwifunni/internal/providers/catalog"
 	"github.com/go-chi/chi/v5"

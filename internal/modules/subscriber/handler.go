@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/deveasyclick/iwifunni/internal/shared/validate"
-	"github.com/deveasyclick/iwifunni/internal/utils/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/deveasyclick/iwifunni/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
