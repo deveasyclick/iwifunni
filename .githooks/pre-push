@@ -1,0 +1,38 @@
+#!/bin/sh
+# Pre-push hook: regenerate swagger docs and fail the push if they're stale.
+# If this hook blocks your push, run: task swagger && git add docs/ && git commit -m "chore: update swagger docs"
+# Then retry your push.
+
+set -e
+
+echo "🔄 Checking swagger docs are up-to-date..."
+
+# Snapshot the current docs/ before regenerating
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+cp -r docs/ "$TMP_DIR/docs"
+
+# Regenerate in place
+task swagger > /dev/null 2>&1
+
+# Compare regenerated output against the snapshot.
+# If they differ, the docs are stale (the developer forgot to regenerate before push).
+if ! diff -rq docs/ "$TMP_DIR/docs" > /dev/null 2>&1; then
+    echo ""
+    echo "❌ Swagger docs are out of date!"
+    echo ""
+    echo "    The handler annotations changed but docs/ was not regenerated."
+    echo "    Please run the following and commit the result:"
+    echo ""
+    echo "        task swagger && git add docs/ && git commit -m \"chore: update swagger docs\""
+    echo ""
+    echo "    Then retry your push."
+    echo ""
+
+    # Restore the snapshot so we don't leave the working tree dirty
+    cp -r "$TMP_DIR/docs/"* docs/
+    exit 1
+fi
+
+echo "✅ Swagger docs are up-to-date."
+exit 0
