@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { config } from '@/lib/config';
 import { clearSessionCookies, setSessionCookies } from '@/lib/auth-session';
+import { NextRequest, NextResponse } from 'next/server';
 
 type BackendResult = {
   status: number;
@@ -12,10 +13,7 @@ type SessionPayload = {
   needs_onboarding?: boolean;
 };
 
-const BACKEND_BASE_URL =
-  process.env.IWIFUNNI_API_BASE_URL ||
-  process.env.API_BASE_URL ||
-  'http://localhost:8080';
+const BACKEND_BASE_URL = config.apiUrl;
 
 function resolveAuthHeader(req: NextRequest): string | null {
   const authorization = req.headers.get('authorization');
