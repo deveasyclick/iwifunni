@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Tailwind Admin Dashboard',
-    short_name: 'TailwindAdmin',
+    name: 'Iwifunni',
+    short_name: 'Iwifunni',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

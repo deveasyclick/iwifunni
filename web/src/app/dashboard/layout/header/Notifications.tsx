@@ -51,7 +51,7 @@ const Notifications = () => {
                         src={item.avatar}
                         width={45}
                         height={45}
-                        alt="tailwindadmin"
+                        alt="iwifunni"
                         className="rounded-full"
                         unoptimized
                       />

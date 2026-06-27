@@ -1,6 +1,6 @@
 {
-  "name": "Tailwind Admin Dashboard",
-  "short_name": "TailwindAdmin",
+  "name": "Iwifunni app",
+  "short_name": "Iwifunni",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
