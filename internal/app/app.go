@@ -57,6 +57,12 @@ func New(cfg Config) *App {
 }
 
 // healthCheck responds with the service status.
+// @Summary      Health check
+// @Description  Check API health including database and Redis connectivity
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  map[string]any
+// @Router       /health [get]
 func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

@@ -56,9 +56,10 @@ tasks:
       - echo "✅ Go linting completed."
 
   swagger:
-    desc: Swagger task is stale
+    desc: Generate Swagger/OpenAPI docs
     cmds:
-      - echo "Swagger generation is not configured for the current repo entrypoints."
+      - go run github.com/swaggo/swag/cmd/swag@v1.16.4 init --dir ./cmd/api,./internal/app,./internal/modules --output ./docs --parseDependency --parseInternal
+      - echo "✅ Swagger documentation generated."
 
   sqlc:
     desc: Generate sqlc queries
@@ -103,6 +104,7 @@ tasks:
       - go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
       - go install github.com/pressly/goose/v3/cmd/goose@latest
       - go install github.com/air-verse/air@latest
+      - go install github.com/swaggo/swag/cmd/swag@v1.16.4
       - echo "✅ Dev tools installed."
 
   # ----------------------------------

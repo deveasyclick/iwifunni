@@ -1,3 +1,26 @@
+// @title           Iwifunni API
+// @version         1.0
+// @description     Multi-tenant notification platform API
+// @termsOfService  https://iwifunni.com/terms
+
+// @contact.name   API Support
+// @contact.email  support@iwifunni.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 JWT token or API key (prefix: Bearer nk_live_...)
+
+// @securityDefinitions.apikey  ApiKeyAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Legacy API key (prefix: ApiKey ...)
 package main
 
 import (

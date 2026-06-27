@@ -55,6 +55,17 @@ type updateStateRequest struct {
 	Action string `json:"action" validate:"required"`
 }
 
+// @Summary      Create integration
+// @Description  Connect a notification provider (SendGrid, Brevo, SMTP, etc.)
+// @Tags         Integrations
+// @Accept       json
+// @Produce      json
+// @Param        body  body  createRequest  true  "Provider credentials and config"
+// @Success      201   {object}  providerResponse
+// @Failure      400   {string}  string  "Invalid input or unsupported provider"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /integrations [post]
+// @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -106,6 +117,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
+// @Summary      List integrations
+// @Description  Get all connected notification providers
+// @Tags         Integrations
+// @Produce      json
+// @Success      200  {array}   providerResponse
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /integrations [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -125,6 +144,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+// @Summary      Get integration
+// @Description  Get a specific notification provider by ID
+// @Tags         Integrations
+// @Produce      json
+// @Param        providerID  path  string  true  "Integration ID"
+// @Success      200         {object}  providerResponse
+// @Failure      400         {string}  string  "Invalid ID"
+// @Failure      404         {string}  string  "Not found"
+// @Router       /integrations/{providerID} [get]
+// @Security     BearerAuth
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -145,6 +174,17 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
+// @Summary      Update integration
+// @Description  Update a connected provider's credentials and config
+// @Tags         Integrations
+// @Accept       json
+// @Produce      json
+// @Param        providerID  path  string  true  "Integration ID"
+// @Param        body        body  updateRequest  true  "Updated provider config"
+// @Success      200         {object}  providerResponse
+// @Failure      400         {string}  string  "Invalid input"
+// @Router       /integrations/{providerID} [put]
+// @Security     BearerAuth
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -176,6 +216,14 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(providerResponseFromRecord(p))
 }
 
+// @Summary      Delete integration
+// @Description  Remove a connected notification provider
+// @Tags         Integrations
+// @Param        providerID  path  string  true  "Integration ID"
+// @Success      204         {string}  string  "No content"
+// @Failure      400         {string}  string  "Invalid ID"
+// @Router       /integrations/{providerID} [delete]
+// @Security     BearerAuth
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -194,6 +242,17 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary      Update integration state
+// @Description  Enable, disable, or set a provider as primary
+// @Tags         Integrations
+// @Accept       json
+// @Produce      json
+// @Param        providerID  path  string  true  "Integration ID"
+// @Param        body        body  updateStateRequest  true  "Action: enable, disable, or set_primary"
+// @Success      200         {object}  providerResponse
+// @Failure      400         {string}  string  "Invalid input or action"
+// @Router       /integrations/{providerID} [patch]
+// @Security     BearerAuth
 func (h *Handler) updateState(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

@@ -46,6 +46,14 @@ type createResponse struct {
 	Key string `json:"key"`
 }
 
+// @Summary      List API keys
+// @Description  Get all API keys for the authenticated environment
+// @Tags         API Keys
+// @Produce      json
+// @Success      200  {array}   apiKeyResponse
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /api-keys [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
@@ -65,6 +73,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// @Summary      Create API key
+// @Description  Create a new API key for machine-to-machine auth
+// @Tags         API Keys
+// @Accept       json
+// @Produce      json
+// @Param        body  body  createRequest  true  "API key name and scopes"
+// @Success      201   {object}  createResponse
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /api-keys [post]
+// @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
@@ -88,6 +106,17 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Rotate API key
+// @Description  Regenerate an API key, replacing the old one
+// @Tags         API Keys
+// @Accept       json
+// @Produce      json
+// @Param        keyID  path  string  true  "API key ID"
+// @Success      200    {object}  createResponse
+// @Failure      400    {string}  string  "Invalid key ID"
+// @Failure      401    {string}  string  "Unauthorized"
+// @Router       /api-keys/{keyID}/rotate [post]
+// @Security     BearerAuth
 func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
@@ -111,6 +140,15 @@ func (h *Handler) rotate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Revoke API key
+// @Description  Revoke (delete) an API key
+// @Tags         API Keys
+// @Param        keyID  path  string  true  "API key ID"
+// @Success      204    {string}  string  "No content"
+// @Failure      400    {string}  string  "Invalid key ID"
+// @Failure      401    {string}  string  "Unauthorized"
+// @Router       /api-keys/{keyID} [delete]
+// @Security     BearerAuth
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := environmentIDFromContext(r)
 	if !ok {
@@ -133,6 +171,18 @@ type updateRequest struct {
 	Status string `json:"status" validate:"required,oneof=active disabled"`
 }
 
+// @Summary      Update API key status
+// @Description  Enable or disable an API key
+// @Tags         API Keys
+// @Accept       json
+// @Produce      json
+// @Param        keyID  path  string  true  "API key ID"
+// @Param        body   body  updateRequest  true  "New status"
+// @Success      200    {object}  map[string]string
+// @Failure      400    {string}  string  "Invalid key ID"
+// @Failure      401    {string}  string  "Unauthorized"
+// @Router       /api-keys/{keyID} [patch]
+// @Security     BearerAuth
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := environmentIDFromContext(r)
 	if !ok {

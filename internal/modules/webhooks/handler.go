@@ -39,6 +39,17 @@ type webhookResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// @Summary      Create webhook
+// @Description  Register a new webhook endpoint for notification events
+// @Tags         Webhooks
+// @Accept       json
+// @Produce      json
+// @Param        body  body  createRequest  true  "Webhook URL and events"
+// @Success      201   {object}  webhookResponse
+// @Failure      400   {string}  string  "Invalid input"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /webhooks [post]
+// @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -64,6 +75,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(webhookResponse{ID: wh.ID, URL: wh.Url, Events: wh.Events, IsActive: wh.IsActive, CreatedAt: wh.CreatedAt.Time})
 }
 
+// @Summary      List webhooks
+// @Description  Get all registered webhooks
+// @Tags         Webhooks
+// @Produce      json
+// @Success      200  {array}   webhookResponse
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /webhooks [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -83,6 +102,15 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// @Summary      Delete webhook
+// @Description  Unregister a webhook
+// @Tags         Webhooks
+// @Param        webhookID  path  string  true  "Webhook ID"
+// @Success      204        {string}  string  "No content"
+// @Failure      400        {string}  string  "Invalid ID"
+// @Failure      401        {string}  string  "Unauthorized"
+// @Router       /webhooks/{webhookID} [delete]
+// @Security     BearerAuth
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

@@ -79,6 +79,17 @@ type testSendRequest struct {
 	SenderID       string `json:"sender_id,omitempty"`
 }
 
+// @Summary      Send test notification
+// @Description  Send a test email or SMS synchronously (dashboard only)
+// @Tags         Dashboard
+// @Accept       json
+// @Produce      json
+// @Param        body  body  testSendRequest  true  "Test send payload"
+// @Success      200   {object}  map[string]string  "{\"status\": \"sent\"}"
+// @Failure      400   {string}  string  "Invalid input"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /notifications/test-send [post]
+// @Security     BearerAuth
 func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	log := logger.Get()
 
@@ -194,8 +205,17 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
 }
 
-// triggerWorkflow handles synchronous workflow trigger requests
-// authenticated via JWT (dashboard sessions).
+// @Summary      Trigger workflow
+// @Description  Trigger a workflow by ID and enqueue the resulting notification
+// @Tags         Dashboard
+// @Accept       json
+// @Produce      json
+// @Param        body  body  triggerWorkflowRequest  true  "Workflow trigger payload"
+// @Success      202   {object}  map[string]any  "{\"status\": \"queued\", \"notification_id\": \"...\"}"
+// @Failure      400   {string}  string  "Invalid input"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /notifications/trigger [post]
+// @Security     BearerAuth
 func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
@@ -251,6 +271,17 @@ func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Send notification (API key auth)
+// @Description  Enqueue a notification for immediate delivery. Authenticated via API key (ApiKey prefix).
+// @Tags         Notifications
+// @Accept       json
+// @Produce      json
+// @Param        body  body  createRequest  true  "Notification payload"
+// @Success      202   {object}  map[string]string  "{\"status\": \"queued\"}"
+// @Failure      400   {string}  string  "Invalid send request"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /notifications [post]
+// @Security     ApiKeyAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var payload createRequest
 	if !validate.DecodeAndRespond(w, r, &payload) {
@@ -300,6 +331,15 @@ func (h *Handler) respondSendError(w http.ResponseWriter, err error) {
 	}
 }
 
+// @Summary      List notifications
+// @Description  Get notifications for the project, optionally including test sends
+// @Tags         Notifications
+// @Produce      json
+// @Param        include_test  query  string  false  "Set to 'true' to include test notifications"
+// @Success      200  {array}   NotificationView
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /notifications [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
@@ -319,6 +359,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(items)
 }
 
+// @Summary      Get notification
+// @Description  Get a single notification by ID
+// @Tags         Notifications
+// @Produce      json
+// @Param        notificationID  path  string  true  "Notification ID"
+// @Success      200  {object}  NotificationView
+// @Failure      400  {string}  string  "Invalid ID"
+// @Failure      404  {string}  string  "Not found"
+// @Router       /notifications/{notificationID} [get]
+// @Security     BearerAuth
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
@@ -342,6 +392,16 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(item)
 }
 
+// @Summary      Poll notification result
+// @Description  Get a notification with its delivery attempts (for polling status)
+// @Tags         Notifications
+// @Produce      json
+// @Param        notificationID  path  string  true  "Notification ID"
+// @Success      200  {object}  NotificationWithAttempts
+// @Failure      400  {string}  string  "Invalid ID"
+// @Failure      404  {string}  string  "Not found"
+// @Router       /notifications/{notificationID}/poll [get]
+// @Security     BearerAuth
 func (h *Handler) poll(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {
@@ -365,6 +425,17 @@ func (h *Handler) poll(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+// @Summary      List workflow activities
+// @Description  Get all notification activities triggered by a specific workflow
+// @Tags         Notifications
+// @Produce      json
+// @Param        workflowID  path  string  true  "Workflow ID"
+// @Param        limit       query int     false  "Max results (1-100, default 50)"
+// @Success      200  {array}   NotificationView
+// @Failure      400  {string}  string  "Invalid ID"
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /workflows/{workflowID}/activities [get]
+// @Security     BearerAuth
 func (h *Handler) listByWorkflow(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := notificationProjectIDFromContext(r)
 	if !ok {

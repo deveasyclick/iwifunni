@@ -58,6 +58,17 @@ func formatTimestamptz(t pgtype.Timestamptz) string {
 	return t.Time.Format(time.RFC3339Nano)
 }
 
+// @Summary      Upsert template
+// @Description  Create or update a notification template by name and channel
+// @Tags         Templates
+// @Accept       json
+// @Produce      json
+// @Param        body  body  createRequest  true  "Template content"
+// @Success      200   {object}  templateResponse
+// @Failure      400   {string}  string  "Invalid input"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /templates/upsert [post]
+// @Security     BearerAuth
 func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -88,6 +99,17 @@ func (h *Handler) upsert(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Get template
+// @Description  Get a notification template by ID
+// @Tags         Templates
+// @Produce      json
+// @Param        templateID  path  string  true  "Template ID"
+// @Success      200         {object}  templateResponse
+// @Failure      400         {string}  string  "Invalid ID"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Failure      404         {string}  string  "Not found"
+// @Router       /templates/{templateID} [get]
+// @Security     BearerAuth
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -112,6 +134,19 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Update template
+// @Description  Update a notification template's body and subject
+// @Tags         Templates
+// @Accept       json
+// @Produce      json
+// @Param        templateID  path  string  true  "Template ID"
+// @Param        body        body  updateRequest  true  "Updated content"
+// @Success      200         {object}  templateResponse
+// @Failure      400         {string}  string  "Invalid ID or payload"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Failure      404         {string}  string  "Not found"
+// @Router       /templates/{templateID} [patch]
+// @Security     BearerAuth
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

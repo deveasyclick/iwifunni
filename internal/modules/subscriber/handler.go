@@ -61,6 +61,17 @@ type subscriberResponse struct {
 	UpdatedAt            string                 `json:"updatedAt"`
 }
 
+// @Summary      Create subscriber
+// @Description  Create a new subscriber for the project
+// @Tags         Subscribers
+// @Accept       json
+// @Produce      json
+// @Param        body  body  subscriberRequest  true  "Subscriber details"
+// @Success      201   {object}  subscriberResponse
+// @Failure      400   {string}  string  "Invalid subscriber payload"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /subscribers [post]
+// @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -89,6 +100,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusCreated, subscriberFromRecord(item))
 }
 
+// @Summary      List subscribers
+// @Description  Get all subscribers, optionally filtered by search query
+// @Tags         Subscribers
+// @Produce      json
+// @Param        search  query  string  false  "Search by name or email"
+// @Success      200     {array}   subscriberResponse
+// @Failure      401     {string}  string  "Unauthorized"
+// @Router       /subscribers [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -116,6 +136,17 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, response)
 }
 
+// @Summary      Get subscriber
+// @Description  Get a single subscriber by ID
+// @Tags         Subscribers
+// @Produce      json
+// @Param        subscriberID  path  string  true  "Subscriber ID"
+// @Success      200           {object}  subscriberResponse
+// @Failure      400           {string}  string  "Invalid ID"
+// @Failure      401           {string}  string  "Unauthorized"
+// @Failure      404           {string}  string  "Not found"
+// @Router       /subscribers/{subscriberID} [get]
+// @Security     BearerAuth
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -135,6 +166,18 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, subscriberFromRecord(item))
 }
 
+// @Summary      Update subscriber
+// @Description  Update a subscriber's details
+// @Tags         Subscribers
+// @Accept       json
+// @Produce      json
+// @Param        subscriberID  path  string  true  "Subscriber ID"
+// @Param        body          body  subscriberRequest  true  "Updated subscriber data"
+// @Success      200           {object}  subscriberResponse
+// @Failure      400           {string}  string  "Invalid ID or payload"
+// @Failure      401           {string}  string  "Unauthorized"
+// @Router       /subscribers/{subscriberID} [put]
+// @Security     BearerAuth
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -169,6 +212,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, subscriberFromRecord(item))
 }
 
+// @Summary      Delete subscriber
+// @Description  Soft-delete a subscriber
+// @Tags         Subscribers
+// @Param        subscriberID  path  string  true  "Subscriber ID"
+// @Success      204           {string}  string  "No content"
+// @Failure      400           {string}  string  "Invalid ID"
+// @Failure      401           {string}  string  "Unauthorized"
+// @Router       /subscribers/{subscriberID} [delete]
+// @Security     BearerAuth
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

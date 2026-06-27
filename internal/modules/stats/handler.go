@@ -29,6 +29,16 @@ var supportedDays = map[int]bool{
 	180: true,
 }
 
+// @Summary      Get dashboard stats
+// @Description  Get aggregated notification and subscriber statistics
+// @Tags         Dashboard
+// @Produce      json
+// @Param        days  query  int  false  "Lookback period: 7, 14, 30, 90, or 180 (default 7)"
+// @Success      200   {object}  any
+// @Failure      400   {string}  string  "Invalid days parameter"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /stats [get]
+// @Security     BearerAuth
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

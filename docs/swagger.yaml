@@ -1,0 +1,2256 @@
+basePath: /
+definitions:
+  apikey.apiKeyResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      key_prefix:
+        type: string
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+    type: object
+  apikey.createRequest:
+    properties:
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
+  apikey.createResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      key_prefix:
+        type: string
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+    type: object
+  apikey.updateRequest:
+    properties:
+      status:
+        enum:
+        - active
+        - disabled
+        type: string
+    required:
+    - status
+    type: object
+  auth.AuthResult:
+    properties:
+      access_token:
+        type: string
+      environment_id:
+        type: string
+      needs_onboarding:
+        type: boolean
+      organization_id:
+        type: string
+      refresh_token:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+    type: object
+  auth.CompleteOnboardingResult:
+    properties:
+      environment_id:
+        type: string
+      needs_onboarding:
+        type: boolean
+      organization_id:
+        type: string
+      organization_name:
+        type: string
+    type: object
+  auth.SignupResult:
+    properties:
+      email:
+        type: string
+      environment_id:
+        type: string
+      needs_onboarding:
+        type: boolean
+      organization_id:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+      verification_expires_at:
+        type: string
+      verification_required:
+        type: boolean
+    type: object
+  auth.completeOnboardingRequest:
+    properties:
+      organization_name:
+        type: string
+    required:
+    - organization_name
+    type: object
+  auth.refreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.resendVerificationRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  auth.signinRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.signupRequest:
+    properties:
+      api_key_name:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  auth.verifyEmailRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
+    type: object
+  integration.createRequest:
+    properties:
+      channel:
+        type: string
+      config:
+        additionalProperties: {}
+        type: object
+      credentials:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+    required:
+    - channel
+    - credentials
+    - name
+    type: object
+  integration.providerResponse:
+    properties:
+      channel:
+        type: string
+      config:
+        additionalProperties: {}
+        type: object
+      created_at: {}
+      environment_id:
+        type: string
+      has_credentials:
+        type: boolean
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_primary:
+        type: boolean
+      name:
+        type: string
+      updated_at: {}
+    type: object
+  integration.updateRequest:
+    properties:
+      channel:
+        type: string
+      config:
+        additionalProperties: {}
+        type: object
+      credentials:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+    required:
+    - channel
+    - credentials
+    - name
+    type: object
+  integration.updateStateRequest:
+    properties:
+      action:
+        type: string
+    required:
+    - action
+    type: object
+  notification.NotificationView:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      environment_id:
+        type: string
+      id:
+        type: string
+      is_test:
+        type: boolean
+      message:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  notification.NotificationWithAttempts:
+    properties:
+      delivery_attempts:
+        items:
+          additionalProperties: {}
+          type: object
+        type: array
+      notification:
+        $ref: '#/definitions/notification.NotificationView'
+    type: object
+  notification.createRequest:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      recipient:
+        $ref: '#/definitions/types.Recipient'
+      subscriber_id:
+        type: string
+      sync:
+        type: boolean
+      title:
+        type: string
+      workflow_id:
+        type: string
+    required:
+    - message
+    - recipient
+    - title
+    type: object
+  notification.testSendRequest:
+    properties:
+      body:
+        type: string
+      channel:
+        enum:
+        - email
+        - sms
+        type: string
+      recipient_email:
+        type: string
+      recipient_phone:
+        type: string
+      sender_email:
+        type: string
+      sender_id:
+        type: string
+      sender_name:
+        type: string
+      subject:
+        type: string
+    required:
+    - body
+    type: object
+  notification.triggerWorkflowRequest:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      is_system:
+        type: boolean
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      recipient:
+        $ref: '#/definitions/types.Recipient'
+      subscriber_id:
+        type: string
+      workflow_id:
+        type: string
+    required:
+    - workflow_id
+    type: object
+  organization.createRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  subscriber.ChannelStatus:
+    properties:
+      email:
+        $ref: '#/definitions/subscriber.ChannelStatusValue'
+      push:
+        $ref: '#/definitions/subscriber.ChannelStatusValue'
+      sms:
+        $ref: '#/definitions/subscriber.ChannelStatusValue'
+    type: object
+  subscriber.ChannelStatusValue:
+    enum:
+    - subscribed
+    - unsubscribed
+    - bounced
+    type: string
+    x-enum-varnames:
+    - StatusSubscribed
+    - StatusUnsubscribed
+    - StatusBounced
+  subscriber.subscriberRequest:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      email:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      phone:
+        type: string
+      preferences:
+        additionalProperties: true
+        type: object
+      pushToken:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  subscriber.subscriberResponse:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: string
+      deleted:
+        type: boolean
+      email:
+        type: string
+      id:
+        type: string
+      lastNotificationDate:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      phone:
+        type: string
+      preferences:
+        additionalProperties: true
+        type: object
+      pushToken:
+        type: string
+      status:
+        $ref: '#/definitions/subscriber.ChannelStatus'
+      subscriptionDate:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  templates.createRequest:
+    properties:
+      body:
+        type: string
+      channel:
+        enum:
+        - email
+        - sms
+        - push
+        type: string
+      name:
+        type: string
+      subject:
+        type: string
+    required:
+    - body
+    - channel
+    - name
+    type: object
+  templates.templateResponse:
+    properties:
+      body:
+        type: string
+      channel:
+        type: string
+      created_at:
+        type: string
+      environment_id:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      subject:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  templates.updateRequest:
+    properties:
+      body:
+        type: string
+      subject:
+        type: string
+    required:
+    - body
+    type: object
+  types.Recipient:
+    properties:
+      email:
+        type: string
+      phone_number:
+        type: string
+      push_tokens:
+        items:
+          type: string
+        type: array
+      reference:
+        type: string
+    type: object
+  webhooks.createRequest:
+    properties:
+      events:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      secret:
+        type: string
+      url:
+        type: string
+    required:
+    - events
+    - secret
+    - url
+    type: object
+  webhooks.webhookResponse:
+    properties:
+      created_at:
+        type: string
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      is_active:
+        type: boolean
+      url:
+        type: string
+    type: object
+  workflow.Definition:
+    properties:
+      edges:
+        items:
+          $ref: '#/definitions/workflow.Edge'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/workflow.Node'
+        type: array
+      payload:
+        items:
+          type: integer
+        type: array
+      trigger:
+        $ref: '#/definitions/workflow.Trigger'
+    type: object
+  workflow.Edge:
+    properties:
+      branch:
+        type: string
+      source:
+        type: string
+      target:
+        type: string
+    type: object
+  workflow.Node:
+    properties:
+      config:
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      type:
+        $ref: '#/definitions/workflow.WorkflowStepType'
+    type: object
+  workflow.Trigger:
+    properties:
+      event:
+        type: string
+    type: object
+  workflow.WorkflowStepType:
+    enum:
+    - trigger
+    - notification
+    - delay
+    - condition
+    type: string
+    x-enum-varnames:
+    - WorkflowStepTypeTrigger
+    - WorkflowStepTypeNotification
+    - WorkflowStepTypeDelay
+    - WorkflowStepTypeCondition
+  workflow.triggerEventRequest:
+    properties:
+      data:
+        additionalProperties: {}
+        type: object
+      event:
+        type: string
+      subscriber_id:
+        type: string
+    type: object
+  workflow.triggerEventResponse:
+    properties:
+      executions:
+        items:
+          $ref: '#/definitions/workflow.workflowExecutionResponse'
+        type: array
+      status:
+        type: string
+    type: object
+  workflow.workflowExecutionDetailResponse:
+    properties:
+      completedAt:
+        type: string
+      createdAt:
+        type: string
+      currentStepId:
+        type: string
+      failedAt:
+        type: string
+      id:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+      steps:
+        items:
+          $ref: '#/definitions/workflow.workflowStepExecutionResponse'
+        type: array
+      subscriberId:
+        type: string
+      triggerPayload:
+        items:
+          type: integer
+        type: array
+      updatedAt:
+        type: string
+      workflowId:
+        type: string
+    type: object
+  workflow.workflowExecutionResponse:
+    properties:
+      completedAt:
+        type: string
+      createdAt:
+        type: string
+      currentStepId:
+        type: string
+      failedAt:
+        type: string
+      id:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+      subscriberId:
+        type: string
+      triggerPayload:
+        items:
+          type: integer
+        type: array
+      updatedAt:
+        type: string
+      workflowId:
+        type: string
+    type: object
+  workflow.workflowRequest:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      definition:
+        $ref: '#/definitions/workflow.Definition'
+      description:
+        type: string
+      isActive:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      templateIds:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  workflow.workflowResponse:
+    properties:
+      channels:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: string
+      definition:
+        $ref: '#/definitions/workflow.Definition'
+      description:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      templateIds:
+        additionalProperties:
+          type: string
+        type: object
+      triggerEvent:
+        type: string
+      updatedAt:
+        type: string
+      version:
+        type: integer
+    type: object
+  workflow.workflowStepExecutionResponse:
+    properties:
+      attempts:
+        type: integer
+      completedAt:
+        type: string
+      createdAt:
+        type: string
+      error:
+        items:
+          type: integer
+        type: array
+      executionId:
+        type: string
+      failedAt:
+        type: string
+      id:
+        type: string
+      input:
+        items:
+          type: integer
+        type: array
+      output:
+        items:
+          type: integer
+        type: array
+      startedAt:
+        type: string
+      status:
+        type: string
+      stepId:
+        type: string
+      stepType:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@iwifunni.com
+    name: API Support
+  description: Multi-tenant notification platform API
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://iwifunni.com/terms
+  title: Iwifunni API
+  version: "1.0"
+paths:
+  /api-keys:
+    get:
+      description: Get all API keys for the authenticated environment
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apikey.apiKeyResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List API keys
+      tags:
+      - API Keys
+    post:
+      consumes:
+      - application/json
+      description: Create a new API key for machine-to-machine auth
+      parameters:
+      - description: API key name and scopes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/apikey.createRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apikey.createResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create API key
+      tags:
+      - API Keys
+  /api-keys/{keyID}:
+    delete:
+      description: Revoke (delete) an API key
+      parameters:
+      - description: API key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Invalid key ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Revoke API key
+      tags:
+      - API Keys
+    patch:
+      consumes:
+      - application/json
+      description: Enable or disable an API key
+      parameters:
+      - description: API key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/apikey.updateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid key ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update API key status
+      tags:
+      - API Keys
+  /api-keys/{keyID}/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Regenerate an API key, replacing the old one
+      parameters:
+      - description: API key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apikey.createResponse'
+        "400":
+          description: Invalid key ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Rotate API key
+      tags:
+      - API Keys
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke a refresh token
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.refreshTokenRequest'
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            type: string
+      summary: Logout
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      description: Get the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Auth
+  /auth/onboarding:
+    post:
+      consumes:
+      - application/json
+      description: Set up the user's organization after first sign in
+      parameters:
+      - description: Organization name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.completeOnboardingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.CompleteOnboardingResult'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Complete onboarding
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a refresh token for a new access token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.refreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResult'
+        "401":
+          description: Invalid refresh token
+          schema:
+            type: string
+      summary: Refresh token
+      tags:
+      - Auth
+  /auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      description: Resend the email verification code
+      parameters:
+      - description: Email address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.resendVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email already verified
+          schema:
+            type: string
+      summary: Resend verification email
+      tags:
+      - Auth
+  /auth/signin:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password
+      parameters:
+      - description: Signin credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.signinRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResult'
+        "401":
+          description: Invalid credentials
+          schema:
+            type: string
+        "403":
+          description: Email not verified
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Sign in
+      tags:
+      - Auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Create a new account with a project and API key
+      parameters:
+      - description: Signup credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.signupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.SignupResult'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "409":
+          description: Email already exists
+          schema:
+            type: string
+      summary: Sign up
+      tags:
+      - Auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify email address with code sent during signup
+      parameters:
+      - description: Verification code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.verifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid or expired code
+          schema:
+            type: string
+      summary: Verify email
+      tags:
+      - Auth
+  /events:
+    post:
+      consumes:
+      - application/json
+      description: Trigger workflows matching an event name via API key auth
+      parameters:
+      - description: Event payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workflow.triggerEventRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/workflow.triggerEventResponse'
+        "400":
+          description: Invalid payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Trigger event
+      tags:
+      - Workflows
+  /health:
+    get:
+      description: Check API health including database and Redis connectivity
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - System
+  /integrations:
+    get:
+      description: Get all connected notification providers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/integration.providerResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List integrations
+      tags:
+      - Integrations
+    post:
+      consumes:
+      - application/json
+      description: Connect a notification provider (SendGrid, Brevo, SMTP, etc.)
+      parameters:
+      - description: Provider credentials and config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/integration.createRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/integration.providerResponse'
+        "400":
+          description: Invalid input or unsupported provider
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create integration
+      tags:
+      - Integrations
+  /integrations/{providerID}:
+    delete:
+      description: Remove a connected notification provider
+      parameters:
+      - description: Integration ID
+        in: path
+        name: providerID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete integration
+      tags:
+      - Integrations
+    get:
+      description: Get a specific notification provider by ID
+      parameters:
+      - description: Integration ID
+        in: path
+        name: providerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/integration.providerResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get integration
+      tags:
+      - Integrations
+    patch:
+      consumes:
+      - application/json
+      description: Enable, disable, or set a provider as primary
+      parameters:
+      - description: Integration ID
+        in: path
+        name: providerID
+        required: true
+        type: string
+      - description: 'Action: enable, disable, or set_primary'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/integration.updateStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/integration.providerResponse'
+        "400":
+          description: Invalid input or action
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update integration state
+      tags:
+      - Integrations
+    put:
+      consumes:
+      - application/json
+      description: Update a connected provider's credentials and config
+      parameters:
+      - description: Integration ID
+        in: path
+        name: providerID
+        required: true
+        type: string
+      - description: Updated provider config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/integration.updateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/integration.providerResponse'
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update integration
+      tags:
+      - Integrations
+  /notifications:
+    get:
+      description: Get notifications for the project, optionally including test sends
+      parameters:
+      - description: Set to 'true' to include test notifications
+        in: query
+        name: include_test
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/notification.NotificationView'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - Notifications
+    post:
+      consumes:
+      - application/json
+      description: Enqueue a notification for immediate delivery. Authenticated via
+        API key (ApiKey prefix).
+      parameters:
+      - description: Notification payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/notification.createRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{\"status\": \"queued\"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid send request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Send notification (API key auth)
+      tags:
+      - Notifications
+  /notifications/{notificationID}:
+    get:
+      description: Get a single notification by ID
+      parameters:
+      - description: Notification ID
+        in: path
+        name: notificationID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/notification.NotificationView'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get notification
+      tags:
+      - Notifications
+  /notifications/{notificationID}/poll:
+    get:
+      description: Get a notification with its delivery attempts (for polling status)
+      parameters:
+      - description: Notification ID
+        in: path
+        name: notificationID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/notification.NotificationWithAttempts'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Poll notification result
+      tags:
+      - Notifications
+  /notifications/test-send:
+    post:
+      consumes:
+      - application/json
+      description: Send a test email or SMS synchronously (dashboard only)
+      parameters:
+      - description: Test send payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/notification.testSendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{\"status\": \"sent\"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Send test notification
+      tags:
+      - Dashboard
+  /notifications/trigger:
+    post:
+      consumes:
+      - application/json
+      description: Trigger a workflow by ID and enqueue the resulting notification
+      parameters:
+      - description: Workflow trigger payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/notification.triggerWorkflowRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{\"status\": \"queued\", \"notification_id\": \"...\"}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Trigger workflow
+      tags:
+      - Dashboard
+  /organizations:
+    get:
+      description: Get all organizations for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items: {}
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List organizations
+      tags:
+      - Organizations
+    post:
+      consumes:
+      - application/json
+      description: Create a new organization for the authenticated user
+      parameters:
+      - description: Organization name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.createRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema: {}
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create organization
+      tags:
+      - Organizations
+  /organizations/{orgID}:
+    get:
+      description: Get a single organization by ID
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get organization
+      tags:
+      - Organizations
+  /stats:
+    get:
+      description: Get aggregated notification and subscriber statistics
+      parameters:
+      - description: 'Lookback period: 7, 14, 30, 90, or 180 (default 7)'
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Invalid days parameter
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get dashboard stats
+      tags:
+      - Dashboard
+  /subscribers:
+    get:
+      description: Get all subscribers, optionally filtered by search query
+      parameters:
+      - description: Search by name or email
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/subscriber.subscriberResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List subscribers
+      tags:
+      - Subscribers
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscriber for the project
+      parameters:
+      - description: Subscriber details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/subscriber.subscriberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/subscriber.subscriberResponse'
+        "400":
+          description: Invalid subscriber payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create subscriber
+      tags:
+      - Subscribers
+  /subscribers/{subscriberID}:
+    delete:
+      description: Soft-delete a subscriber
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: subscriberID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete subscriber
+      tags:
+      - Subscribers
+    get:
+      description: Get a single subscriber by ID
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: subscriberID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/subscriber.subscriberResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get subscriber
+      tags:
+      - Subscribers
+    put:
+      consumes:
+      - application/json
+      description: Update a subscriber's details
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: subscriberID
+        required: true
+        type: string
+      - description: Updated subscriber data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/subscriber.subscriberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/subscriber.subscriberResponse'
+        "400":
+          description: Invalid ID or payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update subscriber
+      tags:
+      - Subscribers
+  /templates/{templateID}:
+    get:
+      description: Get a notification template by ID
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/templates.templateResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get template
+      tags:
+      - Templates
+    patch:
+      consumes:
+      - application/json
+      description: Update a notification template's body and subject
+      parameters:
+      - description: Template ID
+        in: path
+        name: templateID
+        required: true
+        type: string
+      - description: Updated content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/templates.updateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/templates.templateResponse'
+        "400":
+          description: Invalid ID or payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update template
+      tags:
+      - Templates
+  /templates/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Create or update a notification template by name and channel
+      parameters:
+      - description: Template content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/templates.createRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/templates.templateResponse'
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Upsert template
+      tags:
+      - Templates
+  /webhooks:
+    get:
+      description: Get all registered webhooks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/webhooks.webhookResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Register a new webhook endpoint for notification events
+      parameters:
+      - description: Webhook URL and events
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/webhooks.createRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/webhooks.webhookResponse'
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create webhook
+      tags:
+      - Webhooks
+  /webhooks/{webhookID}:
+    delete:
+      description: Unregister a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: webhookID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete webhook
+      tags:
+      - Webhooks
+  /workflow-executions:
+    get:
+      description: Get all workflow executions, optionally filtered by workflow ID
+      parameters:
+      - description: Filter by workflow ID
+        in: query
+        name: workflow_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/workflow.workflowExecutionResponse'
+            type: array
+        "400":
+          description: Invalid workflow ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List workflow executions
+      tags:
+      - Workflows
+  /workflow-executions/{executionID}:
+    get:
+      description: Get a workflow execution with step details
+      parameters:
+      - description: Execution ID
+        in: path
+        name: executionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workflow.workflowExecutionDetailResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get workflow execution
+      tags:
+      - Workflows
+  /workflows:
+    get:
+      description: Get all workflows for the project
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/workflow.workflowResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List workflows
+      tags:
+      - Workflows
+    post:
+      consumes:
+      - application/json
+      description: Create a new notification workflow
+      parameters:
+      - description: Workflow configuration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workflow.workflowRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/workflow.workflowResponse'
+        "400":
+          description: Invalid workflow payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}:
+    delete:
+      description: Delete a workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No content
+          schema:
+            type: string
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete workflow
+      tags:
+      - Workflows
+    get:
+      description: Get a single workflow by ID
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workflow.workflowResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get workflow
+      tags:
+      - Workflows
+    put:
+      consumes:
+      - application/json
+      description: Update a workflow configuration
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Updated workflow data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workflow.workflowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workflow.workflowResponse'
+        "400":
+          description: Invalid ID or payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "409":
+          description: Published workflows are immutable
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}/activities:
+    get:
+      description: Get all notification activities triggered by a specific workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Max results (1-100, default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/notification.NotificationView'
+            type: array
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List workflow activities
+      tags:
+      - Notifications
+  /workflows/{workflowID}/publish:
+    post:
+      description: Publish a workflow, making it active and immutable
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workflow.workflowResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Publish workflow
+      tags:
+      - Workflows
+securityDefinitions:
+  ApiKeyAuth:
+    description: 'Legacy API key (prefix: ApiKey ...)'
+    in: header
+    name: Authorization
+    type: apiKey
+  BearerAuth:
+    description: 'JWT token or API key (prefix: Bearer nk_live_...)'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

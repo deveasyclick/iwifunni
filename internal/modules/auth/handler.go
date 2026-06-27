@@ -69,6 +69,16 @@ type signupRequest struct {
 	APIKeyName string `json:"api_key_name,omitempty"`
 }
 
+// @Summary      Sign up
+// @Description  Create a new account with a project and API key
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  signupRequest  true  "Signup credentials"
+// @Success      201   {object}  SignupResult
+// @Failure      400   {string}  string  "Bad request"
+// @Failure      409   {string}  string  "Email already exists"
+// @Router       /auth/signup [post]
 func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
 	var req signupRequest
 	if !validate.DecodeAndRespond(w, r, &req) {
@@ -101,6 +111,15 @@ type verifyEmailRequest struct {
 	Code  string `json:"code" validate:"required"`
 }
 
+// @Summary      Verify email
+// @Description  Verify email address with code sent during signup
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  verifyEmailRequest  true  "Verification code"
+// @Success      200   {object}  map[string]any
+// @Failure      400   {string}  string  "Invalid or expired code"
+// @Router       /auth/verify-email [post]
 func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req verifyEmailRequest
 	if !validate.DecodeAndRespond(w, r, &req) {
@@ -128,6 +147,15 @@ type resendVerificationRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+// @Summary      Resend verification email
+// @Description  Resend the email verification code
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  resendVerificationRequest  true  "Email address"
+// @Success      200   {object}  map[string]any
+// @Failure      409   {string}  string  "Email already verified"
+// @Router       /auth/resend-verification [post]
 func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
 	var req resendVerificationRequest
 	if !validate.DecodeAndRespond(w, r, &req) {
@@ -198,6 +226,16 @@ type signinRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// @Summary      Sign in
+// @Description  Authenticate with email and password
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  signinRequest  true  "Signin credentials"
+// @Success      200   {object}  AuthResult
+// @Failure      401   {string}  string  "Invalid credentials"
+// @Failure      403   {object}  map[string]string  "Email not verified"
+// @Router       /auth/signin [post]
 func (h *Handler) signin(w http.ResponseWriter, r *http.Request) {
 	var req signinRequest
 	if !validate.DecodeAndRespond(w, r, &req) {
@@ -226,6 +264,16 @@ type completeOnboardingRequest struct {
 	OrganizationName string `json:"organization_name" validate:"required"`
 }
 
+// @Summary      Complete onboarding
+// @Description  Set up the user's organization after first sign in
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  completeOnboardingRequest  true  "Organization name"
+// @Success      200   {object}  CompleteOnboardingResult
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /auth/onboarding [post]
+// @Security     BearerAuth
 func (h *Handler) completeOnboarding(w http.ResponseWriter, r *http.Request) {
 	claims := authctx.GetJWTClaims(r.Context())
 	if claims == nil {
@@ -257,6 +305,14 @@ func (h *Handler) completeOnboarding(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+// @Summary      Get current user
+// @Description  Get the authenticated user's profile
+// @Tags         Auth
+// @Produce      json
+// @Success      200   {object}  map[string]any
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /auth/me [get]
+// @Security     BearerAuth
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	claims := authctx.GetJWTClaims(r.Context())
 	if claims == nil {
@@ -289,6 +345,15 @@ type refreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
+// @Summary      Refresh token
+// @Description  Exchange a refresh token for a new access token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  refreshTokenRequest  true  "Refresh token"
+// @Success      200   {object}  AuthResult
+// @Failure      401   {string}  string  "Invalid refresh token"
+// @Router       /auth/refresh [post]
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 	var req refreshTokenRequest
 	if !validate.DecodeAndRespond(w, r, &req) {
@@ -309,6 +374,14 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(result)
 }
 
+// @Summary      Logout
+// @Description  Revoke a refresh token
+// @Tags         Auth
+// @Accept       json
+// @Param        body  body  refreshTokenRequest  true  "Refresh token to revoke"
+// @Success      204   {string}  string  "No content"
+// @Failure      400   {string}  string  "Bad request"
+// @Router       /auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	var req refreshTokenRequest
 	if !validate.DecodeAndRespond(w, r, &req) {

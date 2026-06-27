@@ -132,6 +132,17 @@ type triggerEventResponse struct {
 	Executions []workflowExecutionResponse `json:"executions"`
 }
 
+// @Summary      Create workflow
+// @Description  Create a new notification workflow
+// @Tags         Workflows
+// @Accept       json
+// @Produce      json
+// @Param        body  body  workflowRequest  true  "Workflow configuration"
+// @Success      201   {object}  workflowResponse
+// @Failure      400   {string}  string  "Invalid workflow payload"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /workflows [post]
+// @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -158,6 +169,17 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusCreated, workflowFromRecord(item))
 }
 
+// @Summary      Trigger event
+// @Description  Trigger workflows matching an event name via API key auth
+// @Tags         Workflows
+// @Accept       json
+// @Produce      json
+// @Param        body  body  triggerEventRequest  true  "Event payload"
+// @Success      202   {object}  triggerEventResponse
+// @Failure      400   {string}  string  "Invalid payload"
+// @Failure      401   {string}  string  "Unauthorized"
+// @Router       /events [post]
+// @Security     ApiKeyAuth
 func (h *Handler) triggerEvent(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -186,6 +208,14 @@ func (h *Handler) triggerEvent(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusAccepted, triggerEventResponse{Status: "queued", Executions: response})
 }
 
+// @Summary      List workflows
+// @Description  Get all workflows for the project
+// @Tags         Workflows
+// @Produce      json
+// @Success      200  {array}   workflowResponse
+// @Failure      401  {string}  string  "Unauthorized"
+// @Router       /workflows [get]
+// @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -204,6 +234,17 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, response)
 }
 
+// @Summary      Get workflow
+// @Description  Get a single workflow by ID
+// @Tags         Workflows
+// @Produce      json
+// @Param        workflowID  path  string  true  "Workflow ID"
+// @Success      200         {object}  workflowResponse
+// @Failure      400         {string}  string  "Invalid ID"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Failure      404         {string}  string  "Not found"
+// @Router       /workflows/{workflowID} [get]
+// @Security     BearerAuth
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -223,6 +264,20 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
 }
 
+// @Summary      Update workflow
+// @Description  Update a workflow configuration
+// @Tags         Workflows
+// @Accept       json
+// @Produce      json
+// @Param        workflowID  path  string  true  "Workflow ID"
+// @Param        body        body  workflowRequest  true  "Updated workflow data"
+// @Success      200         {object}  workflowResponse
+// @Failure      400         {string}  string  "Invalid ID or payload"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Failure      404         {string}  string  "Not found"
+// @Failure      409         {string}  string  "Published workflows are immutable"
+// @Router       /workflows/{workflowID} [put]
+// @Security     BearerAuth
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -256,6 +311,17 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
 }
 
+// @Summary      Publish workflow
+// @Description  Publish a workflow, making it active and immutable
+// @Tags         Workflows
+// @Produce      json
+// @Param        workflowID  path  string  true  "Workflow ID"
+// @Success      200         {object}  workflowResponse
+// @Failure      400         {string}  string  "Invalid ID"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Failure      404         {string}  string  "Not found"
+// @Router       /workflows/{workflowID}/publish [post]
+// @Security     BearerAuth
 func (h *Handler) publish(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -277,6 +343,15 @@ func (h *Handler) publish(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
 }
 
+// @Summary      Delete workflow
+// @Description  Delete a workflow
+// @Tags         Workflows
+// @Param        workflowID  path  string  true  "Workflow ID"
+// @Success      204         {string}  string  "No content"
+// @Failure      400         {string}  string  "Invalid ID"
+// @Failure      401         {string}  string  "Unauthorized"
+// @Router       /workflows/{workflowID} [delete]
+// @Security     BearerAuth
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -295,6 +370,16 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary      List workflow executions
+// @Description  Get all workflow executions, optionally filtered by workflow ID
+// @Tags         Workflows
+// @Produce      json
+// @Param        workflow_id  query  string  false  "Filter by workflow ID"
+// @Success      200          {array}   workflowExecutionResponse
+// @Failure      400          {string}  string  "Invalid workflow ID"
+// @Failure      401          {string}  string  "Unauthorized"
+// @Router       /workflow-executions [get]
+// @Security     BearerAuth
 func (h *Handler) listExecutions(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {
@@ -325,6 +410,17 @@ func (h *Handler) listExecutions(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, response)
 }
 
+// @Summary      Get workflow execution
+// @Description  Get a workflow execution with step details
+// @Tags         Workflows
+// @Produce      json
+// @Param        executionID  path  string  true  "Execution ID"
+// @Success      200          {object}  workflowExecutionDetailResponse
+// @Failure      400          {string}  string  "Invalid ID"
+// @Failure      401          {string}  string  "Unauthorized"
+// @Failure      404          {string}  string  "Not found"
+// @Router       /workflow-executions/{executionID} [get]
+// @Security     BearerAuth
 func (h *Handler) getExecution(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
 	if !ok {

@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/deveasyclick/iwifunni/internal/middleware"
+	"github.com/swaggo/http-swagger/v2"
+	_ "github.com/deveasyclick/iwifunni/docs"
+
 	apikey "github.com/deveasyclick/iwifunni/internal/modules/apikey"
 	"github.com/deveasyclick/iwifunni/internal/modules/notification"
 	"github.com/deveasyclick/iwifunni/internal/modules/organization"
@@ -29,6 +32,9 @@ func (a *App) Router() http.Handler {
 func (a *App) registerRoutes(r chi.Router) {
 	// Health check (no auth)
 	r.Get("/health", a.healthCheck)
+
+	// Swagger UI
+	r.Get("/swagger/*", httpSwagger.Handler())
 
 	// Auth routes (no auth middleware)
 	a.authHandler.Register(r)
