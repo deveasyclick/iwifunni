@@ -27,6 +27,9 @@ func (a *App) Router() http.Handler {
 }
 
 func (a *App) registerRoutes(r chi.Router) {
+	// Health check (no auth)
+	r.Get("/health", a.healthCheck)
+
 	// Auth routes (no auth middleware)
 	a.authHandler.Register(r)
 

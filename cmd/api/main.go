@@ -125,6 +125,7 @@ func main() {
 	application := app.New(app.Config{
 		Queries:       store.Queries,
 		DBPool:        store.Pool,
+		RedisClient:   redisClient,
 		RateLimiter:   rateLimiter,
 		AuthHandler:   authHandler,
 		EncryptionKey: cfg.EncryptionKey,
