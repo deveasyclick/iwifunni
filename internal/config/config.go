@@ -11,8 +11,7 @@ import (
 
 type Config struct {
 	DatabaseURL        string
-	RedisAddr          string
-	RedisPassword      string
+	RedisURL           string
 	APIServicePort     string
 	BrevoAPIKey        string
 	BrevoFromEmail     string
@@ -76,8 +75,7 @@ func Load() (*Config, error) {
 
 	return &Config{
 		DatabaseURL:        getenvDefault("DATABASE_URL", "postgres://iwifunni:iwifunni@localhost:5432/iwifunni?sslmode=disable"),
-		RedisAddr:          getenvDefault("REDIS_ADDR", "localhost:6379"),
-		RedisPassword:      os.Getenv("REDIS_PASSWORD"),
+		RedisURL:           getenvDefault("REDIS_URL", "redis://localhost:6379"),
 		APIServicePort:     getenvDefault("API_PORT", "8080"),
 		BrevoAPIKey:        os.Getenv("BREVO_API_KEY"),
 		BrevoFromEmail:     os.Getenv("BREVO_FROM_EMAIL"),

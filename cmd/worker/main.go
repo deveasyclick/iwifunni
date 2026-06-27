@@ -33,10 +33,12 @@ func main() {
 	store := storage.NewStore(ctx, cfg)
 	defer store.Pool.Close()
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisAddr,
-		Password: cfg.RedisPassword,
-	})
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		l.Error("invalid redis url", "error", err)
+		os.Exit(1)
+	}
+	redisClient := redis.NewClient(redisOpts)
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		l.Error("failed to connect to redis", "error", err)
 		os.Exit(1)
@@ -44,15 +46,17 @@ func main() {
 	defer redisClient.Close()
 
 	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
-		Addr:     cfg.RedisAddr,
-		Password: cfg.RedisPassword,
+		Addr:     redisOpts.Addr,
+		Password: redisOpts.Password,
+		DB:       redisOpts.DB,
 	})
 	defer asynqClient.Close()
 
 	asynqServer := asynq.NewServer(
 		asynq.RedisClientOpt{
-			Addr:     cfg.RedisAddr,
-			Password: cfg.RedisPassword,
+			Addr:     redisOpts.Addr,
+			Password: redisOpts.Password,
+			DB:       redisOpts.DB,
 		},
 		asynq.Config{
 			Concurrency: 10,
