@@ -7,42 +7,24 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import FullLogo from '../../../components/shared/FullLogo';
 import { useRouter } from 'next/navigation';
+import { useCompleteOnboarding } from '@/features/auth/queries';
 
 export const Onboarding = () => {
   const router = useRouter();
   const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const onboarding = useCompleteOnboarding();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/onboarding', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ organization_name: organizationName }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-
-      if (!response.ok) {
-        setError(payload?.error || 'Unable to complete onboarding.');
-        return;
-      }
-
+      await onboarding.mutateAsync({ organization_name: organizationName });
       router.replace('/dashboard');
       router.refresh();
-    } catch {
-      setError('Unable to complete onboarding right now.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to complete onboarding.');
     }
   }
 
@@ -84,9 +66,9 @@ export const Onboarding = () => {
             <Button
               className="w-full mt-6"
               type="submit"
-              disabled={isSubmitting}
+              disabled={onboarding.isPending}
             >
-              {isSubmitting ? 'Finishing...' : 'Finish Setup'}
+              {onboarding.isPending ? 'Finishing...' : 'Finish Setup'}
             </Button>
           </form>
         </CardBox>

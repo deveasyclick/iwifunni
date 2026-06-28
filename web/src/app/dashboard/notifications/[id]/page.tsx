@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useNotification } from '@/features/notifications/queries';
 import { format } from 'date-fns';
 import { Icon } from '@iconify/react';
 import { Button } from '@/components/ui/button';
@@ -53,40 +53,11 @@ export default function NotificationDetailPage() {
   const router = useRouter();
   const notificationId = params.id as string;
 
-  const [notification, setNotification] = useState<NotificationDetail | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchNotification = async () => {
-      try {
-        const res = await fetch(`/api/notifications/${notificationId}`, {
-          headers: { browserrefreshed: 'false' },
-        });
-
-        if (!res.ok) {
-          setNotification(null);
-          return;
-        }
-
-        const data = (await res.json()) as
-          | { data?: NotificationDetail }
-          | NotificationDetail;
-        const body = 'data' in data ? data.data : (data as NotificationDetail);
-        if (body) {
-          setNotification(body);
-          return;
-        }
-      } catch (err) {
-        console.error('Error fetching notification:', err);
-        setNotification(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void fetchNotification();
-  }, [notificationId]);
+  const {
+    data: notification,
+    isLoading: loading,
+    refetch,
+  } = useNotification(notificationId);
 
   const handleRefresh = () => {
     router.refresh();

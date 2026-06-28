@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import FullLogo from '../../../components/shared/FullLogo';
 import { SocialAuthButtons } from './SocialAuthButtons';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useVerifyEmail, useResendVerification } from '@/features/auth/queries';
 
 export const VerifyEmail = () => {
   const router = useRouter();
@@ -17,69 +18,34 @@ export const VerifyEmail = () => {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+  const verifyEmail = useVerifyEmail();
+  const resendCode = useResendVerification();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, code }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-        needs_onboarding?: boolean;
-      } | null;
-
-      if (!response.ok) {
-        setError(payload?.error || 'Unable to verify your email.');
-        return;
-      }
+      const result = await verifyEmail.mutateAsync({ email, code });
 
       router.replace(
-        payload?.needs_onboarding ? '/auth/onboarding' : '/dashboard',
+        result.needs_onboarding ? '/auth/onboarding' : '/dashboard',
       );
       router.refresh();
-    } catch {
-      setError('Unable to verify your email right now.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to verify your email.');
     }
   }
 
   async function handleResend() {
     setError(null);
     setResendMessage(null);
-    setIsResending(true);
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setError(payload?.error || 'Failed to resend code.');
-        return;
-      }
-
+      await resendCode.mutateAsync({ email });
       setResendMessage('A new code has been sent to your email.');
-    } catch {
-      setError('Unable to resend code right now.');
-    } finally {
-      setIsResending(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend code.');
     }
   }
 
@@ -148,17 +114,17 @@ export const VerifyEmail = () => {
                 type="button"
                 variant="outline"
                 className="flex-1"
-                disabled={isResending}
+                disabled={resendCode.isPending}
                 onClick={() => void handleResend()}
               >
-                {isResending ? 'Sending...' : 'Resend Code'}
+                {resendCode.isPending ? 'Sending...' : 'Resend Code'}
               </Button>
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={isSubmitting}
+                disabled={verifyEmail.isPending}
               >
-                {isSubmitting ? 'Verifying...' : 'Verify Email'}
+                {verifyEmail.isPending ? 'Verifying...' : 'Verify Email'}
               </Button>
             </div>
           </form>

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import CardBox from '@/components/card/CardBox';
 import { Badge } from '@/components/ui/badge';
@@ -24,22 +24,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { CreateWebhookPayload, WebhookItem } from '@/app/types/webhook';
-
-const parseError = async (res: Response): Promise<string> => {
-  const fallback = 'Request failed';
-  try {
-    const body = (await res.json()) as { error?: string; message?: string };
-    return body.error || body.message || fallback;
-  } catch {
-    return fallback;
-  }
-};
+import {
+  useWebhookList,
+  useCreateWebhook,
+  useDeleteWebhook,
+} from './queries';
 
 function webhookTableBody(
   loading: boolean,
   items: WebhookItem[],
   deleteWebhook: (id: string) => Promise<void>,
-  mutatingID: string | null,
+  isMutating: boolean,
 ) {
   if (loading) {
     return (
@@ -86,10 +81,10 @@ function webhookTableBody(
         <Button
           variant="outline"
           size="sm"
-          disabled={mutatingID === item.id}
+          disabled={isMutating}
           onClick={() => void deleteWebhook(item.id)}
         >
-          {mutatingID === item.id ? 'Deleting...' : 'Delete'}
+          {isMutating ? 'Deleting...' : 'Delete'}
         </Button>
       </TableCell>
     </TableRow>
@@ -97,43 +92,21 @@ function webhookTableBody(
 }
 
 const WebhookManagement = () => {
-  const [items, setItems] = useState<WebhookItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: items = [],
+    isLoading: loading,
+    error: queryError,
+    refetch: fetchWebhooks,
+  } = useWebhookList();
+  const createWebhook = useCreateWebhook();
+  const deleteWebhookMutation = useDeleteWebhook();
+
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const [mutatingID, setMutatingID] = useState<string | null>(null);
   const [url, setURL] = useState('');
   const [secret, setSecret] = useState('');
   const [events, setEvents] = useState('notification.sent,notification.failed');
-
-  const fetchWebhooks = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/webhooks', {
-        method: 'GET',
-        headers: { browserrefreshed: 'false' },
-        cache: 'no-store',
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
-      const data = (await res.json()) as WebhookItem[];
-      setItems(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load webhooks');
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchWebhooks();
-  }, [fetchWebhooks]);
 
   const visibleItems = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -167,29 +140,14 @@ const WebhookManagement = () => {
       return;
     }
 
-    setMutatingID('create');
     try {
-      const res = await fetch('/api/webhooks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
+      await createWebhook.mutateAsync(payload);
       setOpen(false);
       setURL('');
       setSecret('');
       setEvents('notification.sent,notification.failed');
-      await fetchWebhooks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create webhook');
-    } finally {
-      setMutatingID(null);
     }
   };
 
@@ -199,21 +157,10 @@ const WebhookManagement = () => {
     }
 
     setError(null);
-    setMutatingID(id);
     try {
-      const res = await fetch(`/api/webhooks/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok && res.status !== 204) {
-        throw new Error(await parseError(res));
-      }
-
-      await fetchWebhooks();
+      await deleteWebhookMutation.mutateAsync(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete webhook');
-    } finally {
-      setMutatingID(null);
     }
   };
 
@@ -291,10 +238,10 @@ const WebhookManagement = () => {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={mutatingID === 'create'}
+                  disabled={createWebhook.isPending}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingID === 'create' ? 'Saving...' : 'Create webhook'}
+                  {createWebhook.isPending ? 'Saving...' : 'Create webhook'}
                 </Button>
               </DialogFooter>
             </form>
@@ -302,9 +249,9 @@ const WebhookManagement = () => {
         </Dialog>
       </div>
 
-      {error && (
+      {(error || queryError) && (
         <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
+          {error || (queryError instanceof Error ? queryError.message : 'Failed to load webhooks')}
         </p>
       )}
 
@@ -329,7 +276,7 @@ const WebhookManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {webhookTableBody(loading, visibleItems, deleteWebhook, mutatingID)}
+            {webhookTableBody(loading, visibleItems, deleteWebhook, deleteWebhookMutation.isPending)}
           </TableBody>
         </Table>
       </div>

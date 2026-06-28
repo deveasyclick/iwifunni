@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import FullLogo from '../../../components/shared/FullLogo';
 import { SocialAuthButtons } from './SocialAuthButtons';
 import { useRouter } from 'next/navigation';
+import { useSignup } from '@/features/auth/queries';
 
 export const Register = () => {
   const router = useRouter();
@@ -17,46 +18,25 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const signup = useSignup();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          password,
-        }),
+      const result = await signup.mutateAsync({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password,
       });
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setError(payload?.error || 'Unable to create your account.');
-        return;
-      }
-
-      const payload = (await response.json().catch(() => null)) as {
-        email?: string;
-      } | null;
-      const nextEmail = payload?.email || email;
-
+      const nextEmail = result.email || email;
       router.replace(`/auth/verify?email=${encodeURIComponent(nextEmail)}`);
       router.refresh();
-    } catch {
-      setError('Unable to create your account right now.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create your account.');
     }
   }
 
@@ -147,9 +127,9 @@ export const Register = () => {
             <Button
               className="w-full mt-6"
               type="submit"
-              disabled={isSubmitting}
+              disabled={signup.isPending}
             >
-              {isSubmitting ? 'Signing Up...' : 'Sign Up'}
+              {signup.isPending ? 'Signing Up...' : 'Sign Up'}
             </Button>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">

@@ -8,6 +8,7 @@ import * as profileData from './data';
 import SimpleBar from 'simplebar-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useLogout } from '@/features/auth/queries';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,25 +19,15 @@ import {
 
 const Profile = () => {
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const logout = useLogout();
 
   async function handleLogout() {
-    setIsLoggingOut(true);
-
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        setIsLoggingOut(false);
-        return;
-      }
-
+      await logout.mutateAsync();
       router.replace('/auth/login');
       router.refresh();
     } catch {
-      setIsLoggingOut(false);
+      // Error is swallowed — navigation won't happen on failure
     }
   }
 
@@ -89,9 +80,9 @@ const Profile = () => {
               onClick={() => {
                 void handleLogout();
               }}
-              disabled={isLoggingOut}
+              disabled={logout.isPending}
             >
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
+              {logout.isPending ? 'Logging out...' : 'Logout'}
             </Button>
           </div>
         </DropdownMenuContent>

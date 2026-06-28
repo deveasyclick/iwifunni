@@ -1,33 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import CardBox from '@/components/card/CardBox';
-import type { WorkflowItem } from '@/app/types/workflow';
+import { useWorkflowListQuery } from '@/features/workflows/queries';
 
 export const TopWorkflows = () => {
-  const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
-
-  useEffect(() => {
-    const fetchWorkflows = async () => {
-      try {
-        const response = await fetch('/api/workflows', {
-          headers: { browserrefreshed: 'false' },
-          cache: 'no-store',
-        });
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as WorkflowItem[];
-        setWorkflows(Array.isArray(data) ? data.slice(0, 5) : []);
-      } catch {
-        setWorkflows([]);
-      }
-    };
-
-    void fetchWorkflows();
-  }, []);
+  const { data: workflows = [] } = useWorkflowListQuery();
+  const topWorkflows = workflows.slice(0, 5);
 
   return (
     <CardBox>
@@ -42,12 +21,12 @@ export const TopWorkflows = () => {
       </div>
 
       <div className="space-y-4">
-        {workflows.length === 0 ? (
+        {topWorkflows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No workflows configured yet.
           </p>
         ) : (
-          workflows.map((item) => (
+          topWorkflows.map((item) => (
             <div
               key={item.id}
               className="flex items-center justify-between py-2 border-b border-border last:border-none gap-4"

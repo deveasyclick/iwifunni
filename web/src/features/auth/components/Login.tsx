@@ -1,15 +1,15 @@
 'use client';
 
-import CardBox from '../../../components/card/CardBox';
-import Link from 'next/link';
-import { FormEvent, useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, useState } from 'react';
+import CardBox from '../../../components/card/CardBox';
 import FullLogo from '../../../components/shared/FullLogo';
 import { SocialAuthButtons } from './SocialAuthButtons';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 export const Login = () => {
   const router = useRouter();
@@ -17,19 +17,15 @@ export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(searchParams.get('error'));
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     try {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
@@ -41,10 +37,11 @@ export const Login = () => {
 
       if (!response.ok) {
         if (response.status === 403 && payload?.email) {
-          router.replace(`/auth/verify?email=${encodeURIComponent(payload.email)}`);
+          router.replace(
+            `/auth/verify?email=${encodeURIComponent(payload.email)}`,
+          );
           return;
         }
-
         setError(payload?.error || 'Unable to sign in.');
         return;
       }
@@ -55,8 +52,6 @@ export const Login = () => {
       router.refresh();
     } catch {
       setError('Unable to sign in right now.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -129,8 +124,8 @@ export const Login = () => {
                 {error}
               </p>
             ) : null}
-            <Button className="w-full" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
+            <Button className="w-full" type="submit">
+              Sign In
             </Button>
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">

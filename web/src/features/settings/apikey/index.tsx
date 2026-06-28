@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Icon } from '@iconify/react';
 import CardBox from '@/components/card/CardBox';
@@ -28,8 +28,14 @@ import {
 import type {
   ApiKeyItem,
   ApiKeySecretResponse,
-  CreateApiKeyPayload,
 } from '@/app/types/api-key';
+import {
+  useApiKeyList,
+  useCreateApiKey,
+  useRotateApiKey,
+  useRevokeApiKey,
+  useUpdateApiKeyStatus,
+} from './queries';
 
 const statusVariant = (
   status: string,
@@ -46,43 +52,6 @@ const statusVariant = (
   }
 };
 
-const parseError = async (res: Response): Promise<string> => {
-  const fallback = 'Request failed';
-  try {
-    const body = (await res.json()) as { error?: string; message?: string };
-    return body.error || body.message || fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const MOCK_KEYS: ApiKeyItem[] = [
-  {
-    id: 'key_1',
-    name: 'Production API Key',
-    key_prefix: 'nk_live_abc123',
-    scopes: ['notifications:write'],
-    status: 'active',
-    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'key_2',
-    name: 'Development Key',
-    key_prefix: 'nk_live_def456',
-    scopes: ['notifications:write'],
-    status: 'active',
-    created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'key_3',
-    name: 'Legacy Integration',
-    key_prefix: 'nk_live_ghi789',
-    scopes: ['notifications:write'],
-    status: 'revoked',
-    created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 function keyTableBody(
   loading: boolean,
   keys: ApiKeyItem[],
@@ -90,10 +59,10 @@ function keyTableBody(
     s: string,
   ) => 'lightSuccess' | 'lightWarning' | 'lightError' | 'lightInfo',
   toggleKeyStatus: (id: string, status: string) => Promise<void>,
-  togglingKeyID: string | null,
+  isToggling: boolean,
   rotateKey: (id: string) => Promise<void>,
   revokeKey: (id: string) => Promise<void>,
-  mutatingKeyID: string | null,
+  isMutating: boolean,
 ) {
   if (loading) {
     return (
@@ -130,7 +99,7 @@ function keyTableBody(
         <Switch
           checked={item.status === 'active'}
           onCheckedChange={() => void toggleKeyStatus(item.id, item.status)}
-          disabled={togglingKeyID === item.id}
+          disabled={isToggling}
           aria-label="Enable/disable API key"
         />
       </TableCell>
@@ -143,7 +112,7 @@ function keyTableBody(
             variant="ghost"
             size="sm"
             onClick={() => void rotateKey(item.id)}
-            disabled={mutatingKeyID === item.id}
+            disabled={isMutating}
           >
             Rotate
           </Button>
@@ -152,7 +121,7 @@ function keyTableBody(
             size="sm"
             className="hover:text-error"
             onClick={() => void revokeKey(item.id)}
-            disabled={mutatingKeyID === item.id}
+            disabled={isMutating}
           >
             Revoke
           </Button>
@@ -163,11 +132,18 @@ function keyTableBody(
 }
 
 const ApiKeyManagement = () => {
-  const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const {
+    data: keys = [],
+    isLoading: loading,
+    error: queryError,
+    refetch: fetchKeys,
+  } = useApiKeyList();
+  const createApiKey = useCreateApiKey();
+  const rotateApiKey = useRotateApiKey();
+  const revokeApiKey = useRevokeApiKey();
+  const updateKeyStatus = useUpdateApiKeyStatus();
+
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [mutatingKeyID, setMutatingKeyID] = useState<string | null>(null);
-  const [togglingKeyID, setTogglingKeyID] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createdSecret, setCreatedSecret] =
     useState<ApiKeySecretResponse | null>(null);
@@ -175,35 +151,11 @@ const ApiKeyManagement = () => {
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'done'>('idle');
 
-  const fetchKeys = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/api-keys', {
-        method: 'GET',
-        headers: {
-          browserrefreshed: 'false',
-        },
-        cache: 'no-store',
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
-      const data = (await res.json()) as ApiKeyItem[];
-      setKeys(Array.isArray(data) && data.length > 0 ? data : MOCK_KEYS);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load API keys');
-      setKeys(MOCK_KEYS);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchKeys();
-  }, [fetchKeys]);
+  const isMutating =
+    createApiKey.isPending ||
+    rotateApiKey.isPending ||
+    revokeApiKey.isPending ||
+    updateKeyStatus.isPending;
 
   const visibleKeys = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -229,33 +181,13 @@ const ApiKeyManagement = () => {
       return;
     }
 
-    const payload: CreateApiKeyPayload = {
-      name: trimmedName,
-    };
-
-    setMutatingKeyID('create');
     try {
-      const res = await fetch('/api/api-keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
-      const created = (await res.json()) as ApiKeySecretResponse;
+      const created = await createApiKey.mutateAsync({ name: trimmedName });
       setCreatedSecret(created);
       setCreateOpen(false);
       setName('');
-      await fetchKeys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create API key');
-    } finally {
-      setMutatingKeyID(null);
     }
   };
 
@@ -265,23 +197,11 @@ const ApiKeyManagement = () => {
     }
 
     setError(null);
-    setMutatingKeyID(keyID);
     try {
-      const res = await fetch(`/api/api-keys/${keyID}/rotate`, {
-        method: 'POST',
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
-      const rotated = (await res.json()) as ApiKeySecretResponse;
+      const rotated = await rotateApiKey.mutateAsync(keyID);
       setCreatedSecret(rotated);
-      await fetchKeys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rotate API key');
-    } finally {
-      setMutatingKeyID(null);
     }
   };
 
@@ -291,50 +211,24 @@ const ApiKeyManagement = () => {
     }
 
     setError(null);
-    setMutatingKeyID(keyID);
     try {
-      const res = await fetch(`/api/api-keys/${keyID}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok && res.status !== 204) {
-        throw new Error(await parseError(res));
-      }
-
-      await fetchKeys();
+      await revokeApiKey.mutateAsync(keyID);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to revoke API key');
-    } finally {
-      setMutatingKeyID(null);
     }
   };
 
   const toggleKeyStatus = async (keyID: string, currentStatus: string) => {
     setError(null);
-    setTogglingKeyID(keyID);
     try {
       const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
-      const res = await fetch(`/api/api-keys/${keyID}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseError(res));
-      }
-
-      await fetchKeys();
+      await updateKeyStatus.mutateAsync({ id: keyID, status: newStatus });
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : `Failed to ${currentStatus === 'active' ? 'disable' : 'enable'} API key`,
       );
-    } finally {
-      setTogglingKeyID(null);
     }
   };
 
@@ -397,10 +291,10 @@ const ApiKeyManagement = () => {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={mutatingKeyID === 'create'}
+                  disabled={createApiKey.isPending}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {mutatingKeyID === 'create'
+                  {createApiKey.isPending
                     ? 'Generating...'
                     : 'Generate key'}
                 </Button>
@@ -410,9 +304,9 @@ const ApiKeyManagement = () => {
         </Dialog>
       </div>
 
-      {error && (
+      {(error || queryError) && (
         <div className="mt-4 rounded-md border border-error/30 bg-lighterror p-3 text-sm text-error">
-          {error}
+          {error || (queryError instanceof Error ? queryError.message : 'Failed to load API keys')}
         </div>
       )}
 
@@ -453,10 +347,10 @@ const ApiKeyManagement = () => {
               visibleKeys,
               statusVariant,
               toggleKeyStatus,
-              togglingKeyID,
+              updateKeyStatus.isPending,
               rotateKey,
               revokeKey,
-              mutatingKeyID,
+              isMutating,
             )}
           </TableBody>
         </Table>
