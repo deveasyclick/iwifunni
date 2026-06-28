@@ -6,7 +6,10 @@ import { channelConfigLabels } from '../utils/display';
 import { useChannelConfig } from '../hooks/use-channel-config';
 import { useDataPanel } from '../hooks/use-data-panel';
 import { buildPreviewContext } from '../utils/preview-context';
-import { useEmailProvider, useSmsProvider } from '@/features/integrations/queries';
+import {
+  useEmailProvider,
+  useSmsProvider,
+} from '@/features/integrations/queries';
 import { ChannelEditorPanel } from './ChannelEditorPanel';
 import { ChannelPreviewPanel } from './ChannelPreviewPanel';
 import { DataPanel } from './DataPanel';

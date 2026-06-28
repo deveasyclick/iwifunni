@@ -12,14 +12,16 @@ export function useApiKeyList() {
   });
 }
 
+function invalidateKeys(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+}
+
 export function useCreateApiKey() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: CreateApiKeyPayload) => apiKeyApi.createKey(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
-    },
+    onSuccess: () => invalidateKeys(queryClient),
   });
 }
 
@@ -28,9 +30,7 @@ export function useRotateApiKey() {
 
   return useMutation({
     mutationFn: (id: string) => apiKeyApi.rotateKey(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
-    },
+    onSuccess: () => invalidateKeys(queryClient),
   });
 }
 
@@ -39,9 +39,7 @@ export function useRevokeApiKey() {
 
   return useMutation({
     mutationFn: (id: string) => apiKeyApi.revokeKey(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
-    },
+    onSuccess: () => invalidateKeys(queryClient),
   });
 }
 
@@ -51,8 +49,6 @@ export function useUpdateApiKeyStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       apiKeyApi.updateKeyStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
-    },
+    onSuccess: () => invalidateKeys(queryClient),
   });
 }

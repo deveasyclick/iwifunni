@@ -33,7 +33,9 @@ export const VerifyEmail = () => {
       );
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to verify your email.');
+      setError(
+        err instanceof Error ? err.message : 'Unable to verify your email.',
+      );
     }
   }
 

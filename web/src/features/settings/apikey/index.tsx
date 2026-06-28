@@ -25,10 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type {
-  ApiKeyItem,
-  ApiKeySecretResponse,
-} from '@/app/types/api-key';
+import type { ApiKeyItem, ApiKeySecretResponse } from '@/app/types/api-key';
 import {
   useApiKeyList,
   useCreateApiKey,
@@ -294,9 +291,7 @@ const ApiKeyManagement = () => {
                   disabled={createApiKey.isPending}
                   className="bg-primary text-primary-foreground hover:bg-primaryemphasis"
                 >
-                  {createApiKey.isPending
-                    ? 'Generating...'
-                    : 'Generate key'}
+                  {createApiKey.isPending ? 'Generating...' : 'Generate key'}
                 </Button>
               </DialogFooter>
             </form>
@@ -306,7 +301,10 @@ const ApiKeyManagement = () => {
 
       {(error || queryError) && (
         <div className="mt-4 rounded-md border border-error/30 bg-lighterror p-3 text-sm text-error">
-          {error || (queryError instanceof Error ? queryError.message : 'Failed to load API keys')}
+          {error ||
+            (queryError instanceof Error
+              ? queryError.message
+              : 'Failed to load API keys')}
         </div>
       )}
 

@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import * as profileData from './data';
 import SimpleBar from 'simplebar-react';

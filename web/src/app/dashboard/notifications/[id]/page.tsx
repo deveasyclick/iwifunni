@@ -16,9 +16,6 @@ import {
 } from '@/components/ui/table';
 import CardBox from '@/components/card/CardBox';
 import BreadcrumbComp from '@/app/dashboard/layout/shared/breadcrumb/BreadcrumbComp';
-import type { NotificationType } from '@/app/types/notification';
-
-type NotificationDetail = NotificationType;
 
 const formatDateTime = (value: Date | string | undefined) => {
   if (!value) {
@@ -53,11 +50,8 @@ export default function NotificationDetailPage() {
   const router = useRouter();
   const notificationId = params.id as string;
 
-  const {
-    data: notification,
-    isLoading: loading,
-    refetch,
-  } = useNotification(notificationId);
+  const { data: notification, isLoading: loading } =
+    useNotification(notificationId);
 
   const handleRefresh = () => {
     router.refresh();

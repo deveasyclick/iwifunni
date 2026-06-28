@@ -1,5 +1,9 @@
 import { request } from '@/lib/api-client';
-import type { ApiKeyItem, ApiKeySecretResponse, CreateApiKeyPayload } from '@/app/types/api-key';
+import type {
+  ApiKeyItem,
+  ApiKeySecretResponse,
+  CreateApiKeyPayload,
+} from '@/app/types/api-key';
 
 export const apiKeyApi = {
   listKeys() {

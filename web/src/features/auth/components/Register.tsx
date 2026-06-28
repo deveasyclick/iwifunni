@@ -36,7 +36,9 @@ export const Register = () => {
       router.replace(`/auth/verify?email=${encodeURIComponent(nextEmail)}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create your account.');
+      setError(
+        err instanceof Error ? err.message : 'Unable to create your account.',
+      );
     }
   }
 

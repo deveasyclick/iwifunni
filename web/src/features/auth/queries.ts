@@ -48,12 +48,14 @@ export function useVerifyEmail() {
 
 export function useResendVerification() {
   return useMutation({
-    mutationFn: (payload: { email: string }) => authApi.resendVerification(payload),
+    mutationFn: (payload: { email: string }) =>
+      authApi.resendVerification(payload),
   });
 }
 
 export function useCompleteOnboarding() {
   return useMutation({
-    mutationFn: (payload: OnboardingPayload) => authApi.completeOnboarding(payload),
+    mutationFn: (payload: OnboardingPayload) =>
+      authApi.completeOnboarding(payload),
   });
 }

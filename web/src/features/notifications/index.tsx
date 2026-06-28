@@ -4,10 +4,9 @@ import CardBox from '@/components/card/CardBox';
 import NotificationFilter from './NotificationFilter';
 import NotificationListing from './NotificationListing';
 import { useNotificationList } from './queries';
-import type { NotificationType } from '@/app/types/notification';
 
 const NotificationList = () => {
-  const { data: notifications = [], isLoading } = useNotificationList();
+  const { data: notifications = [] } = useNotificationList();
   const [filter, setFilter] = useState<string>('total_notifications');
   const [notificationSearch, setNotificationSearch] = useState<string>('');
 

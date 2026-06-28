@@ -24,11 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { CreateWebhookPayload, WebhookItem } from '@/app/types/webhook';
-import {
-  useWebhookList,
-  useCreateWebhook,
-  useDeleteWebhook,
-} from './queries';
+import { useWebhookList, useCreateWebhook, useDeleteWebhook } from './queries';
 
 function webhookTableBody(
   loading: boolean,
@@ -96,7 +92,6 @@ const WebhookManagement = () => {
     data: items = [],
     isLoading: loading,
     error: queryError,
-    refetch: fetchWebhooks,
   } = useWebhookList();
   const createWebhook = useCreateWebhook();
   const deleteWebhookMutation = useDeleteWebhook();
@@ -251,7 +246,10 @@ const WebhookManagement = () => {
 
       {(error || queryError) && (
         <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error || (queryError instanceof Error ? queryError.message : 'Failed to load webhooks')}
+          {error ||
+            (queryError instanceof Error
+              ? queryError.message
+              : 'Failed to load webhooks')}
         </p>
       )}
 
@@ -276,7 +274,12 @@ const WebhookManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {webhookTableBody(loading, visibleItems, deleteWebhook, deleteWebhookMutation.isPending)}
+            {webhookTableBody(
+              loading,
+              visibleItems,
+              deleteWebhook,
+              deleteWebhookMutation.isPending,
+            )}
           </TableBody>
         </Table>
       </div>

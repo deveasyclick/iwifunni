@@ -24,7 +24,9 @@ export const Onboarding = () => {
       router.replace('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to complete onboarding.');
+      setError(
+        err instanceof Error ? err.message : 'Unable to complete onboarding.',
+      );
     }
   }
 

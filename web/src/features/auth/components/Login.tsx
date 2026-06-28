@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useSignin } from '@/features/auth/queries';
+import { ApiError } from '@/lib/api-client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
@@ -17,41 +19,29 @@ export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(searchParams.get('error'));
+  const signin = useSignin();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-        email?: string;
-        needs_onboarding?: boolean;
-      } | null;
-
-      if (!response.ok) {
-        if (response.status === 403 && payload?.email) {
-          router.replace(
-            `/auth/verify?email=${encodeURIComponent(payload.email)}`,
-          );
-          return;
-        }
-        setError(payload?.error || 'Unable to sign in.');
-        return;
-      }
+      const result = await signin.mutateAsync({ email, password });
 
       router.replace(
-        payload?.needs_onboarding ? '/auth/onboarding' : '/dashboard',
+        result.needs_onboarding ? '/auth/onboarding' : '/dashboard',
       );
       router.refresh();
-    } catch {
-      setError('Unable to sign in right now.');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        const email =
+          err.body && typeof err.body.email === 'string' ? err.body.email : '';
+        if (email) {
+          router.replace(`/auth/verify?email=${encodeURIComponent(email)}`);
+          return;
+        }
+      }
+      setError(err instanceof Error ? err.message : 'Unable to sign in.');
     }
   }
 

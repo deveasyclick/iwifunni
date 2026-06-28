@@ -1,16 +1,40 @@
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: Record<string, unknown> | null;
+
+  constructor(
+    message: string,
+    status: number,
+    body: Record<string, unknown> | null,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export type ApiRequestInit = Omit<RequestInit, 'body'> & {
   body?: BodyInit | object;
 };
 
-const parseError = async (response: Response): Promise<string> => {
+const parseBody = async (
+  response: Response,
+): Promise<{ message: string; body: Record<string, unknown> | null }> => {
   const fallback = 'Request failed';
   const text = await response.text().catch(() => '');
-  if (!text) return fallback;
+  if (!text) return { message: fallback, body: null };
   try {
-    const body = JSON.parse(text) as { error?: string; message?: string };
-    return body.error || body.message || fallback;
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    let msg = fallback;
+    if (typeof parsed.error === 'string') {
+      msg = parsed.error;
+    } else if (typeof parsed.message === 'string') {
+      msg = parsed.message;
+    }
+    return { message: msg, body: parsed };
   } catch {
-    return text.trim() || fallback;
+    return { message: text.trim() || fallback, body: null };
   }
 };
 
@@ -38,7 +62,10 @@ export async function request<T>(
   init?: ApiRequestInit,
 ): Promise<T> {
   const response = await fetch(path, buildRequestInit(init));
-  if (!response.ok) throw new Error(await parseError(response));
+  if (!response.ok) {
+    const { message, body } = await parseBody(response);
+    throw new ApiError(message, response.status, body);
+  }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
