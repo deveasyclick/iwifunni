@@ -56,6 +56,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (db.Integration, e
 			return db.Integration{}, encErr
 		}
 		credentials = []byte(`"` + encCreds + `"`)
+	} else {
+		credentials = []byte(`{}`)
 	}
 
 	// Only set active+primary if no other active provider exists for this channel yet.

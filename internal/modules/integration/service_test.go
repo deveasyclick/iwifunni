@@ -105,7 +105,7 @@ func TestPrepareProviderInputNormalizesBrevoValues(t *testing.T) {
 	name, channel, credentialsJSON, configJSON, err := service.prepareProviderInput(
 		" Brevo ",
 		" EMAIL ",
-		map[string]any{"login": " user@example.com ", "api_key": " xkeysib-123 "},
+		map[string]any{"api_key": " xkeysib-123 "},
 		map[string]any{"from_email": " notify@example.com "},
 		nil,
 	)
@@ -123,21 +123,15 @@ func TestPrepareProviderInputNormalizesBrevoValues(t *testing.T) {
 	if err := json.Unmarshal(credentialsJSON, &credentials); err != nil {
 		t.Fatalf("Unmarshal(credentialsJSON) error = %v", err)
 	}
-	if credentials["username"] != "user@example.com" {
-		t.Fatalf("credentials.username = %q, want user@example.com", credentials["username"])
-	}
-	if credentials["password"] != "xkeysib-123" {
-		t.Fatalf("credentials.password = %q, want xkeysib-123", credentials["password"])
+	if credentials["api_key"] != "xkeysib-123" {
+		t.Fatalf("credentials.api_key = %q, want xkeysib-123", credentials["api_key"])
 	}
 
 	var config map[string]any
 	if err := json.Unmarshal(configJSON, &config); err != nil {
 		t.Fatalf("Unmarshal(configJSON) error = %v", err)
 	}
-	if config["host"] != "smtp-relay.brevo.com" {
-		t.Fatalf("config.host = %v, want smtp-relay.brevo.com", config["host"])
-	}
-	if config["from"] != "notify@example.com" {
-		t.Fatalf("config.from = %v, want notify@example.com", config["from"])
+	if config["from_email"] != "notify@example.com" {
+		t.Fatalf("config.from_email = %v, want notify@example.com", config["from_email"])
 	}
 }

@@ -108,6 +108,30 @@ tasks:
       - echo "✅ Dev tools installed."
 
   # ----------------------------------
+  # Testing
+  # ----------------------------------
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - bash -o pipefail -c 'go test ./internal/... -short -count=1 2>&1 | grep -v "\[no test files\]"'
+      - echo "✅ Unit tests passed."
+
+  test:e2e:
+    desc: Run integration tests (requires docker-compose services up)
+    cmds:
+      - task: db
+      - go test ./test/integration/... -v -count=1 -timeout 120s
+      - echo "✅ Integration tests passed."
+
+  test:all:
+    desc: Run all tests (unit + integration)
+    cmds:
+      - task: db
+      - bash -o pipefail -c 'go test ./... -count=1 -timeout 180s 2>&1 | grep -v "\[no test files\]"'
+      - echo "✅ All tests passed."
+
+  # ----------------------------------
   # Help
   # ----------------------------------
 
