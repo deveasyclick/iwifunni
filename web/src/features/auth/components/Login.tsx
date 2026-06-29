@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSignin } from '@/features/auth/queries';
 import { ApiError } from '@/lib/api-client';
+import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
@@ -18,6 +19,7 @@ export const Login = () => {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(searchParams.get('error'));
   const signin = useSignin();
 
@@ -46,8 +48,8 @@ export const Login = () => {
   }
 
   return (
-    <div className="h-screen w-full flex justify-center items-center bg-lightprimary">
-      <div className="md:min-w-112.5 min-w-max">
+    <div className="min-h-screen w-full flex justify-center items-center bg-lightprimary px-4 py-8">
+      <div className="w-full max-w-md">
         <CardBox>
           <div className="flex justify-center mb-4">
             <FullLogo />
@@ -83,14 +85,28 @@ export const Login = () => {
                   Password
                 </Label>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  <Icon
+                    icon={showPassword ? 'tabler:eye-off' : 'tabler:eye'}
+                    height={18}
+                  />
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-6 items-center justify-between my-6">
               <div className="flex items-center gap-2">
@@ -99,11 +115,11 @@ export const Login = () => {
                   className="text-link font-normal text-sm"
                   htmlFor="remember"
                 >
-                  Remember this device
+                  Remember me
                 </Label>
               </div>
               <Link
-                href="#"
+                href="/auth/forgot-password"
                 className="text-sm font-medium text-primary hover:text-primaryemphasis"
               >
                 Forgot Password ?
