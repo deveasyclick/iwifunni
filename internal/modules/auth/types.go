@@ -34,6 +34,7 @@ type authUserStore interface {
 	GetUserByID(context.Context, uuid.UUID) (db.User, error)
 	UpdateUserEmailVerifiedAt(context.Context, db.UpdateUserEmailVerifiedAtParams) error
 	UpdateUserOnboardingCompletedAt(context.Context, db.UpdateUserOnboardingCompletedAtParams) error
+	UpdateUserPassword(context.Context, db.UpdateUserPasswordParams) error
 }
 
 type authVerificationStore interface {
@@ -75,6 +76,9 @@ type HandlerService interface {
 	Signup(ctx context.Context, input SignupInput) (*SignupResult, error)
 	VerifyEmail(ctx context.Context, input VerifyEmailInput) (*VerifyEmailResult, error)
 	ResendVerification(ctx context.Context, email string) (*ResendVerificationResult, error)
+	ForgotPassword(ctx context.Context, email string) error
+	VerifyResetCode(ctx context.Context, email, code string) error
+	ResetPassword(ctx context.Context, email, code, newPassword string) error
 	SigninWithSocial(ctx context.Context, input SocialSigninInput) (*SocialSigninResult, error)
 	Signin(ctx context.Context, input SigninInput) (*SigninResult, error)
 	Refresh(ctx context.Context, input RefreshInput) (*RefreshResult, error)

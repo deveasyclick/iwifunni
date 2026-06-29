@@ -122,6 +122,38 @@ func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) (*Ver
 	return s.newAuthResult(ctx, user.ID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
 
+// VerifyResetCode validates the reset code without consuming it.
+func (s *Service) VerifyResetCode(ctx context.Context, email, code string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	code = strings.TrimSpace(code)
+
+	user, err := s.users.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidVerificationCode
+		}
+		return err
+	}
+
+	verification, err := s.verifications.GetEmailVerificationByUserID(ctx, user.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidVerificationCode
+		}
+		return err
+	}
+	if verification.ConsumedAt.Valid {
+		return ErrInvalidVerificationCode
+	}
+	if !verification.ExpiresAt.Valid || verification.ExpiresAt.Time.Before(s.now().UTC()) {
+		return ErrVerificationCodeExpired
+	}
+	if !CompareVerificationCode(code, verification.CodeHash) {
+		return ErrInvalidVerificationCode
+	}
+	return nil
+}
+
 // sendVerificationEmail sends the verification code via the shared mailer.
 func (s *Service) sendVerificationEmail(ctx context.Context, toEmail, code string) error {
 	return s.mailer.SendVerificationCode(ctx, toEmail, code)

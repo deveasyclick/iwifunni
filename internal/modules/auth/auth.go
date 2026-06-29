@@ -194,3 +194,75 @@ func (s *Service) Signin(ctx context.Context, input SigninInput) (*SigninResult,
 
 	return s.newAuthResult(ctx, user.ID, membership.OrganizationID, environment.ID, membership.Role, !user.OnboardingCompletedAt.Valid, nowTs)
 }
+
+// ForgotPassword generates and sends a password reset code.
+// Always returns success to avoid leaking whether the email exists.
+func (s *Service) ForgotPassword(ctx context.Context, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	user, err := s.users.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil // silence — don't reveal email existence
+		}
+		return err
+	}
+
+	_, err = s.createAndSendVerification(ctx, user.ID, email)
+	return err
+}
+
+// ResetPassword verifies the reset code and updates the user's password.
+func (s *Service) ResetPassword(ctx context.Context, email, code, newPassword string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	code = strings.TrimSpace(code)
+	newPassword = strings.TrimSpace(newPassword)
+
+	if newPassword == "" {
+		return fmt.Errorf("password is required")
+	}
+
+	user, err := s.users.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidVerificationCode
+		}
+		return err
+	}
+
+	verification, err := s.verifications.GetEmailVerificationByUserID(ctx, user.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidVerificationCode
+		}
+		return err
+	}
+	if verification.ConsumedAt.Valid {
+		return ErrInvalidVerificationCode
+	}
+	if !verification.ExpiresAt.Valid || verification.ExpiresAt.Time.Before(s.now().UTC()) {
+		return ErrVerificationCodeExpired
+	}
+	if !CompareVerificationCode(code, verification.CodeHash) {
+		return ErrInvalidVerificationCode
+	}
+
+	passwordHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	nowTs := pgtype.Timestamptz{Time: s.now().UTC(), Valid: true}
+	if err := s.users.UpdateUserPassword(ctx, db.UpdateUserPasswordParams{
+		ID:           user.ID,
+		PasswordHash: passwordHash,
+		UpdatedAt:    nowTs,
+	}); err != nil {
+		return err
+	}
+
+	if err := s.verifications.DeleteEmailVerificationByUserID(ctx, user.ID); err != nil {
+		return err
+	}
+
+	return nil
+}

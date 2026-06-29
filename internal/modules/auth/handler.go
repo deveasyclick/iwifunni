@@ -48,6 +48,9 @@ func (h *Handler) Register(r chi.Router) {
 	r.Post("/auth/signup", h.signup)
 	r.Post("/auth/verify-email", h.verifyEmail)
 	r.Post("/auth/resend-verification", h.resendVerification)
+	r.Post("/auth/forgot-password", h.forgotPassword)
+	r.Post("/auth/verify-reset-code", h.verifyResetCode)
+	r.Post("/auth/reset-password", h.resetPassword)
 	r.Post("/auth/signin", h.signin)
 	r.Post("/auth/refresh", h.refresh)
 	r.Post("/auth/logout", h.logout)
@@ -174,6 +177,68 @@ func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
+		return
+	}
+	if err := h.svc.ForgotPassword(r.Context(), req.Email); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "If the email exists, a reset code has been sent."})
+}
+
+type verifyResetCodeRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Code  string `json:"code" validate:"required"`
+}
+
+func (h *Handler) verifyResetCode(w http.ResponseWriter, r *http.Request) {
+	var req verifyResetCodeRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
+		return
+	}
+	if err := h.svc.VerifyResetCode(r.Context(), req.Email, req.Code); err != nil {
+		if errors.Is(err, ErrInvalidVerificationCode) || errors.Is(err, ErrVerificationCodeExpired) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "valid"})
+}
+
+type resetPasswordRequest struct {
+	Email       string `json:"email" validate:"required,email"`
+	Code        string `json:"code" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
+
+func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if !validate.DecodeAndRespond(w, r, &req) {
+		return
+	}
+	if err := h.svc.ResetPassword(r.Context(), req.Email, req.Code, req.NewPassword); err != nil {
+		if errors.Is(err, ErrInvalidVerificationCode) || errors.Is(err, ErrVerificationCodeExpired) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully."})
 }
 
 func (h *Handler) socialStart(w http.ResponseWriter, r *http.Request) {
