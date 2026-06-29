@@ -224,6 +224,23 @@ func (q *Queries) UpdateUserOnboardingCompletedAt(ctx context.Context, arg Updat
 	return err
 }
 
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = $2, updated_at = $3
+WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID           uuid.UUID          `db:"id" json:"id"`
+	PasswordHash string             `db:"password_hash" json:"password_hash"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.PasswordHash, arg.UpdatedAt)
+	return err
+}
+
 const upsertEmailVerification = `-- name: UpsertEmailVerification :exec
 INSERT INTO email_verifications (
 	user_id,
