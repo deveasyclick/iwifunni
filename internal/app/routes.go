@@ -3,14 +3,15 @@ package app
 import (
 	"net/http"
 
-	"github.com/deveasyclick/iwifunni/internal/middleware"
-	"github.com/swaggo/http-swagger/v2"
 	_ "github.com/deveasyclick/iwifunni/docs"
+	"github.com/deveasyclick/iwifunni/internal/middleware"
+	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	apikey "github.com/deveasyclick/iwifunni/internal/modules/apikey"
+	"github.com/deveasyclick/iwifunni/internal/modules/integration"
 	"github.com/deveasyclick/iwifunni/internal/modules/notification"
 	"github.com/deveasyclick/iwifunni/internal/modules/organization"
-	"github.com/deveasyclick/iwifunni/internal/modules/integration"
 	"github.com/deveasyclick/iwifunni/internal/modules/stats"
 	"github.com/deveasyclick/iwifunni/internal/modules/subscriber"
 	"github.com/deveasyclick/iwifunni/internal/modules/templates"
@@ -21,6 +22,17 @@ import (
 
 func (a *App) Router() http.Handler {
 	r := chi.NewRouter()
+
+	// Global CORS — must be first so preflight OPTIONS requests are handled
+	// before any auth middleware.
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "https://iwifunni.cc"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "browserrefreshed"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	r.Use(middleware.HTTPLogger)
 
