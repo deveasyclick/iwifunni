@@ -89,4 +89,25 @@ export const authApi = {
       body: payload,
     });
   },
+
+  forgotPassword(email: string) {
+    return request<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    });
+  },
+
+  verifyResetCode(email: string, code: string) {
+    return request<{ status: string }>('/api/auth/verify-reset-code', {
+      method: 'POST',
+      body: { email, code },
+    });
+  },
+
+  resetPassword(email: string, code: string, newPassword: string) {
+    return request<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: { email, code, new_password: newPassword },
+    });
+  },
 };

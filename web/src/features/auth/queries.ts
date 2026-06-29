@@ -59,3 +59,30 @@ export function useCompleteOnboarding() {
       authApi.completeOnboarding(payload),
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.forgotPassword(email),
+  });
+}
+
+export function useVerifyResetCode() {
+  return useMutation({
+    mutationFn: ({ email, code }: { email: string; code: string }) =>
+      authApi.verifyResetCode(email, code),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({
+      email,
+      code,
+      newPassword,
+    }: {
+      email: string;
+      code: string;
+      newPassword: string;
+    }) => authApi.resetPassword(email, code, newPassword),
+  });
+}
