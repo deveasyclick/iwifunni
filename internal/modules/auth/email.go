@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -37,7 +37,7 @@ func (s *Service) createAndSendVerification(ctx context.Context, userID uuid.UUI
 		return time.Time{}, err
 	}
 
-	logger.Get().Info("signup verification code generated", "email", email, "verification_code", code)
+	logger.Get().Info("signup verification code generated", "email", email)
 
 	go func() {
 		if err := s.sendVerificationEmail(context.Background(), email, code); err != nil {
