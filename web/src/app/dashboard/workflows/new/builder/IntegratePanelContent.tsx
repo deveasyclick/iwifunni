@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Terminal, FileCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface IntegratePanelContentProps {
   readonly workflowId: string;
@@ -115,17 +116,71 @@ export function IntegratePanelContent({
         </div>
       </div>
 
-      {/* cURL snippet */}
+      {/* SDK examples with tabs */}
       <div>
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          cURL example
+          Trigger via API
         </p>
-        <div className="relative">
-          <pre className="overflow-x-auto rounded-xl border border-border bg-dark p-4 font-mono text-xs leading-relaxed text-white">
-            <code>{curlSnippet}</code>
-          </pre>
-          <CopyButton text={curlSnippet} />
-        </div>
+
+        <Tabs defaultValue="curl">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="curl" className="gap-1.5">
+              <Terminal className="h-3.5 w-3.5" />
+              cURL
+            </TabsTrigger>
+            <TabsTrigger value="nodejs" className="gap-1.5">
+              <FileCode className="h-3.5 w-3.5" />
+              Node.js
+            </TabsTrigger>
+            <TabsTrigger value="go" className="gap-1.5">
+              <FileCode className="h-3.5 w-3.5" />
+              Go
+            </TabsTrigger>
+            <TabsTrigger value="python" className="gap-1.5">
+              <FileCode className="h-3.5 w-3.5" />
+              Python
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="curl" className="mt-3">
+            <div className="relative">
+              <pre className="overflow-x-auto rounded-xl border border-border bg-dark p-4 font-mono text-xs leading-relaxed text-white">
+                <code>{curlSnippet}</code>
+              </pre>
+              <CopyButton text={curlSnippet} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="nodejs" className="mt-3">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
+              <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">Node.js SDK</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                SDK coming soon. You can use the REST API with fetch or axios in the meantime.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="go" className="mt-3">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
+              <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">Go SDK</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                SDK coming soon. You can use the REST API with net/http in the meantime.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="python" className="mt-3">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
+              <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">Python SDK</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                SDK coming soon. You can use the REST API with requests in the meantime.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Auth note */}
