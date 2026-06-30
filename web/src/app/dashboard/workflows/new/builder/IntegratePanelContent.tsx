@@ -44,9 +44,9 @@ function CopyButton({ text }: { readonly text: string }) {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="outline"
       size="sm"
-      className="absolute right-2 top-2 h-7 gap-1 text-xs"
+      className="absolute right-2 top-2 h-7 gap-1 border-border/40 bg-dark/90 text-white/80 hover:bg-dark hover:text-white text-xs"
       onClick={() => void handleCopy()}
     >
       {copied ? (
