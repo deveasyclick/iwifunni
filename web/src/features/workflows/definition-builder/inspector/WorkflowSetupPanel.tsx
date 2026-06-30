@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Copy, Info, Mail, MessageSquare, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Bell, Check, Copy, Info, Mail, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
 import type { WorkflowSetupPanelProps } from '../../types/ui';
 import { TriggerWorkflowDialog } from './TriggerWorkflowDialog';
 import { useWorkflowChannelToggles } from './hooks/use-workflow-channel-toggles';
@@ -173,13 +173,7 @@ export const WorkflowSetupPanel = ({
           workflowId={workflowSetup?.workflowId ?? ''}
           workflowKey={workflowSetup?.key ?? ''}
           selectedChannels={selectedChannels}
-          hasChannelToggles={channelToggles.length > 0}
         />
-      </div>
-
-      <div className="rounded-xl border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
-        Click any node to edit its step settings, or use the canvas edge
-        controls to insert the next step.
       </div>
     </div>
   );

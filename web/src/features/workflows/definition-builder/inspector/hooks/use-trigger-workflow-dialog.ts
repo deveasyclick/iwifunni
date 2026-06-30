@@ -9,7 +9,6 @@ import type { PreviewSubscriber } from '@/features/workflows/types/data-panel';
 interface UseTriggerWorkflowDialogOptions {
   readonly workflowId: string;
   readonly selectedChannels: string[];
-  readonly hasChannelToggles?: boolean;
 }
 
 interface UseTriggerWorkflowDialogReturn {
@@ -48,7 +47,6 @@ interface UseTriggerWorkflowDialogReturn {
 export function useTriggerWorkflowDialog({
   workflowId,
   selectedChannels,
-  hasChannelToggles = false,
 }: UseTriggerWorkflowDialogOptions): UseTriggerWorkflowDialogReturn {
   const [open, setOpen] = useState(false);
   const [selectedSubscriber, setSelectedSubscriber] =
@@ -175,9 +173,7 @@ export function useTriggerWorkflowDialog({
   const triggerError = triggerMutation.error?.message;
 
   const isValid =
-    selectedSubscriber !== null &&
-    !isTriggering &&
-    (!hasChannelToggles || selectedChannels.length > 0);
+    selectedSubscriber !== null && !isTriggering && selectedChannels.length > 0;
 
   return {
     open,

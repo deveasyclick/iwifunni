@@ -26,7 +26,6 @@ interface TriggerWorkflowDialogProps {
   readonly workflowId: string;
   readonly workflowKey: string;
   readonly selectedChannels: string[];
-  readonly hasChannelToggles?: boolean;
 }
 
 const channelIcon = (channel: string) => {
@@ -46,7 +45,6 @@ export function TriggerWorkflowDialog({
   workflowId,
   workflowKey: _workflowKey,
   selectedChannels,
-  hasChannelToggles = false,
 }: TriggerWorkflowDialogProps) {
   const {
     open,
@@ -73,7 +71,6 @@ export function TriggerWorkflowDialog({
   } = useTriggerWorkflowDialog({
     workflowId,
     selectedChannels,
-    hasChannelToggles,
   });
 
   return (
@@ -82,7 +79,7 @@ export function TriggerWorkflowDialog({
         <Button
           variant="default"
           className="w-full gap-2"
-          disabled={hasChannelToggles && selectedChannels.length === 0}
+          disabled={selectedChannels.length === 0}
         >
           <Play className="h-4 w-4" />
           Trigger workflow
