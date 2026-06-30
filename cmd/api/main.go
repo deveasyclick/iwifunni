@@ -108,13 +108,15 @@ func main() {
 	socialProviders := make(map[string]bool)
 	providers := make([]goth.Provider, 0, 2)
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
-		providers = append(providers, googleProvider.New(
+		google := googleProvider.New(
 			cfg.GoogleClientID,
 			cfg.GoogleClientSecret,
 			apiPublicBaseURL+"/auth/social/google/callback",
 			"email",
 			"profile",
-		))
+		)
+		google.SetPrompt("select_account")
+		providers = append(providers, google)
 		socialProviders["google"] = true
 	}
 	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
