@@ -13,7 +13,6 @@ import type { WorkflowDefinitionInspectorProps } from '../../types/ui';
 import { DelayConfig } from './DelayConfig';
 import { NotificationConfig } from './NotificationConfig';
 import { EdgeInfo } from './EdgeInfo';
-import { NodeIssues } from './NodeIssues';
 import { WorkflowSetupPanel } from './WorkflowSetupPanel';
 
 function inspectorTitleText(
@@ -181,8 +180,6 @@ export const WorkflowDefinitionInspector = ({
           </div>
         )}
 
-        {/* Issues */}
-        <NodeIssues issues={selectedNodeIssues} />
       </div>
     );
   } else if (selectedEdge) {
