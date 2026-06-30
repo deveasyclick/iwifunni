@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
-import CreateWorkflowBuilder from '../../../../../features/workflows/components/CreateWorkflowBuilder';
 import { buildWorkflowBuilderHref } from '../../../../../features/workflows/utils/urls';
 import { workflowIdFromRecord } from '../../../../../features/workflows/utils/search-params';
 import { workflowApi } from '../../../../../features/workflows/api';
+import WorkflowBuilderShell from './WorkflowBuilderShell';
 
 export const metadata: Metadata = {
   title: 'Workflow Builder',
@@ -39,10 +38,11 @@ const WorkflowBuilderPage = async ({
   ];
 
   return (
-    <>
-      <BreadcrumbComp title={workflowName} items={breadcrumbItems} />
-      <CreateWorkflowBuilder workflowId={workflowId} />
-    </>
+    <WorkflowBuilderShell
+      workflowId={workflowId}
+      workflowName={workflowName}
+      breadcrumbItems={breadcrumbItems}
+    />
   );
 };
 
