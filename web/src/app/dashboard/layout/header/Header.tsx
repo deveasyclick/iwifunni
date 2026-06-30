@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
-import Profile from './Profile';
-import Notifications from './Notifications';
-import SidebarLayout from '../sidebar/Sidebar';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import Search from './Search';
 import FullLogo from '@/components/shared/FullLogo';
 import { useTheme } from '@/components/theme-provider';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Icon } from '@iconify/react';
+import { useEffect, useState } from 'react';
+import SidebarLayout from '../sidebar/Sidebar';
+import Profile from './Profile';
+import Search from './Search';
 
 const Header = () => {
   const { resolvedTheme, setTheme } = useTheme();
@@ -82,13 +81,6 @@ const Header = () => {
               </span>
             </button>
 
-            <div className="xl:block">
-              <div className="flex gap-0 items-center relative">
-                {/* Chat */}
-                <Notifications />
-              </div>
-            </div>
-
             {/* Profile Dropdown */}
             <Profile />
           </div>
@@ -124,13 +116,6 @@ const Header = () => {
                     )}
                   </span>
                 </button>
-
-                <div className="xl:block ">
-                  <div className="flex gap-0 items-center relative">
-                    {/* Chat */}
-                    <Notifications />
-                  </div>
-                </div>
 
                 {/* Profile Dropdown */}
                 <Profile />
