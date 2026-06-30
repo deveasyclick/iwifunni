@@ -4,13 +4,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Bell, Check, Copy, Info, Mail, MessageSquare } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Bell,
+  Check,
+  Copy,
+  ChevronRight,
+  Info,
+  Mail,
+  MessageSquare,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { WorkflowSetupPanelProps } from '../../types/ui';
-import { TriggerWorkflowDialog } from './TriggerWorkflowDialog';
 import { useWorkflowChannelToggles } from './hooks/use-workflow-channel-toggles';
 
 function ChannelIcon({ channel }: { readonly channel: string }) {
@@ -88,19 +99,22 @@ export const WorkflowSetupPanel = ({
             />
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">
+          <Collapsible className="group">
+            <CollapsibleTrigger className="flex w-full items-center gap-2 text-sm font-medium text-foreground">
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
               Description
-            </label>
-            <Textarea
-              value={workflowSetup?.description || ''}
-              onChange={(event) =>
-                onWorkflowSetupChange?.({ description: event.target.value })
-              }
-              placeholder="Describe what this workflow does"
-              className="min-h-28"
-            />
-          </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <Textarea
+                value={workflowSetup?.description || ''}
+                onChange={(event) =>
+                  onWorkflowSetupChange?.({ description: event.target.value })
+                }
+                placeholder="Describe what this workflow does"
+                className="min-h-28"
+              />
+            </CollapsibleContent>
+          </Collapsible>
 
           <div>
             <label className="mb-2 block text-sm font-medium">
@@ -125,11 +139,17 @@ export const WorkflowSetupPanel = ({
         </div>
       </div>
 
-      {/* Channels */}
+      {/* Channels — collapsible */}
       {channelToggles.length > 0 && (
-        <div className="rounded-xl border border-border px-4 py-4 space-y-3">
-          <p className="text-sm font-medium">Channels</p>
-          <div className="space-y-2">
+        <Collapsible className="group rounded-xl border border-border px-4 py-4">
+          <CollapsibleTrigger className="flex w-full items-center gap-2 text-sm font-medium text-foreground">
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+            Channels
+            <span className="ml-auto text-xs text-muted-foreground">
+              {selectedChannels.length} active
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 space-y-2">
             {channelToggles.map((ct) => (
               <div
                 key={ct.channel}
@@ -161,20 +181,9 @@ export const WorkflowSetupPanel = ({
                 />
               </div>
             ))}
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
-
-      <Separator />
-
-      <div>
-        <p className="mb-3 text-sm font-medium">Test workflow</p>
-        <TriggerWorkflowDialog
-          workflowId={workflowSetup?.workflowId ?? ''}
-          workflowKey={workflowSetup?.key ?? ''}
-          selectedChannels={selectedChannels}
-        />
-      </div>
     </div>
   );
 };
