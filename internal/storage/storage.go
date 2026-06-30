@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/deveasyclick/iwifunni/internal/config"
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -21,21 +21,23 @@ type Store struct {
 
 func NewStore(ctx context.Context, cfg *config.Config) *Store {
 	pgPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	sharedLogger := logger.Get()
 	if err != nil {
-		logger.Get().Error("failed to connect to postgres", "error", err)
+		sharedLogger.Error("failed to connect to postgres", "error", err)
 		os.Exit(1)
 	}
 
 	if err := pgPool.Ping(ctx); err != nil {
-		logger.Get().Error("failed to connect to postgres", "error", err)
+		sharedLogger.Error("failed to connect to postgres", "error", err)
 		os.Exit(1)
 	}
 
-	sharedLogger := logger.Get()
 	if err := AutoMigrate(cfg, sharedLogger); err != nil {
 		sharedLogger.Error("failed to apply migrations", "error", err)
 		os.Exit(1)
 	}
+
+	sharedLogger.Info("connected to database")
 	return &Store{
 		Queries: db.New(pgPool),
 		Pool:    pgPool,
