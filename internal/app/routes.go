@@ -5,17 +5,17 @@ import (
 
 	_ "github.com/deveasyclick/iwifunni/docs"
 	"github.com/deveasyclick/iwifunni/internal/middleware"
+
+	apikey "github.com/deveasyclick/iwifunni/internal/modules/apikey"
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
-	apikey "github.com/deveasyclick/iwifunni/internal/modules/apikey"
 	"github.com/deveasyclick/iwifunni/internal/modules/integration"
 	"github.com/deveasyclick/iwifunni/internal/modules/notification"
 	"github.com/deveasyclick/iwifunni/internal/modules/organization"
 	"github.com/deveasyclick/iwifunni/internal/modules/stats"
 	"github.com/deveasyclick/iwifunni/internal/modules/subscriber"
 	"github.com/deveasyclick/iwifunni/internal/modules/templates"
-	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/modules/workflow"
 	"github.com/go-chi/chi/v5"
 )
@@ -93,9 +93,6 @@ func (a *App) registerRoutes(r chi.Router) {
 		statsSvc := stats.NewService(statsRepo)
 		stats.NewHandler(statsSvc).Register(r)
 
-		// Webhook management (dashboard)
-		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
-		webhooks.NewHandler(webhookSvc).Register(r)
 	})
 	// API key protected group
 	r.Group(func(r chi.Router) {
@@ -110,10 +107,6 @@ func (a *App) registerRoutes(r chi.Router) {
 		workflowRepo := workflow.NewRepository(a.queries)
 		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
 		workflow.NewHandler(workflowSvc).RegisterAPIRoutes(r)
-
-		// Webhooks
-		webhookSvc := webhooks.NewService(a.queries, a.dispatcher)
-		webhooks.NewHandler(webhookSvc).Register(r)
 
 		// Organizations
 		orgRepo := organization.NewRepository(a.queries)

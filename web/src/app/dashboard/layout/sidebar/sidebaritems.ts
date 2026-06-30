@@ -83,11 +83,6 @@ const SidebarContent: MenuItem[] = [
             name: 'API Keys',
             url: '/dashboard/settings/apikey',
           },
-          {
-            id: uniqueId(),
-            name: 'Webhooks',
-            url: '/dashboard/settings/webhook',
-          },
         ],
       },
     ],

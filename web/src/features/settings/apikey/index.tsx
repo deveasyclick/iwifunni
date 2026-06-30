@@ -266,6 +266,7 @@ const ApiKeyManagement = () => {
         onOpenChange={(open) => {
           if (!open) setKeyToDelete(null);
         }}
+        keyName={keyToDelete?.name ?? ''}
         onConfirm={() => handleDelete()}
         isPending={deleteApiKey.isPending}
       />
