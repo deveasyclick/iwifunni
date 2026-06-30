@@ -83,7 +83,10 @@ export function IntegratePanelContent({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Endpoint
         </p>
-        <p className="mt-1.5 font-mono text-sm text-foreground">
+        <p
+          className="mt-1.5 truncate font-mono text-sm text-foreground"
+          title={`POST ${baseUrl}/api/notifications/trigger`}
+        >
           POST {baseUrl}/api/notifications/trigger
         </p>
       </div>

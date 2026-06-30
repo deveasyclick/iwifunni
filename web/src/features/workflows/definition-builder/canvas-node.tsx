@@ -80,10 +80,10 @@ const WorkflowCanvasNodeComponent = memo(
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className="nodrag nopan inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/60 bg-destructive/15 text-destructive transition hover:border-destructive hover:bg-destructive/25"
+                  className="nodrag nopan inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-destructive bg-destructive/15 text-destructive transition hover:bg-destructive/25"
                   aria-label={`${data.nodeIssues.length} issue${data.nodeIssues.length !== 1 ? 's' : ''}`}
                 >
-                  <AlertCircle className="h-3.5 w-3.5" />
+                  <AlertCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
               <TooltipContent
@@ -150,7 +150,7 @@ const WorkflowCanvasNodeComponent = memo(
               !selected &&
                 data.nodeIssues &&
                 data.nodeIssues.length > 0 &&
-                'border-destructive/50 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--destructive)_10%,transparent)] hover:border-destructive/70',
+                'border-destructive shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--destructive)_12%,transparent)] hover:border-destructive/80',
               !selected &&
                 (!data.nodeIssues || data.nodeIssues.length === 0) &&
                 'border-border/45 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border)_55%,transparent)] hover:border-primary/40',

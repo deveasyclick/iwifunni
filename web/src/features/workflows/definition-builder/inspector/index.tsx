@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, Copy } from 'lucide-react';
 import {
   buildNodeDescription,
   getNodeDisplayName,
@@ -50,21 +48,7 @@ export const WorkflowDefinitionInspector = ({
   onWorkflowSetupChange,
   builderNodes,
 }: WorkflowDefinitionInspectorProps) => {
-  const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
-
   const inspectorTitle = inspectorTitleText(selectedNode, selectedEdge);
-
-  const copyNodeId = async (nodeId: string) => {
-    try {
-      await navigator.clipboard.writeText(nodeId);
-      setCopiedNodeId(nodeId);
-      window.setTimeout(() => {
-        setCopiedNodeId((current) => (current === nodeId ? null : current));
-      }, 1600);
-    } catch {
-      setCopiedNodeId(null);
-    }
-  };
 
   let inspectorPanel: ReactNode;
   if (selectedNode) {
@@ -121,43 +105,6 @@ export const WorkflowDefinitionInspector = ({
           />
         </div>
 
-        {/* Step ID — with copy button */}
-        <div>
-          <label className="mb-2 block text-sm font-medium">
-            {selectedNode.data.draft.type === 'trigger'
-              ? 'Workflow key'
-              : 'Step ID'}
-          </label>
-          <div className="flex items-center gap-2">
-            <Input
-              value={
-                selectedNode.data.draft.type === 'trigger'
-                  ? (workflowSetup?.key ?? selectedNode.data.draft.id)
-                  : selectedNode.data.draft.id
-              }
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                void copyNodeId(
-                  selectedNode.data.draft.type === 'trigger'
-                    ? (workflowSetup?.key ?? selectedNode.data.draft.id)
-                    : selectedNode.data.draft.id,
-                )
-              }
-            >
-              {copiedNodeId === selectedNode.data.draft.id ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-
         {/* Type-specific configs */}
         {selectedNode.data.draft.type === 'delay' && (
           <DelayConfig
@@ -179,7 +126,6 @@ export const WorkflowDefinitionInspector = ({
             not support editing or publishing them.
           </div>
         )}
-
       </div>
     );
   } else if (selectedEdge) {
