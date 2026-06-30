@@ -26,7 +26,12 @@ export const WorkflowDefinitionBuilder = ({
   onConfigureNotificationNode,
   onWorkflowSetupChange,
 }: WorkflowDefinitionBuilderProps) => {
-  const builder = useWorkflowBuilder({ value, onChange, issues });
+  const builder = useWorkflowBuilder({
+    value,
+    onChange,
+    issues,
+    onConfigureNotificationNode,
+  });
 
   return (
     <div className="space-y-6">

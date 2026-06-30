@@ -2,12 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
 import CardBox from '@/components/card/CardBox';
 import { Button } from '@/components/ui/button';
+import { workflowApi } from '@/features/workflows/api';
 import { WorkflowDefinitionBuilder } from '@/features/workflows/definition-builder/index';
 import { useWorkflowBuilderDraft } from '@/features/workflows/hooks/use-workflow-builder-draft';
+import { workflowDefinitionFromBuilderDraft } from '@/features/workflows/definition-builder/index';
 import { buildWorkflowChannelConfigureHref } from '@/features/workflows/utils/urls';
 
+import type { CreateWorkflowPayload } from '@/app/types/workflow';
 import type { CreateWorkflowBuilderProps } from '@/features/workflows/types/ui';
 
 const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
@@ -22,6 +26,37 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     definitionIssues,
     onWorkflowSetupChange,
   } = useWorkflowBuilderDraft(workflowId);
+
+  const handleConfigureNotificationNode = useCallback(
+    async (nodeId: string, channel?: string) => {
+      // Save definition before navigating so the channel page
+      // can find the notification node on the server.
+      const definition = workflowDefinitionFromBuilderDraft(definitionDraft);
+      const payload: CreateWorkflowPayload = {
+        key: workflow?.key ?? '',
+        name: workflow?.name ?? '',
+        description: workflow?.description || undefined,
+        definition,
+      };
+      try {
+        await workflowApi.updateWorkflow(workflow?.id ?? '', payload);
+      } catch {
+        // Navigate anyway — the channel page will show an error
+        // if the node still isn't found.
+      }
+      router.push(
+        buildWorkflowChannelConfigureHref(workflow?.id ?? '', nodeId, channel),
+      );
+    },
+    [
+      definitionDraft,
+      workflow?.id,
+      workflow?.key,
+      workflow?.name,
+      workflow?.description,
+      router,
+    ],
+  );
 
   if (loading) {
     return (
@@ -46,12 +81,14 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
     );
   }
 
-  const workflowSetup = {
-    workflowId: workflow.id,
-    key: workflow.key,
-    name: workflow.name,
-    description: workflow.description || '',
-  };
+  const workflowSetup = workflow
+    ? {
+        workflowId: workflow.id,
+        key: workflow.key,
+        name: workflow.name,
+        description: workflow.description || '',
+      }
+    : undefined;
 
   return (
     <CardBox className="p-6">
@@ -68,11 +105,7 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
         workflowSetup={workflowSetup}
         autosaveState={autosaveState}
         onWorkflowSetupChange={onWorkflowSetupChange}
-        onConfigureNotificationNode={(nodeId: string, channel?: string) =>
-          router.push(
-            buildWorkflowChannelConfigureHref(workflow.id, nodeId, channel),
-          )
-        }
+        onConfigureNotificationNode={handleConfigureNotificationNode}
       />
     </CardBox>
   );
