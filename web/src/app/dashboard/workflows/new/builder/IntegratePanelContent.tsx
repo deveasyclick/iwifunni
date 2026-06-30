@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 interface IntegratePanelContentProps {
   readonly workflowId: string;
@@ -76,22 +75,21 @@ export function IntegratePanelContent({
 
   const curlSnippet = buildCurlSnippet(baseUrl, workflowId);
 
+  const [copied, setCopied] = useState(false);
+
+  const copyWorkflowId = async () => {
+    try {
+      await navigator.clipboard.writeText(workflowId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // fallback
+    }
+  };
+
   return (
     <div className="space-y-5">
-      {/* Endpoint info */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Endpoint
-        </p>
-        <p
-          className="mt-1.5 truncate font-mono text-sm text-foreground"
-          title={`POST ${baseUrl}/api/notifications/trigger`}
-        >
-          POST {baseUrl}/api/notifications/trigger
-        </p>
-      </div>
-
-      {/* Workflow info */}
+      {/* Workflow info with copyable ID */}
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -102,9 +100,19 @@ export function IntegratePanelContent({
               {workflowName}
             </p>
           </div>
-          <Badge variant="outline" className="font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => void copyWorkflowId()}
+            className="group inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            title="Copy workflow ID"
+          >
             {workflowId}
-          </Badge>
+            {copied ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+              <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </button>
         </div>
       </div>
 
