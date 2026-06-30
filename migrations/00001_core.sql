@@ -50,7 +50,7 @@ CREATE UNIQUE INDEX idx_environments_organization_name ON environments(organizat
 CREATE UNIQUE INDEX idx_environments_default_per_org ON environments(organization_id) WHERE is_default = true;
 
 -- ── API Keys ───────────────────────────────────────────────────
-CREATE TABLE api_keys (
+CREATE TABLE apikeys (
     id UUID PRIMARY KEY,
     environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -61,14 +61,12 @@ CREATE TABLE api_keys (
     last_used_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
     revoked_at TIMESTAMPTZ,
-    rotated_from UUID REFERENCES api_keys(id) ON DELETE SET NULL,
+    rotated_from UUID REFERENCES apikeys(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT api_keys_status_check CHECK (status IN ('active', 'rotating', 'expired', 'revoked'))
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_api_keys_environment_id ON api_keys(environment_id);
-CREATE INDEX idx_api_keys_status ON api_keys(status);
+CREATE INDEX idx_apikeys_environment_id ON apikeys(environment_id);
 
 -- ── Refresh Tokens ─────────────────────────────────────────────
 CREATE TABLE refresh_tokens (
@@ -114,7 +112,7 @@ CREATE INDEX idx_auth_identities_user_id ON auth_identities(user_id);
 DROP TABLE IF EXISTS auth_identities;
 DROP TABLE IF EXISTS email_verifications;
 DROP TABLE IF EXISTS refresh_tokens;
-DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS apikeys;
 DROP TABLE IF EXISTS environments;
 DROP TABLE IF EXISTS organization_members;
 DROP TABLE IF EXISTS users;

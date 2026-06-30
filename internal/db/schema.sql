@@ -62,12 +62,10 @@ CREATE TABLE apikeys (
     revoked_at TIMESTAMPTZ,
     rotated_from UUID REFERENCES apikeys(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT apikeys_status_check CHECK (status IN ('active', 'rotating', 'expired', 'revoked'))
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_apikeys_environment_id ON apikeys(environment_id);
-CREATE INDEX idx_apikeys_status ON apikeys(status);
 
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY,

@@ -24,7 +24,6 @@ type APIKeyResult struct {
 	ID         uuid.UUID
 	Name       string
 	KeyPrefix  string
-	Status     string
 	LastUsedAt *time.Time
 	CreatedAt  time.Time
 	Key        string // only set on creation
@@ -63,7 +62,7 @@ func (s *Service) Create(ctx context.Context, environmentID uuid.UUID, name stri
 	}); err != nil {
 		return APIKeyResult{}, err
 	}
-	return APIKeyResult{ID: keyID, Name: name, KeyPrefix: prefix, Status: "active", CreatedAt: now, Key: rawKey}, nil
+	return APIKeyResult{ID: keyID, Name: name, KeyPrefix: prefix, CreatedAt: now, Key: rawKey}, nil
 }
 
 func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]APIKeyResult, error) {
@@ -77,7 +76,7 @@ func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]APIKeyRe
 		if k.LastUsedAt.Valid {
 			lastUsed = &k.LastUsedAt.Time
 		}
-		out = append(out, APIKeyResult{ID: k.ID, Name: k.Name, KeyPrefix: k.KeyPrefix, Status: k.Status, LastUsedAt: lastUsed, CreatedAt: k.CreatedAt.Time})
+		out = append(out, APIKeyResult{ID: k.ID, Name: k.Name, KeyPrefix: k.KeyPrefix, LastUsedAt: lastUsed, CreatedAt: k.CreatedAt.Time})
 	}
 	return out, nil
 }

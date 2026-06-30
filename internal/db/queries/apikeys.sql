@@ -29,10 +29,5 @@ UPDATE apikeys
 SET last_used_at = $1, updated_at = $2
 WHERE id = $3;
 
--- name: UpdateAPIKeyStatus :exec
-UPDATE apikeys
-SET status = $1, revoked_at = $2, updated_at = $3
-WHERE id = $4;
-
 -- name: DeleteAPIKey :exec
 DELETE FROM apikeys WHERE id = $1;

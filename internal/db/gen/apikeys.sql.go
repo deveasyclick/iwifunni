@@ -144,6 +144,15 @@ func (q *Queries) TouchAPIKeyLastUsed(ctx context.Context, arg TouchAPIKeyLastUs
 	return err
 }
 
+const deleteAPIKey = `-- name: DeleteAPIKey :exec
+DELETE FROM apikeys WHERE id = $1
+`
+
+func (q *Queries) DeleteAPIKey(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAPIKey, id)
+	return err
+}
+
 const updateAPIKeyStatus = `-- name: UpdateAPIKeyStatus :exec
 UPDATE apikeys
 SET status = $1, revoked_at = $2, updated_at = $3
@@ -155,15 +164,6 @@ type UpdateAPIKeyStatusParams struct {
 	RevokedAt pgtype.Timestamptz `db:"revoked_at" json:"revoked_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	ID        uuid.UUID          `db:"id" json:"id"`
-}
-
-const deleteAPIKey = `-- name: DeleteAPIKey :exec
-DELETE FROM apikeys WHERE id = $1
-`
-
-func (q *Queries) DeleteAPIKey(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteAPIKey, id)
-	return err
 }
 
 func (q *Queries) UpdateAPIKeyStatus(ctx context.Context, arg UpdateAPIKeyStatusParams) error {
