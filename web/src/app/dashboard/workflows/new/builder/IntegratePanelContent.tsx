@@ -44,9 +44,9 @@ function CopyButton({ text }: { readonly text: string }) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="sm"
-      className="absolute right-2 top-2 h-7 gap-1 border-border/40 bg-dark/90 text-white/80 hover:bg-dark hover:text-white text-xs"
+      className="h-7 gap-1 text-xs text-white/50 hover:bg-white/10 hover:text-white"
       onClick={() => void handleCopy()}
     >
       {copied ? (
@@ -143,11 +143,24 @@ export function IntegratePanelContent({
           </TabsList>
 
           <TabsContent value="curl" className="mt-3">
-            <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-border bg-dark p-4 font-mono text-xs leading-relaxed text-white">
+            <div className="overflow-hidden rounded-xl border border-border">
+              {/* Window tab header */}
+              <div className="flex items-center justify-between bg-dark/80 px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
+                  </div>
+                  <span className="ml-2 text-xs font-medium text-white/60">
+                    cURL
+                  </span>
+                </div>
+                <CopyButton text={curlSnippet} />
+              </div>
+              <pre className="overflow-x-auto bg-dark p-4 font-mono text-xs leading-relaxed text-white">
                 <code>{curlSnippet}</code>
               </pre>
-              <CopyButton text={curlSnippet} />
             </div>
           </TabsContent>
 
