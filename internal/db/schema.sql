@@ -49,7 +49,7 @@ CREATE TABLE environments (
 CREATE UNIQUE INDEX idx_environments_organization_name ON environments(organization_id, name);
 CREATE UNIQUE INDEX idx_environments_default_per_org ON environments(organization_id) WHERE is_default = true;
 
-CREATE TABLE api_keys (
+CREATE TABLE apikeys (
     id UUID PRIMARY KEY,
     environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -60,14 +60,14 @@ CREATE TABLE api_keys (
     last_used_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
     revoked_at TIMESTAMPTZ,
-    rotated_from UUID REFERENCES api_keys(id) ON DELETE SET NULL,
+    rotated_from UUID REFERENCES apikeys(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT api_keys_status_check CHECK (status IN ('active', 'rotating', 'expired', 'revoked'))
+    CONSTRAINT apikeys_status_check CHECK (status IN ('active', 'rotating', 'expired', 'revoked'))
 );
 
-CREATE INDEX idx_api_keys_environment_id ON api_keys(environment_id);
-CREATE INDEX idx_api_keys_status ON api_keys(status);
+CREATE INDEX idx_apikeys_environment_id ON apikeys(environment_id);
+CREATE INDEX idx_apikeys_status ON apikeys(status);
 
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY,

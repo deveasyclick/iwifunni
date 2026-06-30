@@ -1,8 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { format } from 'date-fns';
-import { Icon } from '@iconify/react';
+import type { ApiKeyItem, ApiKeySecretResponse } from '@/app/types/apikey';
 import CardBox from '@/components/card/CardBox';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,12 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ApiKeyItem, ApiKeySecretResponse } from '@/app/types/api-key';
-import {
-  useApiKeyList,
-  useCreateApiKey,
-  useDeleteApiKey,
-} from './queries';
+import { Icon } from '@iconify/react';
+import { format } from 'date-fns';
+import { FormEvent, useState } from 'react';
+import { useApiKeyList, useCreateApiKey, useDeleteApiKey } from './queries';
 
 function DeleteKeyDialog({
   open,
@@ -49,10 +45,12 @@ function DeleteKeyDialog({
         <DialogHeader>
           <DialogTitle>Delete API key</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            This API key <span className="font-semibold text-foreground">{keyName}</span> will immediately
-            be disabled. API requests made using this key will be rejected, which
-            could cause any systems still depending on it to break. Once deleted,
-            you&apos;ll no longer be able to view or modify this API key.
+            This API key{' '}
+            <span className="font-semibold text-foreground">{keyName}</span>{' '}
+            will immediately be disabled. API requests made using this key will
+            be rejected, which could cause any systems still depending on it to
+            break. Once deleted, you&apos;ll no longer be able to view or modify
+            this API key.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
@@ -77,7 +75,6 @@ const ApiKeyManagement = () => {
     data: keys = [],
     isLoading: loading,
     error: queryError,
-
   } = useApiKeyList();
   const createApiKey = useCreateApiKey();
   const deleteApiKey = useDeleteApiKey();
@@ -91,9 +88,7 @@ const ApiKeyManagement = () => {
 
   const [keyToDelete, setKeyToDelete] = useState<ApiKeyItem | null>(null);
 
-  const isMutating =
-    createApiKey.isPending ||
-    deleteApiKey.isPending;
+  const isMutating = createApiKey.isPending || deleteApiKey.isPending;
 
   const submitCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

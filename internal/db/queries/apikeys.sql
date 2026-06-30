@@ -1,5 +1,5 @@
 -- name: CreateAPIKey :exec
-INSERT INTO api_keys (
+INSERT INTO apikeys (
 	id,
 	environment_id,
 	name,
@@ -15,24 +15,24 @@ INSERT INTO api_keys (
 
 -- name: GetAPIKeyByPrefix :one
 SELECT id, environment_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
-FROM api_keys
+FROM apikeys
 WHERE key_prefix = $1;
 
 -- name: ListAPIKeysByEnvironment :many
 SELECT id, environment_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
-FROM api_keys
+FROM apikeys
 WHERE environment_id = $1
 ORDER BY created_at DESC;
 
 -- name: TouchAPIKeyLastUsed :exec
-UPDATE api_keys
+UPDATE apikeys
 SET last_used_at = $1, updated_at = $2
 WHERE id = $3;
 
 -- name: UpdateAPIKeyStatus :exec
-UPDATE api_keys
+UPDATE apikeys
 SET status = $1, revoked_at = $2, updated_at = $3
 WHERE id = $4;
 
 -- name: DeleteAPIKey :exec
-DELETE FROM api_keys WHERE id = $1;
+DELETE FROM apikeys WHERE id = $1;

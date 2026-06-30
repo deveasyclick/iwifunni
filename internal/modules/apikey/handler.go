@@ -20,9 +20,9 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router) {
-	r.Get("/api-keys", h.list)
-	r.Post("/api-keys", h.create)
-	r.Delete("/api-keys/{keyID}", h.delete)
+	r.Get("/apikeys", h.list)
+	r.Post("/apikeys", h.create)
+	r.Delete("/apikeys/{keyID}", h.delete)
 }
 
 type createRequest struct {
@@ -48,7 +48,7 @@ type createResponse struct {
 // @Produce      json
 // @Success      200  {array}   apiKeyResponse
 // @Failure      401  {string}  string  "Unauthorized"
-// @Router       /api-keys [get]
+// @Router       /apikeys [get]
 // @Security     BearerAuth
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
@@ -77,7 +77,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Param        body  body  createRequest  true  "API key name and scopes"
 // @Success      201   {object}  createResponse
 // @Failure      401   {string}  string  "Unauthorized"
-// @Router       /api-keys [post]
+// @Router       /apikeys [post]
 // @Security     BearerAuth
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())
@@ -109,7 +109,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 // @Success      204    {string}  string  "No content"
 // @Failure      400    {string}  string  "Invalid key ID"
 // @Failure      401    {string}  string  "Unauthorized"
-// @Router       /api-keys/{keyID} [delete]
+// @Router       /apikeys/{keyID} [delete]
 // @Security     BearerAuth
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	environmentID, ok := authctx.GetEnvironmentID(r.Context())

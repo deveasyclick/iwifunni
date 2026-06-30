@@ -1,19 +1,19 @@
 'use client';
 
+import type { CreateApiKeyPayload } from '@/app/types/apikey';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiKeyApi } from './api';
-import type { CreateApiKeyPayload } from '@/app/types/api-key';
 
 export function useApiKeyList() {
   return useQuery({
-    queryKey: ['api-keys'],
+    queryKey: ['apikeys'],
     queryFn: () => apiKeyApi.listKeys(),
     staleTime: 60_000,
   });
 }
 
 function invalidateKeys(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+  void queryClient.invalidateQueries({ queryKey: ['apikeys'] });
 }
 
 export function useCreateApiKey() {
@@ -33,5 +33,3 @@ export function useDeleteApiKey() {
     onSuccess: () => invalidateKeys(queryClient),
   });
 }
-
-
