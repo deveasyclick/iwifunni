@@ -18,10 +18,10 @@ import type { WorkflowCanvasNode } from '../types/canvas';
 import { getNodeMeta } from '../utils';
 
 const handleClassName =
-  'h-3! w-3! border-2! border-dark! bg-primary! opacity-0! pointer-events-none shadow-[0_0_0_3px_color-mix(in_oklab,var(--dark)_88%,black)]';
+  'h-3! w-3! border-2! border-card! bg-primary! opacity-0! pointer-events-none shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-card)_88%,black)]';
 
 const actionButtonClassName =
-  'nodrag nopan inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/55 bg-black/85 text-bodytext transition hover:border-primary/50 hover:text-white';
+  'nodrag nopan inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/55 bg-background/80 text-muted-foreground transition hover:border-primary/50 hover:text-foreground';
 
 const WorkflowCanvasNodeComponent = memo(
   ({ id, data, selected }: NodeProps<WorkflowCanvasNode>) => {
@@ -75,7 +75,7 @@ const WorkflowCanvasNodeComponent = memo(
     return (
       <div className="group relative min-w-67.5 pt-4">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex -translate-y-1.5 justify-center opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
-          <div className="flex items-center gap-1 rounded-full border border-border/55 bg-dark/95 px-2 py-1 shadow-[0_16px_30px_rgba(0,0,0,0.35)] backdrop-blur">
+          <div className="flex items-center gap-1 rounded-full border border-border/55 bg-card/95 px-2 py-1 shadow-[0_16px_30px_rgba(0,0,0,0.35)] backdrop-blur">
             {actionItems.map((action) => {
               const ActionIcon = action.icon;
 
@@ -89,7 +89,7 @@ const WorkflowCanvasNodeComponent = memo(
                         action.hoverClassName,
                         action.enabled
                           ? ''
-                          : 'cursor-not-allowed opacity-45 hover:text-bodytext',
+                          : 'cursor-not-allowed opacity-45 hover:text-muted-foreground',
                       )}
                       aria-label={action.label}
                       onClick={(event) =>
@@ -110,7 +110,7 @@ const WorkflowCanvasNodeComponent = memo(
 
         <div
           className={cn(
-            'relative overflow-hidden rounded-2xl border bg-dark px-4 py-3.5 text-white transition-all duration-200',
+            'relative overflow-hidden rounded-2xl border bg-card px-4 py-3.5 text-foreground transition-all duration-200',
             selected
               ? 'border-primary ring-1 ring-primary shadow-[0_0_35px_color-mix(in_oklab,var(--primary)_30%,transparent)]'
               : 'border-border/45 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border)_55%,transparent)] hover:border-primary/40',
@@ -157,7 +157,7 @@ const WorkflowCanvasNodeComponent = memo(
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-semibold text-white">
+                <p className="truncate text-sm font-semibold text-foreground">
                   {getNodeDisplayName(draft)}
                 </p>
 
@@ -174,11 +174,11 @@ const WorkflowCanvasNodeComponent = memo(
                 ) : null}
               </div>
 
-              <p className="mt-1 text-[11px] leading-relaxed text-bodytext/85">
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/85">
                 {meta.description || buildNodeDescription(draft)}
               </p>
 
-              <p className="mt-1 text-xs leading-relaxed text-bodytext">
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {buildNodeSubtitle(draft, triggerEvent)}
               </p>
             </div>

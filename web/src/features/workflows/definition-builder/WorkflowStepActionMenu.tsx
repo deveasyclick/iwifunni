@@ -74,15 +74,15 @@ export const WorkflowStepActionMenu = ({
         align={align}
         side={side}
         sideOffset={sideOffset}
-        className="w-[280px] rounded-3xl border border-border/20 bg-[color:color-mix(in_oklab,var(--dark)_92%,black)] p-3 text-white shadow-lg backdrop-blur"
+        className="w-[280px] rounded-3xl border border-border/20 bg-card p-3 text-foreground shadow-lg backdrop-blur"
       >
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-bodytext/60">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">
             Channels
           </p>
           {renderActionList(channelItems, onSelect, onOpenChange)}
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-bodytext/60">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">
             Actions
           </p>
           {renderActionList(actionItems, onSelect, onOpenChange)}

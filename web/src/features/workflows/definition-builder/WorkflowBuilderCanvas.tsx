@@ -55,22 +55,22 @@ export const WorkflowBuilderCanvas = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-border/20 bg-dark p-3 text-foreground shadow-lg">
+      <div className="rounded-3xl border border-border/20 bg-card p-3 text-foreground shadow-lg">
         <div className="mb-3 flex items-center justify-between gap-3 px-2 py-1">
           <div>
             <h6 className="font-medium text-foreground">Workflow Canvas</h6>
-            <p className="text-sm text-bodytext">
+            <p className="text-sm text-muted-foreground">
               Click any node to inspect it. Use the edge plus buttons to insert
               the next step.
             </p>
           </div>
-          <span className="text-xs text-bodytext">
+          <span className="text-xs text-muted-foreground">
             {nodes.length} node{nodes.length === 1 ? '' : 's'} · {edgeCount}{' '}
             edge{edgeCount === 1 ? '' : 's'}
           </span>
         </div>
 
-        <div className="scrollbar-none relative h-168 overflow-x-hidden overflow-y-auto overscroll-contain rounded-3xl border border-border/20 bg-dark [-ms-overflow-style:none] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-20 before:bg-linear-to-b before:from-lightprimary before:to-transparent before:opacity-55 before:content-[''] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 [&_.react-flow__attribution]:hidden [&_.react-flow__controls]:overflow-hidden [&_.react-flow__controls]:rounded-2xl [&_.react-flow__controls]:border [&_.react-flow__controls]:border-border/20 [&_.react-flow__controls]:bg-dark [&_.react-flow__controls]:shadow-lg [&_.react-flow__controls-button]:h-9! [&_.react-flow__controls-button]:w-9! [&_.react-flow__controls-button]:border-border/20! [&_.react-flow__controls-button]:bg-transparent! [&_.react-flow__controls-button]:text-bodytext! [&_.react-flow__controls-button:hover]:bg-lightprimary/15! [&_.react-flow__controls-button:hover]:text-primary!">
+        <div className="scrollbar-none relative h-168 overflow-x-hidden overflow-y-auto overscroll-contain rounded-3xl border border-border/20 bg-card [-ms-overflow-style:none] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-20 before:bg-linear-to-b before:from-lightprimary before:to-transparent before:opacity-55 before:content-[''] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 [&_.react-flow__attribution]:hidden [&_.react-flow__controls]:overflow-hidden [&_.react-flow__controls]:rounded-2xl [&_.react-flow__controls]:border [&_.react-flow__controls]:border-border/20 [&_.react-flow__controls]:bg-card [&_.react-flow__controls]:shadow-lg [&_.react-flow__controls-button]:h-9! [&_.react-flow__controls-button]:w-9! [&_.react-flow__controls-button]:border-border/20! [&_.react-flow__controls-button]:bg-transparent! [&_.react-flow__controls-button]:text-muted-foreground! [&_.react-flow__controls-button:hover]:bg-lightprimary/15! [&_.react-flow__controls-button:hover]:text-primary!">
           <div
             className={`relative min-h-full min-w-full ${innerCanvasHeightClass}`}
           >

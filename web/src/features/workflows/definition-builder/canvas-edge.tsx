@@ -72,7 +72,7 @@ const WorkflowCanvasEdgeComponent = memo(
                 <button
                   type="button"
                   className={cn(
-                    'nodrag nopan flex h-7 w-7 items-center justify-center rounded-full border border-border/20 bg-[color-mix(in_oklab,var(--dark)_92%,black)] text-bodytext shadow-lg transition-colors duration-200 hover:border-primary hover:text-primary',
+                    'nodrag nopan flex h-7 w-7 items-center justify-center rounded-full border border-border/20 bg-background text-muted-foreground shadow-lg transition-colors duration-200 hover:border-primary hover:text-primary',
                     selected && 'border-primary text-primary',
                   )}
                   aria-label="Insert workflow step"
