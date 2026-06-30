@@ -1,16 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import ReactJson from 'react-json-view';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ChevronRight, User } from 'lucide-react';
+
+const ReactJson = dynamic(
+  () => import('react-json-view').then((m) => m.default),
+  { ssr: false },
+);
 import type { PreviewSubscriber } from '@/features/workflows/types/data-panel';
 
 interface SubscriberInfoEditorProps {
