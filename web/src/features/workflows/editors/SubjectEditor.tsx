@@ -87,9 +87,11 @@ export function SubjectEditor({
           hasMenuBar: false,
           hideContextMenu: true,
           spellCheck: false,
-          contentClassName: 'py-0 px-0.5 text-sm leading-7 overflow-hidden',
+          contentClassName:
+            'py-0 px-0.5 text-sm leading-7 overflow-hidden [&>p]:mb-0!',
           immediatelyRender: false,
           autofocus: false,
+          bodyClassName: 'mly:p-2 mly:mt-0',
         }}
       />
     </div>

@@ -38,7 +38,6 @@ const SettingsPage = () => {
               <Link href="/dashboard/settings/apikey">Manage API Keys</Link>
             </Button>
           </CardBox>
-
         </div>
       </CardBox>
     </>
