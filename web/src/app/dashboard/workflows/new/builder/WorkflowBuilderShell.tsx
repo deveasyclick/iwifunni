@@ -68,7 +68,7 @@ const WorkflowBuilderShell = ({
       <CreateWorkflowBuilder workflowId={workflowId} />
 
       <DrawerContent className="sm:max-w-lg">
-        <DrawerHeader className="flex items-start justify-between border-b border-border bg-muted/30 px-6 py-3.5">
+        <DrawerHeader className="flex flex-row items-start justify-between border-b border-border bg-muted/30 px-6 py-3.5">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               {drawerTab === 'trigger' ? (
