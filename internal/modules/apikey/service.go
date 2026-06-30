@@ -21,19 +21,17 @@ func NewService(repo *Repository) *Service {
 }
 
 type APIKeyResult struct {
-	ID        uuid.UUID
-	Name      string
-	KeyPrefix string
-	Scopes    []string
-	Status    string
-	CreatedAt time.Time
-	Key       string // only set on creation/rotation
+	ID         uuid.UUID
+	Name       string
+	KeyPrefix  string
+	Status     string
+	LastUsedAt *time.Time
+	CreatedAt  time.Time
+	Key        string // only set on creation
 }
 
-func (s *Service) Create(ctx context.Context, environmentID uuid.UUID, name string, scopes []string) (APIKeyResult, error) {
-	if len(scopes) == 0 {
-		scopes = []string{"notifications:write"}
-	}
+func (s *Service) Create(ctx context.Context, environmentID uuid.UUID, name string) (APIKeyResult, error) {
+	scopes := []string{"notifications:write"}
 	rawKey, err := apikeyutil.GenerateProjectAPIKey("live")
 	if err != nil {
 		return APIKeyResult{}, err
@@ -65,7 +63,7 @@ func (s *Service) Create(ctx context.Context, environmentID uuid.UUID, name stri
 	}); err != nil {
 		return APIKeyResult{}, err
 	}
-	return APIKeyResult{ID: keyID, Name: name, KeyPrefix: prefix, Scopes: scopes, Status: "active", CreatedAt: now, Key: rawKey}, nil
+	return APIKeyResult{ID: keyID, Name: name, KeyPrefix: prefix, Status: "active", CreatedAt: now, Key: rawKey}, nil
 }
 
 func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]APIKeyResult, error) {
@@ -75,14 +73,16 @@ func (s *Service) List(ctx context.Context, environmentID uuid.UUID) ([]APIKeyRe
 	}
 	out := make([]APIKeyResult, 0, len(rows))
 	for _, k := range rows {
-		var scopes []string
-		_ = json.Unmarshal(k.Scopes, &scopes)
-		out = append(out, APIKeyResult{ID: k.ID, Name: k.Name, KeyPrefix: k.KeyPrefix, Scopes: scopes, Status: k.Status, CreatedAt: k.CreatedAt.Time})
+		var lastUsed *time.Time
+		if k.LastUsedAt.Valid {
+			lastUsed = &k.LastUsedAt.Time
+		}
+		out = append(out, APIKeyResult{ID: k.ID, Name: k.Name, KeyPrefix: k.KeyPrefix, Status: k.Status, LastUsedAt: lastUsed, CreatedAt: k.CreatedAt.Time})
 	}
 	return out, nil
 }
 
-func (s *Service) Revoke(ctx context.Context, environmentID, keyID uuid.UUID) error {
+func (s *Service) Delete(ctx context.Context, environmentID, keyID uuid.UUID) error {
 	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
 	if err != nil {
 		return err
@@ -99,95 +99,7 @@ func (s *Service) Revoke(ctx context.Context, environmentID, keyID uuid.UUID) er
 		return &notFoundError{id: keyID}
 	}
 
-	now := time.Now().UTC()
-	ts := pgtype.Timestamptz{Time: now, Valid: true}
-	return s.repo.UpdateStatus(ctx, keyID, "revoked", ts, ts)
-}
-
-func (s *Service) Rotate(ctx context.Context, environmentID, keyID uuid.UUID) (APIKeyResult, error) {
-	// List keys and find the one being rotated to get name/scopes
-	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
-	if err != nil {
-		return APIKeyResult{}, err
-	}
-	var old db.ApiKey
-	found := false
-	for _, k := range keys {
-		if k.ID == keyID {
-			old = k
-			found = true
-			break
-		}
-	}
-	if !found {
-		return APIKeyResult{}, &notFoundError{id: keyID}
-	}
-
-	// Revoke old key
-	now := time.Now().UTC()
-	ts := pgtype.Timestamptz{Time: now, Valid: true}
-	if err := s.repo.UpdateStatus(ctx, keyID, "revoked", ts, ts); err != nil {
-		return APIKeyResult{}, err
-	}
-
-	// Create new key with same name/scopes
-	rawKey, err := apikeyutil.GenerateProjectAPIKey("live")
-	if err != nil {
-		return APIKeyResult{}, err
-	}
-	prefix, err := apikeyutil.APIKeyPrefix(rawKey)
-	if err != nil {
-		return APIKeyResult{}, err
-	}
-	hash, err := apikeyutil.HashAPIKeySecret(rawKey)
-	if err != nil {
-		return APIKeyResult{}, err
-	}
-	newKeyID := uuid.New()
-	if err := s.repo.Create(ctx, db.CreateAPIKeyParams{
-		ID:            newKeyID,
-		EnvironmentID: environmentID,
-		Name:          old.Name,
-		KeyPrefix:     prefix,
-		KeyHash:       hash,
-		Scopes:        old.Scopes,
-		Status:        "active",
-		RotatedFrom:   pgtype.UUID{Bytes: keyID, Valid: true},
-		CreatedAt:     ts,
-		UpdatedAt:     ts,
-	}); err != nil {
-		return APIKeyResult{}, err
-	}
-
-	var scopes []string
-	_ = json.Unmarshal(old.Scopes, &scopes)
-	return APIKeyResult{ID: newKeyID, Name: old.Name, KeyPrefix: prefix, Scopes: scopes, Status: "active", CreatedAt: now, Key: rawKey}, nil
-}
-
-func (s *Service) UpdateStatus(ctx context.Context, environmentID, keyID uuid.UUID, status string) error {
-	keys, err := s.repo.ListByEnvironment(ctx, environmentID)
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for _, k := range keys {
-		if k.ID == keyID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return &notFoundError{id: keyID}
-	}
-
-	now := time.Now().UTC()
-	var revokedAt pgtype.Timestamptz
-	if status == "revoked" {
-		revokedAt = pgtype.Timestamptz{Time: now, Valid: true}
-	}
-	ts := pgtype.Timestamptz{Time: now, Valid: true}
-	return s.repo.UpdateStatus(ctx, keyID, status, revokedAt, ts)
+	return s.repo.Delete(ctx, keyID)
 }
 
 type notFoundError struct{ id uuid.UUID }

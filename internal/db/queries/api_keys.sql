@@ -33,3 +33,6 @@ WHERE id = $3;
 UPDATE api_keys
 SET status = $1, revoked_at = $2, updated_at = $3
 WHERE id = $4;
+
+-- name: DeleteAPIKey :exec
+DELETE FROM api_keys WHERE id = $1;

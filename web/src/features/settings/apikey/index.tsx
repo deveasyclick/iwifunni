@@ -1,10 +1,9 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { format } from 'date-fns';
 import { Icon } from '@iconify/react';
 import CardBox from '@/components/card/CardBox';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,7 +15,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -29,103 +27,49 @@ import type { ApiKeyItem, ApiKeySecretResponse } from '@/app/types/api-key';
 import {
   useApiKeyList,
   useCreateApiKey,
-  useRotateApiKey,
-  useRevokeApiKey,
-  useUpdateApiKeyStatus,
+  useDeleteApiKey,
 } from './queries';
 
-const statusVariant = (
-  status: string,
-): 'lightSuccess' | 'lightWarning' | 'lightError' | 'lightInfo' => {
-  switch (status) {
-    case 'active':
-      return 'lightSuccess';
-    case 'revoked':
-      return 'lightError';
-    case 'rotating':
-      return 'lightWarning';
-    default:
-      return 'lightInfo';
-  }
-};
-
-function keyTableBody(
-  loading: boolean,
-  keys: ApiKeyItem[],
-  statusVariant: (
-    s: string,
-  ) => 'lightSuccess' | 'lightWarning' | 'lightError' | 'lightInfo',
-  toggleKeyStatus: (id: string, status: string) => Promise<void>,
-  isToggling: boolean,
-  rotateKey: (id: string) => Promise<void>,
-  revokeKey: (id: string) => Promise<void>,
-  isMutating: boolean,
-) {
-  if (loading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center text-muted-foreground">
-          Loading API keys...
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (keys.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center text-muted-foreground">
-          No API keys found.
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  return keys.map((item) => (
-    <TableRow key={item.id}>
-      <TableCell className="font-medium">{item.name}</TableCell>
-      <TableCell>
-        <Badge
-          variant={statusVariant(item.status)}
-          className="rounded-md capitalize"
-        >
-          {item.status}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={item.status === 'active'}
-          onCheckedChange={() => void toggleKeyStatus(item.id, item.status)}
-          disabled={isToggling}
-          aria-label="Enable/disable API key"
-        />
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {format(new Date(item.created_at), 'MMM d, yyyy')}
-      </TableCell>
-      <TableCell>
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void rotateKey(item.id)}
-            disabled={isMutating}
-          >
-            Rotate
+function DeleteKeyDialog({
+  open,
+  onOpenChange,
+  keyName,
+  onConfirm,
+  isPending,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  keyName: string;
+  onConfirm: () => Promise<void>;
+  isPending: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md border-border bg-card text-foreground">
+        <DialogHeader>
+          <DialogTitle>Delete API key</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            This API key <span className="font-semibold text-foreground">{keyName}</span> will immediately
+            be disabled. API requests made using this key will be rejected, which
+            could cause any systems still depending on it to break. Once deleted,
+            you&apos;ll no longer be able to view or modify this API key.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
-            className="hover:text-error"
-            onClick={() => void revokeKey(item.id)}
-            disabled={isMutating}
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => void onConfirm()}
           >
-            Revoke
+            {isPending ? 'Deleting...' : 'Delete key'}
           </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  ));
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 const ApiKeyManagement = () => {
@@ -133,14 +77,11 @@ const ApiKeyManagement = () => {
     data: keys = [],
     isLoading: loading,
     error: queryError,
-    refetch: fetchKeys,
+
   } = useApiKeyList();
   const createApiKey = useCreateApiKey();
-  const rotateApiKey = useRotateApiKey();
-  const revokeApiKey = useRevokeApiKey();
-  const updateKeyStatus = useUpdateApiKeyStatus();
+  const deleteApiKey = useDeleteApiKey();
 
-  const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [createdSecret, setCreatedSecret] =
     useState<ApiKeySecretResponse | null>(null);
@@ -148,25 +89,11 @@ const ApiKeyManagement = () => {
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'done'>('idle');
 
+  const [keyToDelete, setKeyToDelete] = useState<ApiKeyItem | null>(null);
+
   const isMutating =
     createApiKey.isPending ||
-    rotateApiKey.isPending ||
-    revokeApiKey.isPending ||
-    updateKeyStatus.isPending;
-
-  const visibleKeys = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) {
-      return keys;
-    }
-
-    return keys.filter((item) => {
-      return (
-        item.name.toLowerCase().includes(term) ||
-        item.status.toLowerCase().includes(term)
-      );
-    });
-  }, [keys, search]);
+    deleteApiKey.isPending;
 
   const submitCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -188,44 +115,15 @@ const ApiKeyManagement = () => {
     }
   };
 
-  const rotateKey = async (keyID: string) => {
-    if (!confirm('Rotate this API key? The previous key will be revoked.')) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!keyToDelete) return;
 
     setError(null);
     try {
-      const rotated = await rotateApiKey.mutateAsync(keyID);
-      setCreatedSecret(rotated);
+      await deleteApiKey.mutateAsync(keyToDelete.id);
+      setKeyToDelete(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rotate API key');
-    }
-  };
-
-  const revokeKey = async (keyID: string) => {
-    if (!confirm('Revoke this API key? This action cannot be undone.')) {
-      return;
-    }
-
-    setError(null);
-    try {
-      await revokeApiKey.mutateAsync(keyID);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to revoke API key');
-    }
-  };
-
-  const toggleKeyStatus = async (keyID: string, currentStatus: string) => {
-    setError(null);
-    try {
-      const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
-      await updateKeyStatus.mutateAsync({ id: keyID, status: newStatus });
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Failed to ${currentStatus === 'active' ? 'disable' : 'enable'} API key`,
-      );
+      setError(err instanceof Error ? err.message : 'Failed to delete API key');
     }
   };
 
@@ -248,7 +146,7 @@ const ApiKeyManagement = () => {
         <div>
           <h5 className="card-title">Project API Keys</h5>
           <p className="text-sm text-muted-foreground mt-1">
-            Create, rotate, and revoke keys used by your services.
+            Create and manage keys used by your services.
           </p>
         </div>
 
@@ -308,51 +206,78 @@ const ApiKeyManagement = () => {
         </div>
       )}
 
-      <div className="mt-6 flex justify-between items-center gap-4">
-        <div className="relative sm:max-w-72 max-w-full w-full">
-          <Icon
-            icon="tabler:search"
-            height={18}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="text"
-            className="pl-8 bg-background"
-            onChange={(e) => setSearch(e.target.value)}
-            value={search}
-            placeholder="Search name, status"
-          />
-        </div>
-        <Button variant="outline" onClick={() => void fetchKeys()}>
-          Refresh
-        </Button>
-      </div>
-
       <div className="mt-4 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Enabled</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-end">Actions</TableHead>
+              <TableHead>Last Used</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {keyTableBody(
-              loading,
-              visibleKeys,
-              statusVariant,
-              toggleKeyStatus,
-              updateKeyStatus.isPending,
-              rotateKey,
-              revokeKey,
-              isMutating,
+            {loading && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
+                  Loading API keys...
+                </TableCell>
+              </TableRow>
             )}
+            {!loading && keys.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
+                  No API keys found.
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading &&
+              keys.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(new Date(item.created_at), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {item.last_used_at
+                      ? format(new Date(item.last_used_at), 'MMM d, yyyy')
+                      : 'Never'}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-error hover:bg-error/10"
+                        onClick={() => setKeyToDelete(item)}
+                        disabled={isMutating}
+                        title="Delete API key"
+                      >
+                        <Icon icon="tabler:trash" height={18} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </div>
+
+      <DeleteKeyDialog
+        open={Boolean(keyToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setKeyToDelete(null);
+        }}
+        keyName={keyToDelete?.name ?? ''}
+        onConfirm={() => handleDelete()}
+        isPending={deleteApiKey.isPending}
+      />
 
       <Dialog
         open={Boolean(createdSecret)}
@@ -367,16 +292,39 @@ const ApiKeyManagement = () => {
           <DialogHeader>
             <DialogTitle>Save Your API Key</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              This is the only time you can view this key secret.
+              Please save this API key somewhere safe and accessible. For
+              security reasons, you won&apos;t be able to view it again through
+              your account. If you lose this API key, you&apos;ll need to
+              generate a new one.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-md border border-border bg-background p-3">
-            <p className="text-xs text-muted-foreground mb-2">API key</p>
-            <p className="font-mono text-sm break-all">{createdSecret?.key}</p>
+          <div className="rounded-md bg-muted/80 border border-border p-4">
+            <p className="font-mono text-sm break-all text-foreground select-all">
+              {createdSecret?.key}
+            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => void copySecret()}>
-              {copyState === 'done' ? 'Copied' : 'Copy key'}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCreatedSecret(null);
+                setCopyState('idle');
+              }}
+            >
+              Done
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void copySecret()}
+            >
+              <Icon
+                icon={copyState === 'done' ? 'tabler:check' : 'tabler:copy'}
+                height={16}
+              />
+              {copyState === 'done' ? 'Copied!' : 'Copy API Key'}
             </Button>
           </DialogFooter>
         </DialogContent>

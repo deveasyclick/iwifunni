@@ -1,11 +1,8 @@
-export type ApiKeyStatus = 'active' | 'revoked' | 'rotating' | 'expired';
-
 export interface ApiKeyItem {
   id: string;
   name: string;
   key_prefix: string;
-  scopes: string[];
-  status: ApiKeyStatus;
+  last_used_at: string | null;
   created_at: string;
 }
 
@@ -15,5 +12,4 @@ export interface ApiKeySecretResponse extends ApiKeyItem {
 
 export interface CreateApiKeyPayload {
   name: string;
-  scopes?: string[];
 }

@@ -25,30 +25,13 @@ export function useCreateApiKey() {
   });
 }
 
-export function useRotateApiKey() {
+export function useDeleteApiKey() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => apiKeyApi.rotateKey(id),
+    mutationFn: (id: string) => apiKeyApi.deleteKey(id),
     onSuccess: () => invalidateKeys(queryClient),
   });
 }
 
-export function useRevokeApiKey() {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (id: string) => apiKeyApi.revokeKey(id),
-    onSuccess: () => invalidateKeys(queryClient),
-  });
-}
-
-export function useUpdateApiKeyStatus() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiKeyApi.updateKeyStatus(id, status),
-    onSuccess: () => invalidateKeys(queryClient),
-  });
-}

@@ -17,20 +17,7 @@ export const apiKeyApi = {
     });
   },
 
-  rotateKey(id: string) {
-    return request<ApiKeySecretResponse>(`/api/api-keys/${id}/rotate`, {
-      method: 'POST',
-    });
-  },
-
-  revokeKey(id: string) {
+  deleteKey(id: string) {
     return request<void>(`/api/api-keys/${id}`, { method: 'DELETE' });
-  },
-
-  updateKeyStatus(id: string, status: string) {
-    return request<ApiKeyItem>(`/api/api-keys/${id}`, {
-      method: 'PATCH',
-      body: { status },
-    });
   },
 };

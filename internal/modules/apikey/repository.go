@@ -5,7 +5,6 @@ import (
 
 	"github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Repository struct {
@@ -24,11 +23,6 @@ func (r *Repository) ListByEnvironment(ctx context.Context, environmentID uuid.U
 	return r.q.ListAPIKeysByEnvironment(ctx, environmentID)
 }
 
-func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, revokedAt, updatedAt pgtype.Timestamptz) error {
-	return r.q.UpdateAPIKeyStatus(ctx, db.UpdateAPIKeyStatusParams{
-		ID:        id,
-		Status:    status,
-		RevokedAt: revokedAt,
-		UpdatedAt: updatedAt,
-	})
+func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.q.DeleteAPIKey(ctx, id)
 }

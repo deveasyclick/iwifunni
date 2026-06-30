@@ -157,6 +157,15 @@ type UpdateAPIKeyStatusParams struct {
 	ID        uuid.UUID          `db:"id" json:"id"`
 }
 
+const deleteAPIKey = `-- name: DeleteAPIKey :exec
+DELETE FROM api_keys WHERE id = $1
+`
+
+func (q *Queries) DeleteAPIKey(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAPIKey, id)
+	return err
+}
+
 func (q *Queries) UpdateAPIKeyStatus(ctx context.Context, arg UpdateAPIKeyStatusParams) error {
 	_, err := q.db.Exec(ctx, updateAPIKeyStatus,
 		arg.Status,
