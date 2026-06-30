@@ -91,15 +91,14 @@ export function IntegratePanelContent({
     <div className="space-y-5">
       {/* Workflow info with copyable ID */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Workflow
-            </p>
-            <p className="mt-1 text-sm font-medium text-foreground">
-              {workflowName}
-            </p>
-          </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Workflow
+        </p>
+        <p className="mt-1 text-sm font-medium text-foreground">
+          {workflowName}
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Workflow ID</span>
           <button
             type="button"
             onClick={() => void copyWorkflowId()}
