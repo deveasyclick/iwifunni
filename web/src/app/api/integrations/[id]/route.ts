@@ -10,7 +10,7 @@ type RouteContext = {
 export async function DELETE(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  return proxyBackend(req, `/providers/${id}`, {
+  return proxyBackend(req, `/integrations/${id}`, {
     method: 'DELETE',
   });
 }
@@ -18,7 +18,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 export async function PUT(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  return proxyBackend(req, `/providers/${id}`, {
+  return proxyBackend(req, `/integrations/${id}`, {
     method: 'PUT',
     body: await req.text(),
   });
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
 export async function PATCH(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  return proxyBackend(req, `/providers/${id}`, {
+  return proxyBackend(req, `/integrations/${id}`, {
     method: 'PATCH',
     body: await req.text(),
   });
