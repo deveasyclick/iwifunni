@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Play, Code, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Drawer,
   DrawerClose,
@@ -80,39 +79,16 @@ const WorkflowBuilderShell = ({
           </DrawerClose>
         </DrawerHeader>
 
-        <Tabs
-          value={drawerTab}
-          onValueChange={setDrawerTab}
-          className="flex flex-1 flex-col"
-        >
-          <TabsList className="mx-6 mt-4 grid w-[calc(100%-3rem)] grid-cols-2">
-            <TabsTrigger value="trigger" className="gap-2">
-              <Play className="h-4 w-4" />
-              Trigger
-            </TabsTrigger>
-            <TabsTrigger value="integrate" className="gap-2">
-              <Code className="h-4 w-4" />
-              Integrate
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="trigger"
-            className="flex-1 overflow-y-auto px-6 py-4"
-          >
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {drawerTab === 'trigger' ? (
             <TriggerPanelContent workflowId={workflowId} />
-          </TabsContent>
-
-          <TabsContent
-            value="integrate"
-            className="flex-1 overflow-y-auto px-6 py-4"
-          >
+          ) : (
             <IntegratePanelContent
               workflowId={workflowId}
               workflowName={workflowName}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </DrawerContent>
     </Drawer>
   );
