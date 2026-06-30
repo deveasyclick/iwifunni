@@ -29,15 +29,14 @@ import { useApiKeyList, useCreateApiKey, useDeleteApiKey } from './queries';
 function DeleteKeyDialog({
   open,
   onOpenChange,
-  keyName,
   onConfirm,
   isPending,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  keyName: string;
-  onConfirm: () => Promise<void>;
-  isPending: boolean;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly keyName: string;
+  readonly onConfirm: () => Promise<void>;
+  readonly isPending: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,12 +44,10 @@ function DeleteKeyDialog({
         <DialogHeader>
           <DialogTitle>Delete API key</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            This API key{' '}
-            <span className="font-semibold text-foreground">{keyName}</span>{' '}
-            will immediately be disabled. API requests made using this key will
-            be rejected, which could cause any systems still depending on it to
-            break. Once deleted, you&apos;ll no longer be able to view or modify
-            this API key.
+            This API key will immediately be disabled. API requests made using
+            this key will be rejected, which could cause any systems still
+            depending on it to break. Once deleted, you&apos;ll no longer be
+            able to view or modify this API key.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
@@ -269,7 +266,6 @@ const ApiKeyManagement = () => {
         onOpenChange={(open) => {
           if (!open) setKeyToDelete(null);
         }}
-        keyName={keyToDelete?.name ?? ''}
         onConfirm={() => handleDelete()}
         isPending={deleteApiKey.isPending}
       />
