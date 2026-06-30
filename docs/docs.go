@@ -23,7 +23,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api-keys": {
+        "/apikeys": {
             "get": {
                 "security": [
                     {
@@ -100,18 +100,18 @@ const docTemplate = `{
                 }
             }
         },
-        "/api-keys/{keyID}": {
+        "/apikeys/{keyID}": {
             "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Revoke (delete) an API key",
+                "description": "Permanently delete an API key",
                 "tags": [
                     "API Keys"
                 ],
-                "summary": "Revoke API key",
+                "summary": "Delete API key",
                 "parameters": [
                     {
                         "type": "string",
@@ -126,114 +126,6 @@ const docTemplate = `{
                         "description": "No content",
                         "schema": {
                             "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid key ID",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Enable or disable an API key",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API Keys"
-                ],
-                "summary": "Update API key status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API key ID",
-                        "name": "keyID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "New status",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/apikey.updateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid key ID",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/api-keys/{keyID}/rotate": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Regenerate an API key, replacing the old one",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API Keys"
-                ],
-                "summary": "Rotate API key",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API key ID",
-                        "name": "keyID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/apikey.createResponse"
                         }
                     },
                     "400": {
@@ -1787,132 +1679,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/webhooks": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get all registered webhooks",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "List webhooks",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/webhooks.webhookResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Register a new webhook endpoint for notification events",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "Create webhook",
-                "parameters": [
-                    {
-                        "description": "Webhook URL and events",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/webhooks.createRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/webhooks.webhookResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/webhooks/{webhookID}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Unregister a webhook",
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "Delete webhook",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Webhook ID",
-                        "name": "webhookID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No content",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/workflow-executions": {
             "get": {
                 "security": [
@@ -2378,16 +2144,10 @@ const docTemplate = `{
                 "key_prefix": {
                     "type": "string"
                 },
-                "name": {
+                "last_used_at": {
                     "type": "string"
                 },
-                "scopes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "status": {
+                "name": {
                     "type": "string"
                 }
             }
@@ -2400,12 +2160,6 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "type": "string"
-                },
-                "scopes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 }
             }
         },
@@ -2424,32 +2178,11 @@ const docTemplate = `{
                 "key_prefix": {
                     "type": "string"
                 },
+                "last_used_at": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
-                },
-                "scopes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "apikey.updateRequest": {
-            "type": "object",
-            "required": [
-                "status"
-            ],
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "active",
-                        "disabled"
-                    ]
                 }
             }
         },
@@ -3093,52 +2826,6 @@ const docTemplate = `{
                     }
                 },
                 "reference": {
-                    "type": "string"
-                }
-            }
-        },
-        "webhooks.createRequest": {
-            "type": "object",
-            "required": [
-                "events",
-                "secret",
-                "url"
-            ],
-            "properties": {
-                "events": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "secret": {
-                    "type": "string"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "webhooks.webhookResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "events": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "url": {
                     "type": "string"
                 }
             }

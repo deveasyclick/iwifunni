@@ -8,23 +8,15 @@ definitions:
         type: string
       key_prefix:
         type: string
-      name:
+      last_used_at:
         type: string
-      scopes:
-        items:
-          type: string
-        type: array
-      status:
+      name:
         type: string
     type: object
   apikey.createRequest:
     properties:
       name:
         type: string
-      scopes:
-        items:
-          type: string
-        type: array
     required:
     - name
     type: object
@@ -38,24 +30,10 @@ definitions:
         type: string
       key_prefix:
         type: string
+      last_used_at:
+        type: string
       name:
         type: string
-      scopes:
-        items:
-          type: string
-        type: array
-      status:
-        type: string
-    type: object
-  apikey.updateRequest:
-    properties:
-      status:
-        enum:
-        - active
-        - disabled
-        type: string
-    required:
-    - status
     type: object
   auth.AuthResult:
     properties:
@@ -489,37 +467,6 @@ definitions:
       reference:
         type: string
     type: object
-  webhooks.createRequest:
-    properties:
-      events:
-        items:
-          type: string
-        minItems: 1
-        type: array
-      secret:
-        type: string
-      url:
-        type: string
-    required:
-    - events
-    - secret
-    - url
-    type: object
-  webhooks.webhookResponse:
-    properties:
-      created_at:
-        type: string
-      events:
-        items:
-          type: string
-        type: array
-      id:
-        type: string
-      is_active:
-        type: boolean
-      url:
-        type: string
-    type: object
   workflow.Definition:
     properties:
       edges:
@@ -755,7 +702,7 @@ info:
   title: Iwifunni API
   version: "1.0"
 paths:
-  /api-keys:
+  /apikeys:
     get:
       description: Get all API keys for the authenticated environment
       produces:
@@ -803,9 +750,9 @@ paths:
       summary: Create API key
       tags:
       - API Keys
-  /api-keys/{keyID}:
+  /apikeys/{keyID}:
     delete:
-      description: Revoke (delete) an API key
+      description: Permanently delete an API key
       parameters:
       - description: API key ID
         in: path
@@ -827,76 +774,7 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      summary: Revoke API key
-      tags:
-      - API Keys
-    patch:
-      consumes:
-      - application/json
-      description: Enable or disable an API key
-      parameters:
-      - description: API key ID
-        in: path
-        name: keyID
-        required: true
-        type: string
-      - description: New status
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/apikey.updateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid key ID
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Update API key status
-      tags:
-      - API Keys
-  /api-keys/{keyID}/rotate:
-    post:
-      consumes:
-      - application/json
-      description: Regenerate an API key, replacing the old one
-      parameters:
-      - description: API key ID
-        in: path
-        name: keyID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apikey.createResponse'
-        "400":
-          description: Invalid key ID
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Rotate API key
+      summary: Delete API key
       tags:
       - API Keys
   /auth/logout:
@@ -1877,85 +1755,6 @@ paths:
       summary: Upsert template
       tags:
       - Templates
-  /webhooks:
-    get:
-      description: Get all registered webhooks
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/webhooks.webhookResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: List webhooks
-      tags:
-      - Webhooks
-    post:
-      consumes:
-      - application/json
-      description: Register a new webhook endpoint for notification events
-      parameters:
-      - description: Webhook URL and events
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/webhooks.createRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/webhooks.webhookResponse'
-        "400":
-          description: Invalid input
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Create webhook
-      tags:
-      - Webhooks
-  /webhooks/{webhookID}:
-    delete:
-      description: Unregister a webhook
-      parameters:
-      - description: Webhook ID
-        in: path
-        name: webhookID
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No content
-          schema:
-            type: string
-        "400":
-          description: Invalid ID
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Delete webhook
-      tags:
-      - Webhooks
   /workflow-executions:
     get:
       description: Get all workflow executions, optionally filtered by workflow ID
