@@ -12,6 +12,7 @@ export const useWorkflowBuilder = ({
   value,
   onChange,
   issues,
+  onConfigureNotificationNode,
 }: WorkflowDefinitionBuilderProps) => {
   const [store] = useState(() => createWorkflowBuilderStore(value));
   const lastDraftSignatureRef = useRef(JSON.stringify(value));
@@ -40,14 +41,21 @@ export const useWorkflowBuilder = ({
   const canvasHorizontalOffset = 220;
   const canvasVerticalOffset = 120;
 
-  // Derive a map of node ID to its issues
-  const nodeIssuesMap = useMemo(() => {
+  // Build node-level issues by matching parent issues (from definitionIssues)
+  // against canvas nodes by index, then keying by draft node ID for direct
+  // lookup. Provider issues flow from useWorkflowBuilderDraft via definitionIssues.
+  const nodeIssuesById = useMemo(() => {
     const map = new Map<string, WorkflowDefinitionIssue[]>();
 
     currentDraft.nodes.forEach((draftNode, index) => {
-      const nodeIssues = issues.filter((issue) =>
-        issue.path.startsWith(`nodes.${index}`),
-      );
+      const nodeIssues: WorkflowDefinitionIssue[] = [];
+
+      for (const issue of issues) {
+        if (issue.path.startsWith(`nodes.${index}`)) {
+          nodeIssues.push(issue);
+        }
+      }
+
       if (nodeIssues.length > 0) {
         map.set(draftNode.id, nodeIssues);
       }
@@ -68,21 +76,30 @@ export const useWorkflowBuilder = ({
         data: {
           ...node.data,
           triggerEvent,
-          onEditNode: (nodeId: string) =>
-            setSelection({ nodeId, edgeId: null }),
+          onEditNode: (nodeId: string) => {
+            if (node.data.draft.type === 'notification') {
+              onConfigureNotificationNode?.(
+                node.data.draft.id,
+                node.data.draft.channel,
+              );
+            } else {
+              setSelection({ nodeId, edgeId: null });
+            }
+          },
           onRemoveNode: removeNode,
           onDuplicateNode: duplicateNode,
           canDelete: node.data.draft.type !== 'trigger',
           canDuplicate: node.data.draft.type !== 'trigger',
-          nodeIssues: nodeIssuesMap.get(node.data.draft.id) || [],
+          nodeIssues: nodeIssuesById.get(node.data.draft.id) || [],
         },
       })),
     [
       canvasHorizontalOffset,
       canvasVerticalOffset,
       duplicateNode,
-      nodeIssuesMap,
+      nodeIssuesById,
       nodes,
+      onConfigureNotificationNode,
       removeNode,
       setSelection,
       triggerEvent,

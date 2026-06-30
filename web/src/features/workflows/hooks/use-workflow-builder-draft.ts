@@ -95,14 +95,13 @@ export const useWorkflowBuilderDraft = (
     [definitionDraft],
   );
 
-  // Fetch providers to check active provider availability per channel
   const providersQuery = useProviders();
 
   const definitionIssues = useMemo(() => {
     const base = validateWorkflowDefinitionDraft(definition);
 
     // Provider-aware validation: notification nodes need an active provider
-    // for their configured channel. Skip when data is still loading.
+    // for their configured channel.
     if (providersQuery.data) {
       const activeChannels = new Set(
         providersQuery.data.filter((p) => p.is_active).map((p) => p.channel),
@@ -117,7 +116,7 @@ export const useWorkflowBuilderDraft = (
         ) {
           base.push({
             path: `nodes.${i}.channels`,
-            message: `No active ${node.channel.toUpperCase()} provider configured. Set one up in Settings → Providers.`,
+            message: `No active ${node.channel.toUpperCase()} provider configured. Set one up in Integrations page`,
           });
         }
       }
