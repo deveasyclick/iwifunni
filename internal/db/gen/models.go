@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ApiKey struct {
+type Apikey struct {
 	ID            uuid.UUID          `db:"id" json:"id"`
 	EnvironmentID uuid.UUID          `db:"environment_id" json:"environment_id"`
 	Name          string             `db:"name" json:"name"`
@@ -120,6 +120,8 @@ type Subscriber struct {
 	ID                   uuid.UUID          `db:"id" json:"id"`
 	EnvironmentID        uuid.UUID          `db:"environment_id" json:"environment_id"`
 	Name                 string             `db:"name" json:"name"`
+	FirstName            *string            `db:"first_name" json:"first_name"`
+	LastName             *string            `db:"last_name" json:"last_name"`
 	Email                *string            `db:"email" json:"email"`
 	Phone                *string            `db:"phone" json:"phone"`
 	PushToken            *string            `db:"push_token" json:"push_token"`

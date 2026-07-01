@@ -159,6 +159,8 @@ CREATE TABLE subscribers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    first_name TEXT,
+    last_name TEXT,
     email TEXT,
     phone TEXT,
     push_token TEXT,

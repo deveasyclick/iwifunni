@@ -59,15 +59,24 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) erro
 	return err
 }
 
+const deleteAPIKey = `-- name: DeleteAPIKey :exec
+DELETE FROM apikeys WHERE id = $1
+`
+
+func (q *Queries) DeleteAPIKey(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAPIKey, id)
+	return err
+}
+
 const getAPIKeyByPrefix = `-- name: GetAPIKeyByPrefix :one
 SELECT id, environment_id, name, key_prefix, key_hash, scopes, status, last_used_at, expires_at, revoked_at, rotated_from, created_at, updated_at
 FROM apikeys
 WHERE key_prefix = $1
 `
 
-func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (ApiKey, error) {
+func (q *Queries) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (Apikey, error) {
 	row := q.db.QueryRow(ctx, getAPIKeyByPrefix, keyPrefix)
-	var i ApiKey
+	var i Apikey
 	err := row.Scan(
 		&i.ID,
 		&i.EnvironmentID,
@@ -93,15 +102,15 @@ WHERE environment_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListAPIKeysByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]ApiKey, error) {
+func (q *Queries) ListAPIKeysByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]Apikey, error) {
 	rows, err := q.db.Query(ctx, listAPIKeysByEnvironment, environmentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ApiKey{}
+	items := []Apikey{}
 	for rows.Next() {
-		var i ApiKey
+		var i Apikey
 		if err := rows.Scan(
 			&i.ID,
 			&i.EnvironmentID,
@@ -141,37 +150,5 @@ type TouchAPIKeyLastUsedParams struct {
 
 func (q *Queries) TouchAPIKeyLastUsed(ctx context.Context, arg TouchAPIKeyLastUsedParams) error {
 	_, err := q.db.Exec(ctx, touchAPIKeyLastUsed, arg.LastUsedAt, arg.UpdatedAt, arg.ID)
-	return err
-}
-
-const deleteAPIKey = `-- name: DeleteAPIKey :exec
-DELETE FROM apikeys WHERE id = $1
-`
-
-func (q *Queries) DeleteAPIKey(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteAPIKey, id)
-	return err
-}
-
-const updateAPIKeyStatus = `-- name: UpdateAPIKeyStatus :exec
-UPDATE apikeys
-SET status = $1, revoked_at = $2, updated_at = $3
-WHERE id = $4
-`
-
-type UpdateAPIKeyStatusParams struct {
-	Status    string             `db:"status" json:"status"`
-	RevokedAt pgtype.Timestamptz `db:"revoked_at" json:"revoked_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	ID        uuid.UUID          `db:"id" json:"id"`
-}
-
-func (q *Queries) UpdateAPIKeyStatus(ctx context.Context, arg UpdateAPIKeyStatusParams) error {
-	_, err := q.db.Exec(ctx, updateAPIKeyStatus,
-		arg.Status,
-		arg.RevokedAt,
-		arg.UpdatedAt,
-		arg.ID,
-	)
 	return err
 }

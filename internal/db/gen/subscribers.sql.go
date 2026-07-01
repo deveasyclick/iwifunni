@@ -16,6 +16,8 @@ INSERT INTO subscribers (
 	id,
 	environment_id,
 	name,
+	first_name,
+	last_name,
 	email,
 	phone,
 	push_token,
@@ -25,14 +27,16 @@ INSERT INTO subscribers (
 	metadata,
 	preferences
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, environment_id, name, first_name, last_name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
 `
 
 type CreateSubscriberParams struct {
 	ID            uuid.UUID `db:"id" json:"id"`
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 	Name          string    `db:"name" json:"name"`
+	FirstName     *string   `db:"first_name" json:"first_name"`
+	LastName      *string   `db:"last_name" json:"last_name"`
 	Email         *string   `db:"email" json:"email"`
 	Phone         *string   `db:"phone" json:"phone"`
 	PushToken     *string   `db:"push_token" json:"push_token"`
@@ -48,6 +52,8 @@ func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberPara
 		arg.ID,
 		arg.EnvironmentID,
 		arg.Name,
+		arg.FirstName,
+		arg.LastName,
 		arg.Email,
 		arg.Phone,
 		arg.PushToken,
@@ -62,6 +68,8 @@ func (q *Queries) CreateSubscriber(ctx context.Context, arg CreateSubscriberPara
 		&i.ID,
 		&i.EnvironmentID,
 		&i.Name,
+		&i.FirstName,
+		&i.LastName,
 		&i.Email,
 		&i.Phone,
 		&i.PushToken,
@@ -96,7 +104,7 @@ func (q *Queries) DeleteSubscriber(ctx context.Context, arg DeleteSubscriberPara
 }
 
 const getSubscriberByID = `-- name: GetSubscriberByID :one
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, first_name, last_name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
 `
 
@@ -112,6 +120,8 @@ func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDPa
 		&i.ID,
 		&i.EnvironmentID,
 		&i.Name,
+		&i.FirstName,
+		&i.LastName,
 		&i.Email,
 		&i.Phone,
 		&i.PushToken,
@@ -130,7 +140,7 @@ func (q *Queries) GetSubscriberByID(ctx context.Context, arg GetSubscriberByIDPa
 }
 
 const listSubscribersByEnvironment = `-- name: ListSubscribersByEnvironment :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, first_name, last_name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
 ORDER BY subscription_date DESC
 `
@@ -148,6 +158,8 @@ func (q *Queries) ListSubscribersByEnvironment(ctx context.Context, environmentI
 			&i.ID,
 			&i.EnvironmentID,
 			&i.Name,
+			&i.FirstName,
+			&i.LastName,
 			&i.Email,
 			&i.Phone,
 			&i.PushToken,
@@ -173,7 +185,7 @@ func (q *Queries) ListSubscribersByEnvironment(ctx context.Context, environmentI
 }
 
 const searchSubscribers = `-- name: SearchSubscribers :many
-SELECT id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
+SELECT id, environment_id, name, first_name, last_name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at FROM subscribers
 WHERE environment_id = $1 AND deleted_at IS NULL
   AND (LOWER(name) LIKE LOWER($2) OR LOWER(COALESCE(email, '')) LIKE LOWER($2))
 ORDER BY subscription_date DESC
@@ -197,6 +209,8 @@ func (q *Queries) SearchSubscribers(ctx context.Context, arg SearchSubscribersPa
 			&i.ID,
 			&i.EnvironmentID,
 			&i.Name,
+			&i.FirstName,
+			&i.LastName,
 			&i.Email,
 			&i.Phone,
 			&i.PushToken,
@@ -224,23 +238,27 @@ func (q *Queries) SearchSubscribers(ctx context.Context, arg SearchSubscribersPa
 const updateSubscriber = `-- name: UpdateSubscriber :one
 UPDATE subscribers
 SET name = $3,
-	email = $4,
-	phone = $5,
-	push_token = $6,
-	channels = $7,
-	status = $8,
-	tags = $9,
-	metadata = $10,
-	preferences = $11,
+	first_name = $4,
+	last_name = $5,
+	email = $6,
+	phone = $7,
+	push_token = $8,
+	channels = $9,
+	status = $10,
+	tags = $11,
+	metadata = $12,
+	preferences = $13,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
-RETURNING id, environment_id, name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
+RETURNING id, environment_id, name, first_name, last_name, email, phone, push_token, channels, status, tags, preferences, subscription_date, last_notification_date, metadata, deleted_at, created_at, updated_at
 `
 
 type UpdateSubscriberParams struct {
 	ID            uuid.UUID `db:"id" json:"id"`
 	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
 	Name          string    `db:"name" json:"name"`
+	FirstName     *string   `db:"first_name" json:"first_name"`
+	LastName      *string   `db:"last_name" json:"last_name"`
 	Email         *string   `db:"email" json:"email"`
 	Phone         *string   `db:"phone" json:"phone"`
 	PushToken     *string   `db:"push_token" json:"push_token"`
@@ -256,6 +274,8 @@ func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberPara
 		arg.ID,
 		arg.EnvironmentID,
 		arg.Name,
+		arg.FirstName,
+		arg.LastName,
 		arg.Email,
 		arg.Phone,
 		arg.PushToken,
@@ -270,6 +290,8 @@ func (q *Queries) UpdateSubscriber(ctx context.Context, arg UpdateSubscriberPara
 		&i.ID,
 		&i.EnvironmentID,
 		&i.Name,
+		&i.FirstName,
+		&i.LastName,
 		&i.Email,
 		&i.Phone,
 		&i.PushToken,

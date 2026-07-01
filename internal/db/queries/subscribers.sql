@@ -3,6 +3,8 @@ INSERT INTO subscribers (
 	id,
 	environment_id,
 	name,
+	first_name,
+	last_name,
 	email,
 	phone,
 	push_token,
@@ -12,7 +14,7 @@ INSERT INTO subscribers (
 	metadata,
 	preferences
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING *;
 
 -- name: ListSubscribersByEnvironment :many
@@ -27,14 +29,16 @@ WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL;
 -- name: UpdateSubscriber :one
 UPDATE subscribers
 SET name = $3,
-	email = $4,
-	phone = $5,
-	push_token = $6,
-	channels = $7,
-	status = $8,
-	tags = $9,
-	metadata = $10,
-	preferences = $11,
+	first_name = $4,
+	last_name = $5,
+	email = $6,
+	phone = $7,
+	push_token = $8,
+	channels = $9,
+	status = $10,
+	tags = $11,
+	metadata = $12,
+	preferences = $13,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2 AND deleted_at IS NULL
 RETURNING *;
