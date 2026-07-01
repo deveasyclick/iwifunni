@@ -1,67 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Check, Copy, Terminal, FileCode } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileCode, Terminal } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface IntegratePanelContentProps {
   readonly workflowId: string;
   readonly workflowName: string;
 }
 
-function buildCurlSnippet(baseUrl: string, workflowId: string) {
-  return `curl -X POST ${baseUrl}/api/notifications/trigger \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
+function buildCurlSnippet(
+  baseUrl: string,
+  workflowId: string,
+  workflowName: string,
+) {
+  return String.raw`curl -X POST ${baseUrl}/api/notifications/trigger \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
   -d '{
-  "workflow_id": "${workflowId}",
-  "subscriber_id": "sub_abc123",
-  "recipient": {
-    "email": "user@example.com"
+  "name": "${workflowName}",
+  "to": {
+    "subscriberId": "sub_abc123",
+    "email": "user@example.com",
+    "firstName": "Yusuf",
+    "lastName": "Ola"
   },
-  "channels": ["email"],
-  "metadata": {
-    "first_name": "Jane",
+  "payload": {
     "plan": "premium"
   }
 }'`;
-}
-
-function CopyButton({ text }: { readonly text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // fallback
-    }
-  };
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="h-7 gap-1 text-xs text-white/50 hover:bg-white/10 hover:text-white"
-      onClick={() => void handleCopy()}
-    >
-      {copied ? (
-        <>
-          <Check className="h-3 w-3" />
-          Copied
-        </>
-      ) : (
-        <>
-          <Copy className="h-3 w-3" />
-          Copy
-        </>
-      )}
-    </Button>
-  );
 }
 
 export function IntegratePanelContent({
@@ -74,49 +42,11 @@ export function IntegratePanelContent({
     setBaseUrl(window.location.origin);
   }, []);
 
-  const curlSnippet = buildCurlSnippet(baseUrl, workflowId);
-
-  const [copied, setCopied] = useState(false);
-
-  const copyWorkflowId = async () => {
-    try {
-      await navigator.clipboard.writeText(workflowId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // fallback
-    }
-  };
+  const curlSnippet = buildCurlSnippet(baseUrl, workflowId, workflowName);
 
   return (
     <div className="space-y-5">
-      {/* Workflow info with copyable ID */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Workflow
-        </p>
-        <p className="mt-1 text-sm font-medium text-foreground">
-          {workflowName}
-        </p>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Workflow ID</span>
-          <button
-            type="button"
-            onClick={() => void copyWorkflowId()}
-            className="group inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            title="Copy workflow ID"
-          >
-            {workflowId}
-            {copied ? (
-              <Check className="h-3 w-3 text-success" />
-            ) : (
-              <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* SDK examples with tabs */}
+      <p>{/* Tigger instruction should be here*/}</p>
       <div>
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Trigger via API
@@ -169,7 +99,8 @@ export function IntegratePanelContent({
               <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm font-medium text-foreground">Node.js SDK</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                SDK coming soon. You can use the REST API with fetch or axios in the meantime.
+                SDK coming soon. You can use the REST API with fetch or axios in
+                the meantime.
               </p>
             </div>
           </TabsContent>
@@ -179,7 +110,8 @@ export function IntegratePanelContent({
               <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm font-medium text-foreground">Go SDK</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                SDK coming soon. You can use the REST API with net/http in the meantime.
+                SDK coming soon. You can use the REST API with net/http in the
+                meantime.
               </p>
             </div>
           </TabsContent>
@@ -189,7 +121,8 @@ export function IntegratePanelContent({
               <FileCode className="mb-3 h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm font-medium text-foreground">Python SDK</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                SDK coming soon. You can use the REST API with requests in the meantime.
+                SDK coming soon. You can use the REST API with requests in the
+                meantime.
               </p>
             </div>
           </TabsContent>

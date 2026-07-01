@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { Play, Code, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -10,29 +8,36 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
+import { useWorkflowQuery } from '@/features/workflows/queries';
+import { buildWorkflowBuilderHref } from '@/features/workflows/utils/urls';
+import { Code, Play, X } from 'lucide-react';
+import { useState } from 'react';
 import CreateWorkflowBuilder from '../../../../../features/workflows/components/CreateWorkflowBuilder';
-import { TriggerPanelContent } from './TriggerPanelContent';
+import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
 import { IntegratePanelContent } from './IntegratePanelContent';
-
-interface BreadcrumbItem {
-  title: string;
-  to?: string;
-}
+import { TriggerPanelContent } from './TriggerPanelContent';
 
 interface WorkflowBuilderShellProps {
   readonly workflowId: string;
-  readonly workflowName: string;
-  readonly breadcrumbItems: BreadcrumbItem[];
 }
 
-const WorkflowBuilderShell = ({
-  workflowId,
-  workflowName,
-  breadcrumbItems,
-}: WorkflowBuilderShellProps) => {
+const WorkflowBuilderShell = ({ workflowId }: WorkflowBuilderShellProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState('trigger');
+
+  const { data: workflow } = useWorkflowQuery(workflowId);
+  const workflowName = workflow?.name ?? 'Workflow Builder';
+
+  const breadcrumbItems = [
+    {
+      to: '/dashboard/workflows',
+      title: 'Workflows',
+    },
+    {
+      to: buildWorkflowBuilderHref({ workflowId }),
+      title: workflowName,
+    },
+  ];
 
   const openDrawer = (tab: string) => {
     setDrawerTab(tab);
@@ -67,7 +72,7 @@ const WorkflowBuilderShell = ({
 
       <CreateWorkflowBuilder workflowId={workflowId} />
 
-      <DrawerContent className="sm:max-w-lg">
+      <DrawerContent className="sm:max-w-lg!">
         <DrawerHeader className="flex flex-row items-start justify-between border-b border-border bg-muted/30 px-6 py-3.5">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -79,7 +84,9 @@ const WorkflowBuilderShell = ({
             </div>
             <div>
               <DrawerTitle className="text-sm font-semibold">
-                {drawerTab === 'trigger' ? 'Trigger Workflow' : 'API Integration'}
+                {drawerTab === 'trigger'
+                  ? 'Trigger Workflow'
+                  : 'API Integration'}
               </DrawerTitle>
               <p className="text-xs text-muted-foreground">
                 {drawerTab === 'trigger'
@@ -89,7 +96,11 @@ const WorkflowBuilderShell = ({
             </div>
           </div>
           <DrawerClose asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+            >
               <X className="h-4 w-4" />
             </Button>
           </DrawerClose>
