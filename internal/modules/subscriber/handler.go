@@ -34,6 +34,8 @@ func (h *Handler) Register(r chi.Router) {
 
 type subscriberRequest struct {
 	Name        string                 `json:"name"`
+	FirstName   *string                `json:"firstName,omitempty"`
+	LastName    *string                `json:"lastName,omitempty"`
 	Email       *string                `json:"email"`
 	Phone       *string                `json:"phone"`
 	PushToken   *string                `json:"pushToken"`
@@ -46,6 +48,8 @@ type subscriberRequest struct {
 type subscriberResponse struct {
 	ID                   uuid.UUID              `json:"id"`
 	Name                 string                 `json:"name"`
+	FirstName            *string                `json:"firstName,omitempty"`
+	LastName             *string                `json:"lastName,omitempty"`
 	Email                *string                `json:"email,omitempty"`
 	Phone                *string                `json:"phone,omitempty"`
 	PushToken            *string                `json:"pushToken,omitempty"`
@@ -85,6 +89,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	item, err := h.service.Create(r.Context(), CreateInput{
 		EnvironmentID: environmentID,
 		Name:          req.Name,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
 		Email:         req.Email,
 		Phone:         req.Phone,
 		PushToken:     req.PushToken,
@@ -197,6 +203,8 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		ID:            id,
 		EnvironmentID: environmentID,
 		Name:          req.Name,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
 		Email:         req.Email,
 		Phone:         req.Phone,
 		PushToken:     req.PushToken,
@@ -272,6 +280,8 @@ func subscriberFromRecord(item db.Subscriber) subscriberResponse {
 	return subscriberResponse{
 		ID:                   item.ID,
 		Name:                 item.Name,
+		FirstName:            item.FirstName,
+		LastName:             item.LastName,
 		Email:                item.Email,
 		Phone:                item.Phone,
 		PushToken:            item.PushToken,

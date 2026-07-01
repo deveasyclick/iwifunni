@@ -29,6 +29,8 @@ type ChannelStatus struct {
 type CreateInput struct {
 	EnvironmentID uuid.UUID
 	Name          string
+	FirstName     *string
+	LastName      *string
 	Email         *string
 	Phone         *string
 	PushToken     *string
@@ -42,6 +44,8 @@ type UpdateInput struct {
 	ID            uuid.UUID
 	EnvironmentID uuid.UUID
 	Name          string
+	FirstName     *string
+	LastName      *string
 	Email         *string
 	Phone         *string
 	PushToken     *string
@@ -96,9 +100,21 @@ func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error
 
 func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 	name := strings.TrimSpace(in.Name)
+	firstName := trimOptional(in.FirstName)
+	lastName := trimOptional(in.LastName)
 	email := trimOptional(in.Email)
 	phone := trimOptional(in.Phone)
 	pushToken := trimOptional(in.PushToken)
+
+	// Derive name from firstName/lastName if not explicitly provided
+	if name == "" && firstName != nil && lastName != nil {
+		name = strings.TrimSpace(*firstName + " " + *lastName)
+	} else if name == "" && firstName != nil {
+		name = strings.TrimSpace(*firstName)
+	} else if name == "" && lastName != nil {
+		name = strings.TrimSpace(*lastName)
+	}
+
 	if phone != nil && !phoneHasCountryCode(*phone) {
 		return db.CreateSubscriberParams{}, ErrInvalidSubscriber
 	}
@@ -116,6 +132,8 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 		ID:            uuid.New(),
 		EnvironmentID: in.EnvironmentID,
 		Name:          name,
+		FirstName:     firstName,
+		LastName:      lastName,
 		Email:         email,
 		Phone:         phone,
 		PushToken:     pushToken,
@@ -129,9 +147,21 @@ func buildCreateParams(in CreateInput) (db.CreateSubscriberParams, error) {
 
 func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 	name := strings.TrimSpace(in.Name)
+	firstName := trimOptional(in.FirstName)
+	lastName := trimOptional(in.LastName)
 	email := trimOptional(in.Email)
 	phone := trimOptional(in.Phone)
 	pushToken := trimOptional(in.PushToken)
+
+	// Derive name from firstName/lastName if not explicitly provided
+	if name == "" && firstName != nil && lastName != nil {
+		name = strings.TrimSpace(*firstName + " " + *lastName)
+	} else if name == "" && firstName != nil {
+		name = strings.TrimSpace(*firstName)
+	} else if name == "" && lastName != nil {
+		name = strings.TrimSpace(*lastName)
+	}
+
 	if phone != nil && !phoneHasCountryCode(*phone) {
 		return db.UpdateSubscriberParams{}, ErrInvalidSubscriber
 	}
@@ -149,6 +179,8 @@ func buildUpdateParams(in UpdateInput) (db.UpdateSubscriberParams, error) {
 		ID:            in.ID,
 		EnvironmentID: in.EnvironmentID,
 		Name:          name,
+		FirstName:     firstName,
+		LastName:      lastName,
 		Email:         email,
 		Phone:         phone,
 		PushToken:     pushToken,
