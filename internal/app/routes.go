@@ -26,7 +26,7 @@ func (a *App) Router() http.Handler {
 	// Global CORS — must be first so preflight OPTIONS requests are handled
 	// before any auth middleware.
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "https://iwifunni.cc"},
+		AllowedOrigins:   []string{"http://localhost:3000", "https://iwifunni.cc", "https://www.iwifunni.cc"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "browserrefreshed"},
 		ExposedHeaders:   []string{"Link"},
