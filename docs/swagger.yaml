@@ -253,19 +253,16 @@ definitions:
         additionalProperties:
           type: string
         type: object
-      recipient:
-        $ref: '#/definitions/types.Recipient'
-      subscriber_id:
-        type: string
       sync:
         type: boolean
       title:
         type: string
+      to:
+        $ref: '#/definitions/types.SubscriberTo'
       workflow_id:
         type: string
     required:
     - message
-    - recipient
     - title
     type: object
   notification.testSendRequest:
@@ -304,10 +301,8 @@ definitions:
         additionalProperties:
           type: string
         type: object
-      recipient:
-        $ref: '#/definitions/types.Recipient'
-      subscriber_id:
-        type: string
+      to:
+        $ref: '#/definitions/types.SubscriberTo'
       workflow_id:
         type: string
     required:
@@ -347,6 +342,10 @@ definitions:
         type: array
       email:
         type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
       metadata:
         additionalProperties: true
         type: object
@@ -376,7 +375,11 @@ definitions:
         type: boolean
       email:
         type: string
+      firstName:
+        type: string
       id:
+        type: string
+      lastName:
         type: string
       lastNotificationDate:
         type: string
@@ -454,17 +457,19 @@ definitions:
     required:
     - body
     type: object
-  types.Recipient:
+  types.SubscriberTo:
     properties:
       email:
         type: string
-      phone_number:
+      firstName:
         type: string
-      push_tokens:
-        items:
-          type: string
-        type: array
-      reference:
+      lastName:
+        type: string
+      phone:
+        type: string
+      push:
+        type: string
+      subscriberId:
         type: string
     type: object
   workflow.Definition:

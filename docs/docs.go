@@ -2497,7 +2497,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "message",
-                "recipient",
                 "title"
             ],
             "properties": {
@@ -2516,17 +2515,14 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "recipient": {
-                    "$ref": "#/definitions/types.Recipient"
-                },
-                "subscriber_id": {
-                    "type": "string"
-                },
                 "sync": {
                     "type": "boolean"
                 },
                 "title": {
                     "type": "string"
+                },
+                "to": {
+                    "$ref": "#/definitions/types.SubscriberTo"
                 },
                 "workflow_id": {
                     "type": "string"
@@ -2590,11 +2586,8 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "recipient": {
-                    "$ref": "#/definitions/types.Recipient"
-                },
-                "subscriber_id": {
-                    "type": "string"
+                "to": {
+                    "$ref": "#/definitions/types.SubscriberTo"
                 },
                 "workflow_id": {
                     "type": "string"
@@ -2651,6 +2644,12 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
                 "metadata": {
                     "type": "object",
                     "additionalProperties": true
@@ -2694,7 +2693,13 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "firstName": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "lastName": {
                     "type": "string"
                 },
                 "lastNotificationDate": {
@@ -2810,22 +2815,25 @@ const docTemplate = `{
                 }
             }
         },
-        "types.Recipient": {
+        "types.SubscriberTo": {
             "type": "object",
             "properties": {
                 "email": {
                     "type": "string"
                 },
-                "phone_number": {
+                "firstName": {
                     "type": "string"
                 },
-                "push_tokens": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "lastName": {
+                    "type": "string"
                 },
-                "reference": {
+                "phone": {
+                    "type": "string"
+                },
+                "push": {
+                    "type": "string"
+                },
+                "subscriberId": {
                     "type": "string"
                 }
             }
