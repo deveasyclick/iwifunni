@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -278,12 +279,14 @@ func (h *Handler) socialCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writeSessionCookies(w, result)
-	target := strings.TrimRight(h.frontendBaseURL, "/") + "/dashboard"
-	if result.NeedsOnboarding {
-		target = strings.TrimRight(h.frontendBaseURL, "/") + "/auth/onboarding"
-	}
-	http.Redirect(w, r, target, http.StatusTemporaryRedirect)
+	callbackURL := fmt.Sprintf(
+		"%s/api/auth/social/callback?access_token=%s&refresh_token=%s&needs_onboarding=%t",
+		strings.TrimRight(h.frontendBaseURL, "/"),
+		url.QueryEscape(result.AccessToken),
+		url.QueryEscape(result.RefreshToken),
+		result.NeedsOnboarding,
+	)
+	http.Redirect(w, r, callbackURL, http.StatusTemporaryRedirect)
 }
 
 type signinRequest struct {
@@ -461,39 +464,6 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) writeSessionCookies(w http.ResponseWriter, result *SocialSigninResult) {
-	h.writeCookie(w, "access_token", result.AccessToken, 0)
-	h.writeCookie(w, "refresh_token", result.RefreshToken, 0)
-	if result.NeedsOnboarding {
-		h.writeCookie(w, "needs_onboarding", "true", 0)
-		return
-	}
-	h.clearCookie(w, "needs_onboarding")
-}
-
-func (h *Handler) writeCookie(w http.ResponseWriter, name, value string, maxAge int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.cookieSecure,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   maxAge,
-	})
-}
-
-func (h *Handler) clearCookie(w http.ResponseWriter, name string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.cookieSecure,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
-	})
-}
 
 func (h *Handler) redirectSocialError(w http.ResponseWriter, r *http.Request, message string) {
 	target := strings.TrimRight(h.frontendBaseURL, "/") + "/auth/login?error=" + url.QueryEscape(message)
