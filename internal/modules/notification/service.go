@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/registry"
 	"github.com/deveasyclick/iwifunni/internal/types"
+	"github.com/deveasyclick/iwifunni/internal/utils/ptr"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,17 +22,50 @@ import (
 // Service handles notification delivery logic.
 type Service struct {
 	repo          notificationStore
+	workflows     workflowStore
+	subscribers   subscriberStore
+	templates     templateStore
+	integrations  integrationStore
+	users         userStore
 	registry      *registry.Registry
 	dispatcher    *webhooks.Dispatcher
 	encryptionKey string
 }
 
-func NewService(repo notificationStore, encryptionKey string) *Service {
-	return &Service{repo: repo, registry: registry.NewDefault(), encryptionKey: encryptionKey}
+type Stores struct {
+	Notifications notificationStore
+	Workflows     workflowStore
+	Subscribers   subscriberStore
+	Templates     templateStore
+	Integrations  integrationStore
+	Users         userStore
 }
 
-func NewServiceWithWebhooks(repo notificationStore, dispatcher *webhooks.Dispatcher, encryptionKey string) *Service {
-	return &Service{repo: repo, registry: registry.NewDefault(), dispatcher: dispatcher, encryptionKey: encryptionKey}
+func NewService(stores Stores, encryptionKey string) *Service {
+	return &Service{
+		repo:          stores.Notifications,
+		workflows:     stores.Workflows,
+		subscribers:   stores.Subscribers,
+		templates:     stores.Templates,
+		integrations:  stores.Integrations,
+		users:         stores.Users,
+		registry:      registry.NewDefault(),
+		encryptionKey: encryptionKey,
+	}
+}
+
+func NewServiceWithWebhooks(stores Stores, dispatcher *webhooks.Dispatcher, encryptionKey string) *Service {
+	return &Service{
+		repo:          stores.Notifications,
+		workflows:     stores.Workflows,
+		subscribers:   stores.Subscribers,
+		templates:     stores.Templates,
+		integrations:  stores.Integrations,
+		users:         stores.Users,
+		registry:      registry.NewDefault(),
+		dispatcher:    dispatcher,
+		encryptionKey: encryptionKey,
+	}
 }
 
 func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*types.NotificationJob, error) {
@@ -44,6 +78,15 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 	prepared.Message = strings.TrimSpace(prepared.Message)
 	prepared.WorkflowID = strings.TrimSpace(prepared.WorkflowID)
 	prepared.SubscriberID = strings.TrimSpace(prepared.SubscriberID)
+
+	// Resolve subscriber from "to" field if present
+	if prepared.To != nil {
+		var err error
+		prepared, err = s.resolveToAndBuildRecipient(ctx, prepared)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Workflow-based sends: title and message come from templates, skip direct validation
 	if prepared.WorkflowID != "" && prepared.SubscriberID != "" {
@@ -68,6 +111,165 @@ func (s *Service) PrepareJob(ctx context.Context, job *types.NotificationJob) (*
 	return &prepared, nil
 }
 
+// resolveToAndBuildRecipient resolves a subscriber from the "to" field
+// and populates the Recipient fields from the subscriber's contact data.
+func (s *Service) resolveToAndBuildRecipient(ctx context.Context, prepared types.NotificationJob) (types.NotificationJob, error) {
+	subscriber, err := s.resolveSubscriberFromTo(ctx, prepared.ProjectID, prepared.To, prepared.WorkflowID)
+	if err != nil {
+		return prepared, err
+	}
+
+	prepared.SubscriberID = subscriber.ID.String()
+
+	if subscriber.Email != nil {
+		prepared.Recipient.Email = strings.TrimSpace(*subscriber.Email)
+	}
+	if subscriber.Phone != nil {
+		prepared.Recipient.PhoneNumber = strings.TrimSpace(*subscriber.Phone)
+	}
+	if subscriber.PushToken != nil {
+		prepared.Recipient.PushTokens = []string{strings.TrimSpace(*subscriber.PushToken)}
+	}
+	prepared.Recipient.Reference = subscriber.ID.String()
+
+	return prepared, nil
+}
+
+// findOrUpdateSubscriber looks up a subscriber by ID and updates contact fields
+// if any non-empty values are provided. Returns pgx.ErrNoRows if not found
+// so the caller can fall through to creation.
+func (s *Service) findOrUpdateSubscriber(ctx context.Context, projectUUID uuid.UUID, to *types.SubscriberTo, name string, subscriberID uuid.UUID) (db.Subscriber, error) {
+	sub, err := s.subscribers.GetSubscriberByID(ctx, subscriberID, projectUUID)
+	if err != nil {
+		return db.Subscriber{}, err
+	}
+
+	firstName := strings.TrimSpace(to.FirstName)
+	lastName := strings.TrimSpace(to.LastName)
+	email := strings.TrimSpace(to.Email)
+	phone := strings.TrimSpace(to.Phone)
+	push := strings.TrimSpace(to.Push)
+
+	// Subscriber found — update fields if any are provided
+	hasUpdates := firstName != "" || lastName != "" || email != "" || phone != "" || push != ""
+	if !hasUpdates {
+		return sub, nil
+	}
+
+	updateName := sub.Name
+	if firstName != "" || lastName != "" {
+		updateName = name
+	}
+	channels := deriveSubscriberChannels(
+		ptr.StrPtr(ptr.Coalesce(email, sub.Email)),
+		ptr.StrPtr(ptr.Coalesce(phone, sub.Phone)),
+		ptr.StrPtr(ptr.Coalesce(push, sub.PushToken)),
+	)
+	statusJSON, _ := json.Marshal(map[string]string{
+		"email": "subscribed",
+		"sms":   "subscribed",
+		"push":  "subscribed",
+	})
+
+	return s.subscribers.UpdateSubscriber(ctx, db.UpdateSubscriberParams{
+		ID:            sub.ID,
+		EnvironmentID: sub.EnvironmentID,
+		Name:          updateName,
+		FirstName:     ptr.StrPtr(ptr.Coalesce(firstName, sub.FirstName)),
+		LastName:      ptr.StrPtr(ptr.Coalesce(lastName, sub.LastName)),
+		Email:         ptr.StrPtr(ptr.Coalesce(email, sub.Email)),
+		Phone:         ptr.StrPtr(ptr.Coalesce(phone, sub.Phone)),
+		PushToken:     ptr.StrPtr(ptr.Coalesce(push, sub.PushToken)),
+		Channels:      channels,
+		Status:        statusJSON,
+		Tags:          sub.Tags,
+		Metadata:      sub.Metadata,
+		Preferences:   sub.Preferences,
+	})
+}
+
+// resolveSubscriberFromTo resolves or creates a subscriber from the "to" field.
+// If subscriberId is provided, it tries to find the subscriber and update fields.
+// If not found or no subscriberId, it creates a new subscriber.
+func (s *Service) resolveSubscriberFromTo(ctx context.Context, projectID string, to *types.SubscriberTo, workflowName string) (db.Subscriber, error) {
+	projectUUID, err := uuid.Parse(projectID)
+	if err != nil {
+		return db.Subscriber{}, invalidSend("invalid project_id")
+	}
+
+	firstName := strings.TrimSpace(to.FirstName)
+	lastName := strings.TrimSpace(to.LastName)
+	email := strings.TrimSpace(to.Email)
+	phone := strings.TrimSpace(to.Phone)
+	push := strings.TrimSpace(to.Push)
+
+	name := strings.TrimSpace(firstName + " " + lastName)
+	if name == "" && workflowName != "" {
+		name = workflowName
+	}
+
+	// If subscriberId is provided, try to find and optionally update
+	if to.SubscriberID != "" {
+		subscriberID, err := uuid.Parse(to.SubscriberID)
+		if err != nil {
+			return db.Subscriber{}, invalidSend("invalid subscriber_id in to field")
+		}
+
+		sub, err := s.findOrUpdateSubscriber(ctx, projectUUID, to, name, subscriberID)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return db.Subscriber{}, err
+			}
+			// ErrNoRows — fall through to create
+		} else {
+			return sub, nil
+		}
+	}
+
+	// Create new subscriber
+	channels := deriveSubscriberChannels(ptr.StrPtr(email), ptr.StrPtr(phone), ptr.StrPtr(push))
+	statusJSON, _ := json.Marshal(map[string]string{
+		"email": "subscribed",
+		"sms":   "subscribed",
+		"push":  "subscribed",
+	})
+
+	newSub, err := s.subscribers.CreateSubscriber(ctx, db.CreateSubscriberParams{
+		ID:            uuid.New(),
+		EnvironmentID: projectUUID,
+		Name:          name,
+		FirstName:     ptr.StrPtr(firstName),
+		LastName:      ptr.StrPtr(lastName),
+		Email:         ptr.StrPtr(email),
+		Phone:         ptr.StrPtr(phone),
+		PushToken:     ptr.StrPtr(push),
+		Channels:      channels,
+		Status:        statusJSON,
+		Tags:          []string{},
+		Metadata:      []byte("{}"),
+		Preferences:   []byte("{}"),
+	})
+	if err != nil {
+		return db.Subscriber{}, err
+	}
+	return newSub, nil
+}
+
+// deriveSubscriberChannels derives channel list from contact fields.
+func deriveSubscriberChannels(email, phone, pushToken *string) []string {
+	channels := make([]string, 0, 3)
+	if email != nil {
+		channels = append(channels, "email")
+	}
+	if phone != nil {
+		channels = append(channels, "sms")
+	}
+	if pushToken != nil {
+		channels = append(channels, "push")
+	}
+	return channels
+}
+
 func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.NotificationJob) (*types.NotificationJob, error) {
 	if prepared.ProjectID == "" {
 		return nil, invalidSend("workflow-based sends require project-scoped authentication")
@@ -86,7 +288,7 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 		return nil, invalidSend("invalid subscriber_id")
 	}
 
-	workflowRecord, err := s.repo.GetWorkflowByID(ctx, workflowID, projectID)
+	workflowRecord, err := s.workflows.GetWorkflowByID(ctx, workflowID, projectID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("workflow not found: %w", err)
@@ -97,7 +299,7 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 	var subscriberRecord db.Subscriber
 
 	if prepared.IsSystemUser {
-		userRecord, err := s.repo.GetUserByID(ctx, subscriberID)
+		userRecord, err := s.users.GetUserByID(ctx, subscriberID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, fmt.Errorf("user not found: %w", err)
@@ -117,7 +319,7 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 			Email: &userEmail,
 		}
 	} else {
-		subscriberRecord, err = s.repo.GetSubscriberByID(ctx, subscriberID, projectID)
+		subscriberRecord, err = s.subscribers.GetSubscriberByID(ctx, subscriberID, projectID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, fmt.Errorf("subscriber not found: %w", err)

@@ -131,7 +131,7 @@ func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.
 	return db.User{}, pgx.ErrNoRows
 }
 
-func (s *fakeNotificationStore) GetActiveProvidersByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Integration, error) {
+func (s *fakeNotificationStore) ListByChannel(_ context.Context, _ uuid.UUID, _ string) ([]db.Integration, error) {
 	return s.providers, nil
 }
 
@@ -141,6 +141,42 @@ func (s *fakeNotificationStore) GetWorkflowByID(_ context.Context, _, _ uuid.UUI
 
 func (s *fakeNotificationStore) GetSubscriberByID(_ context.Context, _, _ uuid.UUID) (db.Subscriber, error) {
 	return db.Subscriber{}, pgx.ErrNoRows
+}
+
+func (s *fakeNotificationStore) CreateSubscriber(_ context.Context, arg db.CreateSubscriberParams) (db.Subscriber, error) {
+	return db.Subscriber{
+		ID:            arg.ID,
+		EnvironmentID: arg.EnvironmentID,
+		Name:          arg.Name,
+		FirstName:     arg.FirstName,
+		LastName:      arg.LastName,
+		Email:         arg.Email,
+		Phone:         arg.Phone,
+		PushToken:     arg.PushToken,
+		Channels:      arg.Channels,
+		Status:        arg.Status,
+		Tags:          arg.Tags,
+		Metadata:      arg.Metadata,
+		Preferences:   arg.Preferences,
+	}, nil
+}
+
+func (s *fakeNotificationStore) UpdateSubscriber(_ context.Context, arg db.UpdateSubscriberParams) (db.Subscriber, error) {
+	return db.Subscriber{
+		ID:            arg.ID,
+		EnvironmentID: arg.EnvironmentID,
+		Name:          arg.Name,
+		FirstName:     arg.FirstName,
+		LastName:      arg.LastName,
+		Email:         arg.Email,
+		Phone:         arg.Phone,
+		PushToken:     arg.PushToken,
+		Channels:      arg.Channels,
+		Status:        arg.Status,
+		Tags:          arg.Tags,
+		Metadata:      arg.Metadata,
+		Preferences:   arg.Preferences,
+	}, nil
 }
 
 func (s *fakeNotificationStore) GetTemplateByID(_ context.Context, _, _ uuid.UUID) (db.Template, error) {
@@ -172,7 +208,14 @@ func TestServiceSendIsIdempotentByJobID(t *testing.T) {
 
 	store := newFakeNotificationStore()
 	provider := &fakeProvider{channel: "email"}
-	service := NewService(store, "0123456789abcdef0123456789abcdef")
+	service := NewService(Stores{
+			Notifications: store,
+			Workflows:     store,
+			Subscribers:   store,
+			Templates:     store,
+			Integrations:  store,
+			Users:         store,
+		}, "0123456789abcdef0123456789abcdef")
 	service.registry = registry.New(provider)
 
 	originalNow := now
@@ -242,7 +285,14 @@ func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
 	}}
 
 	provider := &fakeProvider{name: "sendgrid", channel: "email"}
-	service := NewService(store, encryptionKey)
+	service := NewService(Stores{
+			Notifications: store,
+			Workflows:     store,
+			Subscribers:   store,
+			Templates:     store,
+			Integrations:  store,
+			Users:         store,
+		}, encryptionKey)
 	service.registry = registry.New(provider)
 
 	job := &types.NotificationJob{

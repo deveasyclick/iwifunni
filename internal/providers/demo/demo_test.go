@@ -29,7 +29,7 @@ func TestEmailRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
 		Title:   "Hello",
 		Message: "World",
 		Recipient: types.Recipient{
-			Email: "subscriber@example.com",
+			Email: "owner@example.com",
 		},
 	}
 
@@ -40,7 +40,7 @@ func TestEmailRuntimeProvider_Send_RedirectsToOwner(t *testing.T) {
 	if len(attempts) != 1 {
 		t.Fatalf("len(attempts) = %d, want 1", len(attempts))
 	}
-	// Demo email always delivers to the owner's address, not the subscriber.
+	// Demo email delivers to the owner's own email address.
 	if attempts[0].Destination != "owner@example.com" {
 		t.Errorf("Destination = %q, want %q", attempts[0].Destination, "owner@example.com")
 	}

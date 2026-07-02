@@ -20,12 +20,19 @@ type userStore interface {
 }
 
 type Handler struct {
-	service   *Service
-	userStore userStore
+	service       *Service
+	userStore     userStore
+	brevoAPIKey   string
+	brevoFromEmail string
 }
 
-func NewHandler(service *Service, us userStore) *Handler {
-	return &Handler{service: service, userStore: us}
+func NewHandler(service *Service, us userStore, brevoAPIKey, brevoFromEmail string) *Handler {
+	return &Handler{
+		service:        service,
+		userStore:      us,
+		brevoAPIKey:    brevoAPIKey,
+		brevoFromEmail: brevoFromEmail,
+	}
 }
 
 func (h *Handler) Register(r chi.Router) {
@@ -99,6 +106,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 			req.Config = make(map[string]any)
 		}
 		req.Config["owner_email"] = user.Email
+		if h.brevoAPIKey != "" && h.brevoFromEmail != "" {
+			req.Config["brevo_api_key"] = h.brevoAPIKey
+			req.Config["brevo_from_email"] = h.brevoFromEmail
+		}
 	}
 
 	p, err := h.service.Create(r.Context(), CreateInput{
@@ -200,6 +211,18 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	if !validate.DecodeAndRespond(w, r, &req) {
 		return
 	}
+
+	// Inject Brevo credentials for demo-email on update as well
+	if strings.EqualFold(req.Name, "demo-email") {
+		if req.Config == nil {
+			req.Config = make(map[string]any)
+		}
+		if h.brevoAPIKey != "" && h.brevoFromEmail != "" {
+			req.Config["brevo_api_key"] = h.brevoAPIKey
+			req.Config["brevo_from_email"] = h.brevoFromEmail
+		}
+	}
+
 	p, err := h.service.Update(r.Context(), UpdateInput{
 		ID:            providerID,
 		EnvironmentID: environmentID,

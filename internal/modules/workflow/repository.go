@@ -3,7 +3,7 @@ package workflow
 import (
 	"context"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -41,6 +41,10 @@ func (r *Repository) List(ctx context.Context, environmentID uuid.UUID) ([]db.Wo
 
 func (r *Repository) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
 	return r.q.GetWorkflowByID(ctx, db.GetWorkflowByIDParams{ID: id, EnvironmentID: environmentID})
+}
+
+func (r *Repository) GetWorkflowByID(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
+	return r.GetByID(ctx, id, environmentID)
 }
 
 func (r *Repository) ListExecutions(ctx context.Context, environmentID uuid.UUID, workflowID *uuid.UUID) ([]db.WorkflowExecution, error) {

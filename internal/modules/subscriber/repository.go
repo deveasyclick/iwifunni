@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 )
 
@@ -42,4 +42,16 @@ func (r *Repository) Update(ctx context.Context, arg db.UpdateSubscriberParams) 
 
 func (r *Repository) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
 	return r.q.DeleteSubscriber(ctx, db.DeleteSubscriberParams{ID: id, EnvironmentID: environmentID})
+}
+
+func (r *Repository) GetSubscriberByID(ctx context.Context, id, environmentID uuid.UUID) (db.Subscriber, error) {
+	return r.GetByID(ctx, id, environmentID)
+}
+
+func (r *Repository) CreateSubscriber(ctx context.Context, arg db.CreateSubscriberParams) (db.Subscriber, error) {
+	return r.Create(ctx, arg)
+}
+
+func (r *Repository) UpdateSubscriber(ctx context.Context, arg db.UpdateSubscriberParams) (db.Subscriber, error) {
+	return r.Update(ctx, arg)
 }

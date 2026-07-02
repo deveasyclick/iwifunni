@@ -26,6 +26,8 @@ type App struct {
 	encryptionKey   string
 	producer        *queue.Producer
 	dispatcher      *webhooks.Dispatcher
+	brevoAPIKey     string
+	brevoFromEmail  string
 }
 
 // Config carries the dependencies needed to create an App.
@@ -42,7 +44,7 @@ type Config struct {
 }
 
 // New creates a new App with the given configuration.
-func New(cfg Config) *App {
+func New(cfg Config, brevoAPIKey, brevoFromEmail string) *App {
 	return &App{
 		queries:         cfg.Queries,
 		dbPool:          cfg.DBPool,
@@ -53,6 +55,8 @@ func New(cfg Config) *App {
 		encryptionKey:   cfg.EncryptionKey,
 		producer:        cfg.Producer,
 		dispatcher:      cfg.Dispatcher,
+		brevoAPIKey:     brevoAPIKey,
+		brevoFromEmail:  brevoFromEmail,
 	}
 }
 

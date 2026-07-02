@@ -20,7 +20,7 @@ var now = func() time.Time { return time.Now().UTC() }
 func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notificationID uuid.UUID, channel string, job *types.NotificationJob) error {
 	log := logger.Get()
 
-	providerRecords, err := s.repo.GetActiveProvidersByChannel(ctx, projectID, channel)
+	providerRecords, err := s.integrations.ListByChannel(ctx, projectID, channel)
 	if err != nil {
 		log.Error("delivery: failed to query active providers", "error", err, "channel", channel, "project_id", projectID.String())
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s: %w", channel, err))
@@ -67,9 +67,12 @@ func (s *Service) buildProjectProviderConfig(providerRecord db.Integration) ([]b
 		return providerRecord.Config, nil
 	}
 
+	// Credentials are stored as a JSON string literal: "<encrypted_value>".
+	// If the value is a JSON object (e.g. {}), there are no credentials to merge.
 	var encrypted string
 	if err := json.Unmarshal(providerRecord.Credentials, &encrypted); err != nil {
-		return nil, fmt.Errorf("invalid integration credentials payload: %w", err)
+		// Not a JSON string — could be an object like {}. Return config as-is.
+		return providerRecord.Config, nil
 	}
 	if strings.TrimSpace(encrypted) == "" {
 		return providerRecord.Config, nil

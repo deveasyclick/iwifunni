@@ -156,7 +156,7 @@ func main() {
 		EncryptionKey: cfg.EncryptionKey,
 		Producer:      producer,
 		Dispatcher:    dispatcher,
-	})
+	}, cfg.BrevoAPIKey, cfg.BrevoFromEmail)
 
 	httpServer := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.APIServicePort),

@@ -3,7 +3,7 @@ package templates
 import (
 	"context"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 )
 
@@ -21,6 +21,10 @@ func (r *Repository) Upsert(ctx context.Context, arg db.UpsertTemplateParams) (d
 
 func (r *Repository) GetByID(ctx context.Context, id, environmentID uuid.UUID) (db.Template, error) {
 	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: environmentID})
+}
+
+func (r *Repository) GetTemplateByID(ctx context.Context, id, environmentID uuid.UUID) (db.Template, error) {
+	return r.GetByID(ctx, id, environmentID)
 }
 
 func (r *Repository) Update(ctx context.Context, arg db.UpdateTemplateParams) (db.Template, error) {

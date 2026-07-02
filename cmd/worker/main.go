@@ -8,12 +8,15 @@ import (
 	"syscall"
 
 	"github.com/deveasyclick/iwifunni/internal/config"
+	"github.com/deveasyclick/iwifunni/internal/modules/integration"
 	"github.com/deveasyclick/iwifunni/internal/modules/notification"
-	"github.com/deveasyclick/iwifunni/internal/utils/ratelimit"
+	"github.com/deveasyclick/iwifunni/internal/modules/subscriber"
+	"github.com/deveasyclick/iwifunni/internal/modules/templates"
 	"github.com/deveasyclick/iwifunni/internal/modules/webhooks"
 	"github.com/deveasyclick/iwifunni/internal/modules/workflow"
 	"github.com/deveasyclick/iwifunni/internal/queue"
 	"github.com/deveasyclick/iwifunni/internal/storage"
+	"github.com/deveasyclick/iwifunni/internal/utils/ratelimit"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -76,8 +79,18 @@ func main() {
 	producer := queue.NewProducer(asynqClient).WithTaskOptions(cfg.QueueMaxRetry, cfg.QueueTaskTimeout, cfg.QueueUniqueTTL)
 	dispatcher := webhooks.NewDispatcher(store.Queries, producer)
 	notifRepo := notification.NewRepository(store.Queries)
-	notifSvc := notification.NewServiceWithWebhooks(notifRepo, dispatcher, cfg.EncryptionKey)
 	workflowRepo := workflow.NewRepository(store.Queries)
+	wSubscriberRepo := subscriber.NewRepository(store.Queries)
+	wTplRepo := templates.NewRepository(store.Queries)
+	wIntegrationRepo := integration.NewRepository(store.Queries, store.Pool)
+	notifSvc := notification.NewServiceWithWebhooks(notification.Stores{
+		Notifications: notifRepo,
+		Workflows:     workflowRepo,
+		Subscribers:   wSubscriberRepo,
+		Templates:     wTplRepo,
+		Integrations:  wIntegrationRepo,
+		Users:         store.Queries,
+	}, dispatcher, cfg.EncryptionKey)
 	workflowSvc := workflow.NewService(workflowRepo).WithProducer(producer)
 	notificationWorker := notification.NewWorker(asynqServer, notifSvc)
 	workflowWorker := workflow.NewWorker(asynqServer, workflowSvc)

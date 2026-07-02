@@ -176,25 +176,4 @@ func (r *Repository) ListDeliveryAttemptsByNotificationID(ctx context.Context, n
 	return r.q.ListDeliveryAttemptsByNotificationID(ctx, notificationID)
 }
 
-func (r *Repository) GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Integration, error) {
-	return r.q.GetActiveEnvironmentIntegrationsByChannel(ctx, db.GetActiveEnvironmentIntegrationsByChannelParams{
-		EnvironmentID: projectID,
-		Channel:       channel,
-	})
-}
 
-func (r *Repository) GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error) {
-	return r.q.GetWorkflowByID(ctx, db.GetWorkflowByIDParams{ID: id, EnvironmentID: projectID})
-}
-
-func (r *Repository) GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error) {
-	return r.q.GetSubscriberByID(ctx, db.GetSubscriberByIDParams{ID: id, EnvironmentID: projectID})
-}
-
-func (r *Repository) GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error) {
-	return r.q.GetTemplateByID(ctx, db.GetTemplateByIDParams{ID: id, EnvironmentID: projectID})
-}
-
-func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error) {
-	return r.q.GetUserByID(ctx, id)
-}

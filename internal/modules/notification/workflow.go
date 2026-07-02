@@ -44,7 +44,7 @@ func (s *Service) prepareWorkflowDelivery(ctx context.Context, projectID uuid.UU
 			return nil, nil, nil, types.Recipient{}, invalidSend("workflow template mapping contains an invalid template id")
 		}
 
-		templateRecord, err := s.repo.GetTemplateByID(ctx, templateID, projectID)
+		templateRecord, err := s.templates.GetTemplateByID(ctx, templateID, projectID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				skippedChannels = append(skippedChannels, types.SkippedChannel{Channel: channel, Reason: "linked template not found"})

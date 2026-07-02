@@ -82,7 +82,7 @@ func NewTestApp() (*TestApp, error) {
 		EncryptionKey: encryptionKey,
 		Producer:      producer,
 		Dispatcher:    dispatcher,
-	})
+	}, "", "")
 
 	server := httptest.NewServer(application.Router())
 

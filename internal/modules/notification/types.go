@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -47,9 +47,26 @@ type notificationStore interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
 	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
 	ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error)
-	GetActiveProvidersByChannel(ctx context.Context, projectID uuid.UUID, channel string) ([]db.Integration, error)
-	GetWorkflowByID(ctx context.Context, id, projectID uuid.UUID) (db.Workflow, error)
-	GetSubscriberByID(ctx context.Context, id, projectID uuid.UUID) (db.Subscriber, error)
-	GetTemplateByID(ctx context.Context, id, projectID uuid.UUID) (db.Template, error)
+}
+
+type workflowStore interface {
+	GetWorkflowByID(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error)
+}
+
+type subscriberStore interface {
+	GetSubscriberByID(ctx context.Context, id, environmentID uuid.UUID) (db.Subscriber, error)
+	CreateSubscriber(ctx context.Context, arg db.CreateSubscriberParams) (db.Subscriber, error)
+	UpdateSubscriber(ctx context.Context, arg db.UpdateSubscriberParams) (db.Subscriber, error)
+}
+
+type templateStore interface {
+	GetTemplateByID(ctx context.Context, id, environmentID uuid.UUID) (db.Template, error)
+}
+
+type integrationStore interface {
+	ListByChannel(ctx context.Context, environmentID uuid.UUID, channel string) ([]db.Integration, error)
+}
+
+type userStore interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error)
 }

@@ -10,11 +10,32 @@ import (
 
 // NewEmailDefinition returns a catalog definition for the demo email provider.
 // No credentials are required — only the owner's email address is stored in config.
+// Brevo API credentials can be injected by the handler for actual delivery.
 func NewEmailDefinition() catalog.Definition {
 	return catalog.NewFuncDefinition("demo-email", "email", func(credentials, config map[string]any, current *catalog.StoredInput) (catalog.NormalizedInput, error) {
 		ownerEmail, err := catalog.RequiredString(config, "owner_email")
 		if err != nil {
 			if current != nil && len(current.Config) > 0 {
+				// Merge any new config values (e.g. Brevo credentials injected by handler)
+				// into the existing stored config.
+				if len(config) > 0 {
+					var merged map[string]any
+					if unmarshalErr := json.Unmarshal(current.Config, &merged); unmarshalErr == nil {
+						for k, v := range config {
+							if s, ok := v.(string); ok && s != "" {
+								merged[k] = s
+							}
+						}
+						mergedJSON, marshalErr := json.Marshal(merged)
+						if marshalErr == nil {
+							return catalog.NormalizedInput{
+								Name:       "demo-email",
+								Channel:    "email",
+								ConfigJSON: mergedJSON,
+							}, nil
+						}
+					}
+				}
 				return catalog.NormalizedInput{
 					Name:       "demo-email",
 					Channel:    "email",
@@ -32,10 +53,25 @@ func NewEmailDefinition() catalog.Definition {
 		}
 		senderName, _ := config["sender_name"].(string)
 
-		configJSON, err := json.Marshal(map[string]string{
+		// Build JSON, preserving any Brevo credentials injected by the handler
+		cfgMap := map[string]string{
 			"owner_email": ownerEmail,
 			"sender_name": strings.TrimSpace(senderName),
-		})
+		}
+
+		// Pass through Brevo credentials if the handler injected them
+		if brevoKey, ok := config["brevo_api_key"]; ok {
+			if s, ok := brevoKey.(string); ok && s != "" {
+				cfgMap["brevo_api_key"] = s
+			}
+		}
+		if brevoFrom, ok := config["brevo_from_email"]; ok {
+			if s, ok := brevoFrom.(string); ok && s != "" {
+				cfgMap["brevo_from_email"] = s
+			}
+		}
+
+		configJSON, err := json.Marshal(cfgMap)
 		if err != nil {
 			return catalog.NormalizedInput{}, err
 		}

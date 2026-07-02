@@ -13,7 +13,15 @@ import (
 func TestWorkerHandleSkipsRetryForInvalidPayload(t *testing.T) {
 	t.Parallel()
 
-	worker := &Worker{service: NewService(newFakeNotificationStore(), "0123456789abcdef0123456789abcdef")}
+	store := newFakeNotificationStore()
+	worker := &Worker{service: NewService(Stores{
+		Notifications: store,
+		Workflows:     store,
+		Subscribers:   store,
+		Templates:     store,
+		Integrations:  store,
+		Users:         store,
+	}, "0123456789abcdef0123456789abcdef")}
 	task := asynq.NewTask(TaskTypeNotificationSend, []byte("not-json"))
 
 	err := worker.handle(context.Background(), task)
@@ -25,7 +33,15 @@ func TestWorkerHandleSkipsRetryForInvalidPayload(t *testing.T) {
 func TestWorkerHandleSkipsRetryForInvalidSendRequest(t *testing.T) {
 	t.Parallel()
 
-	service := NewService(newFakeNotificationStore(), "0123456789abcdef0123456789abcdef")
+	store := newFakeNotificationStore()
+	service := NewService(Stores{
+		Notifications: store,
+		Workflows:     store,
+		Subscribers:   store,
+		Templates:     store,
+		Integrations:  store,
+		Users:         store,
+	}, "0123456789abcdef0123456789abcdef")
 	worker := &Worker{service: service}
 	task := asynq.NewTask(TaskTypeNotificationSend, mustMarshalNotificationJob(t, types.NotificationJob{}))
 

@@ -63,28 +63,35 @@ func (a *App) registerRoutes(r chi.Router) {
 
 		// Notification reads + test sends (dashboard)
 		notifRepo := notification.NewRepository(a.queries)
-		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
+		workflowRepo := workflow.NewRepository(a.queries)
+		subscriberRepo := subscriber.NewRepository(a.queries)
+		tplRepo := templates.NewRepository(a.queries)
+		integrationRepo := integration.NewRepository(a.queries, a.dbPool)
+		notifSvc := notification.NewServiceWithWebhooks(notification.Stores{
+			Notifications: notifRepo,
+			Workflows:     workflowRepo,
+			Subscribers:   subscriberRepo,
+			Templates:     tplRepo,
+			Integrations:  integrationRepo,
+			Users:         a.queries,
+		}, a.dispatcher, a.encryptionKey)
 		notifHandler := notification.NewHandler(notifSvc, a.producer)
 		notifHandler.RegisterReadRoutes(r)
 		notifHandler.RegisterDashboardSendRoutes(r)
 
 		// Integration management (dashboard)
-		integrationRepo := integration.NewRepository(a.queries, a.dbPool)
 		integrationSvc := integration.NewService(integrationRepo, a.encryptionKey)
-		integration.NewHandler(integrationSvc, a.queries).Register(r)
+		integration.NewHandler(integrationSvc, a.queries, a.brevoAPIKey, a.brevoFromEmail).Register(r)
 
 		// Template management (dashboard)
-		tplRepo := templates.NewRepository(a.queries)
 		tplSvc := templates.NewService(tplRepo)
 		templates.NewHandler(tplSvc).RegisterDashboardRoutes(r)
 
 		// Subscriber management (dashboard)
-		subscriberRepo := subscriber.NewRepository(a.queries)
 		subscriberSvc := subscriber.NewService(subscriberRepo)
 		subscriber.NewHandler(subscriberSvc).Register(r)
 
 		// Workflow management (dashboard)
-		workflowRepo := workflow.NewRepository(a.queries)
 		workflowSvc := workflow.NewService(workflowRepo).WithProducer(a.producer)
 		workflow.NewHandler(workflowSvc).RegisterDashboardRoutes(r)
 
@@ -100,7 +107,18 @@ func (a *App) registerRoutes(r chi.Router) {
 
 		// Notifications
 		notifRepo := notification.NewRepository(a.queries)
-		notifSvc := notification.NewServiceWithWebhooks(notifRepo, a.dispatcher, a.encryptionKey)
+		apiWorkflowRepo := workflow.NewRepository(a.queries)
+		apiSubscriberRepo := subscriber.NewRepository(a.queries)
+		apiTplRepo := templates.NewRepository(a.queries)
+		apiIntegrationRepo := integration.NewRepository(a.queries, a.dbPool)
+		notifSvc := notification.NewServiceWithWebhooks(notification.Stores{
+			Notifications: notifRepo,
+			Workflows:     apiWorkflowRepo,
+			Subscribers:   apiSubscriberRepo,
+			Templates:     apiTplRepo,
+			Integrations:  apiIntegrationRepo,
+			Users:         a.queries,
+		}, a.dispatcher, a.encryptionKey)
 		notification.NewHandler(notifSvc, a.producer).RegisterSendRoutes(r)
 
 		// Workflows

@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/deveasyclick/iwifunni/internal/shared/validate"
-	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
 	"github.com/deveasyclick/iwifunni/internal/queue"
+	"github.com/deveasyclick/iwifunni/internal/shared/authctx"
+	"github.com/deveasyclick/iwifunni/internal/shared/validate"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/deveasyclick/iwifunni/pkg/logger"
 	"github.com/go-chi/chi/v5"
@@ -41,31 +41,27 @@ func (h *Handler) RegisterReadRoutes(r chi.Router) {
 	r.Get("/workflows/{workflowID}/activities", h.listByWorkflow)
 }
 
-// RegisterDashboardSendRoutes registers notification send endpoints
-// under JWT-protected dashboard routes (e.g. for test sends and workflow triggers).
 func (h *Handler) RegisterDashboardSendRoutes(r chi.Router) {
 	r.Post("/notifications/test-send", h.testSend)
 	r.Post("/notifications/trigger", h.triggerWorkflow)
 }
 
 type createRequest struct {
-	WorkflowID   string            `json:"workflow_id,omitempty"`
-	SubscriberID string            `json:"subscriber_id,omitempty"`
-	Title        string            `json:"title" validate:"required"`
-	Message      string            `json:"message" validate:"required"`
-	Channels     []string          `json:"channels,omitempty"`
-	Recipient    types.Recipient   `json:"recipient" validate:"required"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	Sync         bool              `json:"sync,omitempty"`
+	WorkflowID string              `json:"workflow_id,omitempty"`
+	Title      string              `json:"title" validate:"required"`
+	Message    string              `json:"message" validate:"required"`
+	Channels   []string            `json:"channels,omitempty"`
+	To         *types.SubscriberTo `json:"to,omitempty"`
+	Metadata   map[string]string   `json:"metadata,omitempty"`
+	Sync       bool                `json:"sync,omitempty"`
 }
 
 type triggerWorkflowRequest struct {
-	WorkflowID   string            `json:"workflow_id" validate:"required"`
-	SubscriberID string            `json:"subscriber_id"`
-	Channels     []string          `json:"channels,omitempty"`
-	Recipient    types.Recipient   `json:"recipient,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	IsSystemUser bool              `json:"is_system,omitempty"`
+	WorkflowID   string              `json:"workflow_id" validate:"required"`
+	Channels     []string            `json:"channels,omitempty"`
+	To           *types.SubscriberTo `json:"to,omitempty"`
+	Metadata     map[string]string   `json:"metadata,omitempty"`
+	IsSystemUser bool                `json:"is_system,omitempty"`
 }
 
 type testSendRequest struct {
@@ -198,7 +194,7 @@ func (h *Handler) testSend(w http.ResponseWriter, r *http.Request) {
 	log.Info("test-send: delivered successfully",
 		"job_id", preparedJob.JobID,
 		"channel", channel,
-)
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -229,13 +225,12 @@ func (h *Handler) triggerWorkflow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := &types.NotificationJob{
-		WorkflowID:    payload.WorkflowID,
-		SubscriberID:  payload.SubscriberID,
-		Channels:      payload.Channels,
-		Recipient:     payload.Recipient,
-		Metadata:      payload.Metadata,
-		ProjectID:     environmentID.String(),
-		IsSystemUser:  payload.IsSystemUser,
+		WorkflowID:   payload.WorkflowID,
+		Channels:     payload.Channels,
+		To:           payload.To,
+		Metadata:     payload.Metadata,
+		ProjectID:    environmentID.String(),
+		IsSystemUser: payload.IsSystemUser,
 	}
 
 	preparedJob, err := h.service.PrepareJob(r.Context(), job)
@@ -289,13 +284,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := &types.NotificationJob{
-		WorkflowID:   payload.WorkflowID,
-		SubscriberID: payload.SubscriberID,
-		Title:        payload.Title,
-		Message:      payload.Message,
-		Channels:     payload.Channels,
-		Recipient:    payload.Recipient,
-		Metadata:     payload.Metadata,
+		WorkflowID: payload.WorkflowID,
+		Title:      payload.Title,
+		Message:    payload.Message,
+		Channels:   payload.Channels,
+		To:         payload.To,
+		Metadata:   payload.Metadata,
 	}
 
 	environment := authctx.GetAuthenticatedEnvironment(r.Context())
