@@ -15,10 +15,13 @@ export type TemplateUpdatePayload = {
 
 export type TriggerWorkflowPayload = {
   workflow_id: string;
-  subscriber_id: string;
-  recipient: {
+  to: {
+    subscriberId?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     phone?: string;
+    push?: string;
   };
   channels: string[];
   metadata: Record<string, string>;

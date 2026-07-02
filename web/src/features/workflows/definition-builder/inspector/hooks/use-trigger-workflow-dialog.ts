@@ -102,8 +102,10 @@ export function useTriggerWorkflowDialog({
 
     const result = await triggerMutation.mutateAsync({
       workflow_id: workflowId,
-      subscriber_id: selectedSubscriber.id,
-      recipient: {
+      to: {
+        subscriberId: selectedSubscriber.id,
+        firstName: selectedSubscriber.firstName,
+        lastName: selectedSubscriber.lastName,
         email: selectedSubscriber.email,
         phone: selectedSubscriber.phone,
       },
