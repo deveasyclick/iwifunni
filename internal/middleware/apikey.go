@@ -15,7 +15,7 @@ import (
 )
 
 type authQueries interface {
-	GetAPIKeyByPrefix(context.Context, string) (db.ApiKey, error)
+	GetAPIKeyByPrefix(context.Context, string) (db.Apikey, error)
 	TouchAPIKeyLastUsed(context.Context, db.TouchAPIKeyLastUsedParams) error
 }
 

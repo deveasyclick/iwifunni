@@ -19,7 +19,7 @@ func (r *Repository) Create(ctx context.Context, arg db.CreateAPIKeyParams) erro
 	return r.q.CreateAPIKey(ctx, arg)
 }
 
-func (r *Repository) ListByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]db.ApiKey, error) {
+func (r *Repository) ListByEnvironment(ctx context.Context, environmentID uuid.UUID) ([]db.Apikey, error) {
 	return r.q.ListAPIKeysByEnvironment(ctx, environmentID)
 }
 
