@@ -2,6 +2,8 @@
 
 import { CopyButton } from '@/components/ui/copy-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUserProfile } from '@/features/auth/queries';
+import { useApiKeyList } from '@/features/settings/apikey/queries';
 import { FileCode, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -10,21 +12,36 @@ interface IntegratePanelContentProps {
   readonly workflowName: string;
 }
 
+interface UserInfo {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 function buildCurlSnippet(
   baseUrl: string,
   workflowId: string,
   workflowName: string,
+  user: UserInfo | null,
+  keyPrefix: string | null,
 ) {
+  const subscriberId = user?.id ?? 'sub_abc123';
+  const email = user?.email ?? 'user@example.com';
+  const firstName = user?.first_name ?? 'John';
+  const lastName = user?.last_name ?? 'Doe';
+  const apiKey = keyPrefix ? `${keyPrefix}...` : 'YOUR_API_KEY';
+
   return String.raw`curl -X POST ${baseUrl}/api/notifications/trigger \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer ${apiKey}" \
   -H "Content-Type: application/json" \
   -d '{
   "name": "${workflowName}",
   "to": {
-    "subscriberId": "sub_abc123",
-    "email": "user@example.com",
-    "firstName": "Yusuf",
-    "lastName": "Ola"
+    "subscriberId": "${subscriberId}",
+    "email": "${email}",
+    "firstName": "${firstName}",
+    "lastName": "${lastName}"
   },
   "payload": {
     "plan": "premium"
@@ -36,13 +53,23 @@ export function IntegratePanelContent({
   workflowId,
   workflowName,
 }: IntegratePanelContentProps) {
-  const [baseUrl, setBaseUrl] = useState('https://api.example.com');
+  const { data: profile } = useUserProfile();
+  const { data: apiKeys } = useApiKeyList();
+
+  const [baseUrl, setBaseUrl] = useState('https://iwifunni.com/docs');
 
   useEffect(() => {
     setBaseUrl(window.location.origin);
   }, []);
 
-  const curlSnippet = buildCurlSnippet(baseUrl, workflowId, workflowName);
+  const firstKeyPrefix = apiKeys?.[0]?.key_prefix ?? null;
+  const curlSnippet = buildCurlSnippet(
+    baseUrl,
+    workflowId,
+    workflowName,
+    profile ?? null,
+    firstKeyPrefix,
+  );
 
   return (
     <div className="space-y-5">
@@ -135,9 +162,20 @@ export function IntegratePanelContent({
         <p className="mt-1">
           Replace{' '}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            YOUR_API_KEY
+            {firstKeyPrefix ? `${firstKeyPrefix}...` : 'YOUR_API_KEY'}
           </code>{' '}
-          with a valid API key. Manage your keys in{' '}
+          with{' '}
+          {firstKeyPrefix ? (
+            <>
+              the full key starting with{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                {firstKeyPrefix}
+              </code>
+            </>
+          ) : (
+            'a valid API key'
+          )}
+          . Manage your keys in{' '}
           <a
             href="/dashboard/settings/apikey"
             className="text-primary underline underline-offset-2 hover:text-primary/80"
