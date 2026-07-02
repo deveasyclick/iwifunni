@@ -87,3 +87,11 @@ export function useUpdateProviderState() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
   });
 }
+
+export function useDeleteProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => providerApi.deleteProvider(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
+  });
+}

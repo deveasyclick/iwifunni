@@ -12,12 +12,14 @@ import {
   CHANNEL_GROUPS,
   SUPPORTED_PROVIDERS,
 } from './constants/supported-providers';
+import { useDeleteProvider } from './queries';
 import { useProviderForm } from './hooks/use-provider-form';
 import type { ProviderCard } from './types';
 
 const IntegrationManagement = () => {
   const providersQuery = useProviders();
   const form = useProviderForm();
+  const deleteProvider = useDeleteProvider();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { connectedCards, unconnectedCards } = useMemo<{
@@ -133,6 +135,7 @@ const IntegrationManagement = () => {
                             )}
                             onEdit={form.openConnectDialog}
                             onStateChange={form.handleStateChange}
+                            onDelete={(i) => deleteProvider.mutate(i.id)}
                           />
                         ),
                       )}

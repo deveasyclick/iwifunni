@@ -19,6 +19,7 @@ type ConnectedProviderCardProps = {
     item: ProviderItem,
     payload: UpdateProviderStatePayload,
   ) => void;
+  readonly onDelete: (item: ProviderItem) => void;
 };
 
 export const ConnectedProviderCard = ({
@@ -28,6 +29,7 @@ export const ConnectedProviderCard = ({
   isMutating,
   onEdit,
   onStateChange,
+  onDelete,
 }: ConnectedProviderCardProps) => {
   const isPrimary = item.is_primary;
   const isActive = item.is_active;
@@ -124,6 +126,24 @@ export const ConnectedProviderCard = ({
           Add another {item.channel} provider to disable this one.
         </p>
       ) : null}
+
+      {isDemo ? (
+        <div className="mt-3 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          Sends to your own email address only.
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex justify-end border-t border-border pt-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={isMutating}
+          onClick={() => onDelete(item)}
+        >
+          Disconnect
+        </Button>
+      </div>
     </div>
   );
 };

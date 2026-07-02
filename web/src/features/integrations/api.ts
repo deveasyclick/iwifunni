@@ -44,4 +44,10 @@ export const providerApi = {
       body: payload,
     });
   },
+
+  deleteProvider(id: string) {
+    return request<void>(`/api/integrations/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
