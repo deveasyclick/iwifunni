@@ -25,7 +25,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
-require github.com/go-chi/cors v1.2.1 // indirect
+require github.com/go-chi/cors v1.2.1
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
@@ -55,7 +55,6 @@ require (
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
