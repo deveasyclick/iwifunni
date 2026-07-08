@@ -5,8 +5,15 @@ import type {
   UpdateProviderStatePayload,
 } from '@/app/types/provider';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Icon } from '@iconify/react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import type { ProviderDefinition } from '../types';
 
 type ConnectedProviderCardProps = {
@@ -34,6 +41,7 @@ export const ConnectedProviderCard = ({
   const isPrimary = item.is_primary;
   const isActive = item.is_active;
   const isDemo = definition.key.startsWith('demo-');
+  const canDisable = !isPrimary || (isPrimary && fallbackExists);
 
   return (
     <div className="flex flex-col rounded-xl border border-border bg-card p-4 shadow-xs">
@@ -64,61 +72,68 @@ export const ConnectedProviderCard = ({
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          onClick={() => onEdit(definition, item)}
-        >
-          Edit
-        </Button>
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-        {!isPrimary && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            disabled={isMutating}
-            onClick={() => onStateChange(item, { action: 'set_primary' })}
-          >
-            Set primary
-          </Button>
-        )}
-        {isActive && !isPrimary ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
-            disabled={isMutating}
-            onClick={() => onStateChange(item, { action: 'disable' })}
-          >
-            Disable
-          </Button>
-        ) : null}
-        {!isActive ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            disabled={isMutating}
-            onClick={() => onStateChange(item, { action: 'enable' })}
-          >
-            Enable
-          </Button>
-        ) : null}
-        {isPrimary && fallbackExists ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
-            disabled={isMutating}
-            onClick={() => onStateChange(item, { action: 'disable' })}
-          >
-            Disable
-          </Button>
-        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={isMutating}
+            >
+              <Icon icon="mdi:dots-vertical" className="text-base" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => onEdit(definition, item)}>
+              <Icon icon="mdi:pencil-outline" className="mr-2 text-base" />
+              Edit
+            </DropdownMenuItem>
+
+            {!isPrimary ? (
+              <DropdownMenuItem
+                onClick={() => onStateChange(item, { action: 'set_primary' })}
+              >
+                <Icon icon="mdi:star-outline" className="mr-2 text-base" />
+                Set primary
+              </DropdownMenuItem>
+            ) : null}
+
+            {canDisable && isActive ? (
+              <DropdownMenuItem
+                onClick={() => onStateChange(item, { action: 'disable' })}
+              >
+                <Icon
+                  icon="mdi:power-off"
+                  className="mr-2 text-base text-muted-foreground"
+                />
+                Disable
+              </DropdownMenuItem>
+            ) : null}
+
+            {!isActive ? (
+              <DropdownMenuItem
+                onClick={() => onStateChange(item, { action: 'enable' })}
+              >
+                <Icon
+                  icon="mdi:power-on"
+                  className="mr-2 text-base text-muted-foreground"
+                />
+                Enable
+              </DropdownMenuItem>
+            ) : null}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => onDelete(item)}
+            >
+              <Icon icon="mdi:link-variant-off" className="mr-2 text-base" />
+              Disconnect
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {isPrimary && !fallbackExists ? (
@@ -132,18 +147,6 @@ export const ConnectedProviderCard = ({
           Sends to your own email address only.
         </div>
       ) : null}
-
-      <div className="mt-3 flex justify-end border-t border-border pt-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={isMutating}
-          onClick={() => onDelete(item)}
-        >
-          Disconnect
-        </Button>
-      </div>
     </div>
   );
 };

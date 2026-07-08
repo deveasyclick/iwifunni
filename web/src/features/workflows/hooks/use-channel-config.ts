@@ -2,6 +2,7 @@
 
 import type { JSONContent } from '@tiptap/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '../api';
 import { zeroUUID } from '../constants';
 import type { TemplateUpdatePayload } from '../types/api';
@@ -59,6 +60,7 @@ export const useChannelConfig = (
   const encodedBodyRef = useRef<string>('');
   const payloadRef = useRef<string>('');
   const nodeNameRef = useRef<string>('');
+  const queryClient = useQueryClient();
   const bodyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const subjectDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,6 +158,10 @@ export const useChannelConfig = (
           name: currentWorkflow.name,
           description: currentWorkflow.description || undefined,
           definition: updatedDefinition,
+        });
+
+        void queryClient.invalidateQueries({
+          queryKey: ['workflow', currentWorkflow.id],
         });
 
         setAutosaveStatus('saved');
@@ -280,6 +286,8 @@ export const useChannelConfig = (
 
     return () => {
       cancelled = true;
+      if (bodyDebounceRef.current) clearTimeout(bodyDebounceRef.current);
+      if (subjectDebounceRef.current) clearTimeout(subjectDebounceRef.current);
     };
   }, [nodeId, workflowId]);
 

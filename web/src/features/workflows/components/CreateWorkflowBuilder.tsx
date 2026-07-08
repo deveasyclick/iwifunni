@@ -1,21 +1,23 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
 import CardBox from '@/components/card/CardBox';
 import { Button } from '@/components/ui/button';
 import { workflowApi } from '@/features/workflows/api';
+import { workflowDefinitionFromBuilderDraft } from '@/features/workflows/definition-builder';
 import { WorkflowDefinitionBuilder } from '@/features/workflows/definition-builder/index';
 import { useWorkflowBuilderDraft } from '@/features/workflows/hooks/use-workflow-builder-draft';
-import { workflowDefinitionFromBuilderDraft } from '@/features/workflows/definition-builder/index';
 import { buildWorkflowChannelConfigureHref } from '@/features/workflows/utils/urls';
+import { useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
 
 import type { CreateWorkflowPayload } from '@/app/types/workflow';
 import type { CreateWorkflowBuilderProps } from '@/features/workflows/types/ui';
 
 const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     workflow,
     definitionDraft,
@@ -40,6 +42,9 @@ const CreateWorkflowBuilder = ({ workflowId }: CreateWorkflowBuilderProps) => {
       };
       try {
         await workflowApi.updateWorkflow(workflow?.id ?? '', payload);
+        void queryClient.invalidateQueries({
+          queryKey: ['workflow', workflow?.id ?? ''],
+        });
       } catch {
         // Navigate anyway — the channel page will show an error
         // if the node still isn't found.

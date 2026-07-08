@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import {
   Sheet,
   SheetContent,
@@ -56,7 +55,9 @@ export const AvailableProvidersSheet = ({
           ) : (
             CHANNEL_GROUPS.map(({ channel, label, icon }) => {
               const channelCards = unconnectedCards.filter(
-                (c) => c.definition.channel === channel,
+                (c) =>
+                  c.definition.channel === channel &&
+                  !c.definition.key.startsWith('demo-'),
               );
               if (channelCards.length === 0) return null;
 
@@ -77,8 +78,6 @@ export const AvailableProvidersSheet = ({
 
                   <div className="space-y-1.5">
                     {channelCards.map(({ definition }) => {
-                      const isDemo = definition.key.startsWith('demo-');
-
                       return (
                         <button
                           key={definition.key}
@@ -97,14 +96,6 @@ export const AvailableProvidersSheet = ({
                               <span className="text-sm font-medium text-foreground">
                                 {definition.label}
                               </span>
-                              {isDemo ? (
-                                <Badge
-                                  variant="lightPrimary"
-                                  className="px-1.5 py-0 text-[10px]"
-                                >
-                                  Demo
-                                </Badge>
-                              ) : null}
                             </div>
                             <p className="truncate text-xs text-muted-foreground">
                               {definition.description}

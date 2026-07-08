@@ -2,6 +2,7 @@
 
 import type { CreateWorkflowPayload, WorkflowItem } from '@/app/types/workflow';
 import { useProviders } from '@/features/integrations/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/features/workflows/api';
 import {
   builderDraftFromDefinition,
@@ -50,7 +51,9 @@ export const useWorkflowBuilderDraft = (
   });
 
   const lastSavedSignatureRef = useRef<string | null>(null);
-  const initialQuerySyncRef = useRef<string | null>(null);
+  const lastSyncedRef = useRef<{ workflowId: string; updatedAt: string } | null>(null);
+
+  const queryClient = useQueryClient();
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const loading = workflowQuery.isLoading && !workflowQuery.data;
@@ -58,11 +61,21 @@ export const useWorkflowBuilderDraft = (
     ? extractErrorMessage(workflowQuery.error)
     : null;
 
-  // Sync query data into local state on initial load (per workflow ID)
+  // Sync query data into local state. Re-syncs only when the workflow
+  // has been updated on the server (different updatedAt), so the builder
+  // picks up changes made on the channel page (e.g. template_id).
   useEffect(() => {
     if (!workflowQuery.data) return;
-    if (initialQuerySyncRef.current === workflowId) return;
-    initialQuerySyncRef.current = workflowId;
+
+    const lastSync = lastSyncedRef.current;
+    const currentUpdatedAt = workflowQuery.data.updatedAt;
+    if (
+      lastSync?.workflowId === workflowId &&
+      lastSync?.updatedAt === currentUpdatedAt
+    ) {
+      return;
+    }
+    lastSyncedRef.current = { workflowId, updatedAt: currentUpdatedAt };
 
     const nextDraft = workflowQuery.data.definition
       ? builderDraftFromDefinition(workflowQuery.data.definition)
@@ -158,6 +171,7 @@ export const useWorkflowBuilderDraft = (
           setWorkflow(updatedWorkflow);
           lastSavedSignatureRef.current = saveSignature;
           setAutosaveState({ status: 'saved', message: 'All changes saved' });
+          void queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
         })
         .catch((err: unknown) => {
           setAutosaveState({

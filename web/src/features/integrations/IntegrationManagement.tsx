@@ -22,11 +22,12 @@ const IntegrationManagement = () => {
   const deleteProvider = useDeleteProvider();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const { connectedCards, unconnectedCards } = useMemo<{
+  const { connectedCards, unconnectedCards, demoCards } = useMemo<{
     connectedCards: (ProviderCard & {
       item: NonNullable<ProviderCard['item']>;
     })[];
     unconnectedCards: ProviderCard[];
+    demoCards: ProviderCard[];
   }>(() => {
     const items = providersQuery.data ?? [];
     const cards = SUPPORTED_PROVIDERS.map((definition) => {
@@ -43,9 +44,12 @@ const IntegrationManagement = () => {
     return {
       connectedCards: cards.filter(
         (c): c is ProviderCard & { item: NonNullable<ProviderCard['item']> } =>
-          c.item !== null,
+          c.item !== null && !c.definition.key.startsWith('demo-'),
       ),
-      unconnectedCards: cards.filter((c) => !c.item),
+      unconnectedCards: cards.filter(
+        (c) => !c.item && !c.definition.key.startsWith('demo-'),
+      ),
+      demoCards: cards.filter((c) => c.definition.key.startsWith('demo-')),
     };
   }, [providersQuery.data]);
 
@@ -85,7 +89,7 @@ const IntegrationManagement = () => {
           </div>
         ) : (
           <>
-            {connectedCards.length === 0 ? (
+            {connectedCards.length === 0 && demoCards.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-2xl">
                   <Icon icon="mdi:connection" />
@@ -113,7 +117,11 @@ const IntegrationManagement = () => {
                 const channelCards = connectedCards.filter(
                   (c) => c.definition.channel === channel,
                 );
-                if (channelCards.length === 0) return null;
+                const channelDemoCards = demoCards.filter(
+                  (c) => c.definition.channel === channel,
+                );
+                if (channelCards.length === 0 && channelDemoCards.length === 0)
+                  return null;
                 return (
                   <div key={channel}>
                     <div className="mb-3 flex items-center gap-2">
@@ -123,6 +131,62 @@ const IntegrationManagement = () => {
                       </h6>
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {/* Demo cards first — use ConnectedProviderCard when connected */}
+                      {channelDemoCards.map(({ definition, item }) => {
+                        if (item) {
+                          return (
+                            <ConnectedProviderCard
+                              key={definition.key}
+                              definition={definition}
+                              item={item}
+                              fallbackExists={false}
+                              isMutating={Boolean(
+                                form.mutatingKey?.endsWith(item.id),
+                              )}
+                              onEdit={form.openConnectDialog}
+                              onStateChange={form.handleStateChange}
+                              onDelete={(i) => deleteProvider.mutate(i.id)}
+                            />
+                          );
+                        }
+                        return (
+                          <div
+                            key={definition.key}
+                            className="flex flex-col rounded-xl border border-border bg-card p-4 shadow-xs"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-base">
+                                  <Icon icon={definition.icon} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-semibold">
+                                      {definition.label}
+                                    </span>
+                                    <span className="rounded-full bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                      Demo
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {definition.description}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0 h-7 px-2 text-xs"
+                                onClick={() =>
+                                  form.openConnectDialog(definition)
+                                }
+                              >
+                                Connect
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                       {channelCards.map(
                         ({ definition, item, fallbackExists }) => (
                           <ConnectedProviderCard
