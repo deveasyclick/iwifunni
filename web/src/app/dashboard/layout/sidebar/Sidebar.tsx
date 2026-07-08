@@ -1,21 +1,12 @@
 'use client';
 
+import FullLogo from '@/components/shared/FullLogo';
+import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import SidebarContent from './sidebaritems';
 import SimpleBar from 'simplebar-react';
-import { Icon } from '@iconify/react';
-import {
-  AMLogo,
-  AMMenu,
-  AMMenuItem,
-  AMSidebar,
-  AMSubmenu,
-} from 'tailwind-sidebar';
-import 'tailwind-sidebar/styles.css';
-import { Button } from '@/components/ui/button';
-import FullLogo from '@/components/shared/FullLogo';
-import { useTheme } from '@/components/theme-provider';
+import SidebarContent from './sidebaritems';
+import { SidebarNavItem, SidebarNavSubmenu } from './sidebar-nav';
 
 interface SidebarItemType {
   heading?: string;
@@ -49,87 +40,65 @@ const renderSidebarItems = (
     if (item.heading) {
       return (
         <div className="mb-1" key={item.heading}>
-          <AMMenu
-            subHeading={item.heading}
-            ClassName="hide-menu leading-21 text-sidebar-foreground dark:text-sidebar-foreground font-bold uppercase text-xs"
-          />
+          <p className="hide-menu leading-21 text-sidebar-foreground dark:text-sidebar-foreground font-bold uppercase text-xs">
+            {item.heading}
+          </p>
         </div>
       );
     }
 
-    // Submenu
+    // Submenu — fully controlled open/close based on pathname
     if (item.children?.length) {
       return (
-        <AMSubmenu
+        <SidebarNavSubmenu
           key={item.id}
+          itemUrl={item.url || ''}
+          firstChildUrl={item.children?.[0]?.url}
           icon={iconElement}
           title={item.name}
-          ClassName="mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground"
         >
           {renderSidebarItems(item.children, currentPath, onClose, true)}
-        </AMSubmenu>
+        </SidebarNavSubmenu>
       );
     }
 
     // Regular menu item
     const linkTarget = item.url?.startsWith('https') ? '_blank' : '_self';
 
-    const itemClassNames = isSubItem
-      ? `mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground !hover:bg-transparent ${
-          isSelected ? '!bg-transparent !text-primary' : ''
-        } !px-1.5`
-      : `mt-0.5 text-sidebar-foreground dark:text-sidebar-foreground`;
+    const itemClassNames = isSubItem ? `mt-0.5` : `mt-0.5`;
 
     return (
-      <div key={item.id} className="contents">
-        <Button
-          onClick={onClose}
-          variant="ghost"
-          className="p-0 w-full [&_svg]:size-auto"
-        >
-          <AMMenuItem
-            icon={iconElement}
-            isSelected={isSelected}
-            link={item.url || undefined}
-            target={linkTarget}
-            badge={!!item.isPro}
-            badgeColor="bg-lightsecondary"
-            badgeTextColor="text-secondary"
-            disabled={item.disabled}
-            badgeContent={item.isPro ? 'Pro' : undefined}
-            component={Link}
-            className={`${itemClassNames} shrink-0`}
-          >
-            <span className="truncate flex-1">{item.title || item.name}</span>
-          </AMMenuItem>
-        </Button>
-      </div>
+      <SidebarNavItem
+        key={item.id}
+        icon={iconElement}
+        isSelected={isSelected}
+        isSubItem={isSubItem}
+        href={item.url}
+        target={linkTarget}
+        disabled={item.disabled}
+        badge={!!item.isPro}
+        badgeContent={item.isPro ? 'Pro' : undefined}
+        badgeColor="bg-lightsecondary"
+        badgeTextColor="text-secondary"
+        className={`${itemClassNames} shrink-0`}
+        onClick={onClose}
+      >
+        <span className="truncate flex-1">{item.title || item.name}</span>
+      </SidebarNavItem>
     );
   });
 };
 
 const SidebarLayout = ({ onClose }: { readonly onClose?: () => void }) => {
   const pathname = usePathname();
-  const { resolvedTheme } = useTheme();
-
-  // Only allow "light" or "dark" for AMSidebar
-  const sidebarMode = resolvedTheme;
 
   return (
-    <AMSidebar
-      collapsible="none"
-      animation={true}
-      showProfile={false}
-      width={'270px'}
-      showTrigger={false}
-      mode={sidebarMode}
-      className="fixed left-0 top-0 border border-border bg-sidebar dark:bg-sidebar z-10 h-screen"
-    >
+    <aside className="fixed left-0 top-0 border-r border-border bg-sidebar dark:bg-sidebar z-10 h-screen w-[270px]">
       {/* Logo */}
-      <div className="px-6 flex items-center brand-logo overflow-hidden">
-        <AMLogo component={Link} href="/" img="">
+      <div className="px-6 flex items-center brand-logo overflow-hidden h-[64px]">
+        <Link href="/">
           <FullLogo />
-        </AMLogo>
+        </Link>
       </div>
 
       {/* Sidebar items */}
@@ -149,7 +118,7 @@ const SidebarLayout = ({ onClose }: { readonly onClose?: () => void }) => {
           ))}
         </div>
       </SimpleBar>
-    </AMSidebar>
+    </aside>
   );
 };
 
