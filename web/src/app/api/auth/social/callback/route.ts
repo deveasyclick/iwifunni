@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
   const origin = `${protocol}//${host}`;
 
   if (!accessToken || !refreshToken) {
-    return NextResponse.redirect(new URL('/auth/login?error=missing_tokens', origin));
+    return NextResponse.redirect(
+      new URL('/auth/login?error=missing_tokens', origin),
+    );
   }
 
   const redirectUrl = new URL(
