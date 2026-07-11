@@ -1,7 +1,6 @@
 import type { WorkflowChannel } from '@/app/types/workflow';
 import type { BuilderNodeDraft, WorkflowNodeType } from '../types/draft';
 import { buildDefaultNodeName } from '../utils/display/node-name';
-import { zeroUUID } from '../constants';
 
 export const createNodeDraft = (
   type: WorkflowNodeType,
@@ -29,7 +28,7 @@ export const createNodeDraft = (
     name: buildDefaultNodeName(type, channel),
     type,
     duration: '5m',
-    templateId: type === 'notification' ? zeroUUID : '',
+    templateId: '',
     channel: type === 'notification' ? channel || 'email' : '',
     field: 'data.plan',
     operator: 'equals',

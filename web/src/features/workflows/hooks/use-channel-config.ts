@@ -4,7 +4,6 @@ import type { JSONContent } from '@tiptap/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '../api';
-import { zeroUUID } from '../constants';
 import type { TemplateUpdatePayload } from '../types/api';
 import type { CreateTemplatePayload } from '@/app/types/template';
 import type {
@@ -110,7 +109,7 @@ export const useChannelConfig = (
         };
 
         let savedTemplateId = currentTemplateId;
-        if (currentTemplateId && currentTemplateId !== zeroUUID) {
+        if (currentTemplateId) {
           const updated = await workflowApi.updateTemplate(currentTemplateId, {
             body: templatePayload.body,
             subject: templatePayload.subject,
@@ -246,7 +245,7 @@ export const useChannelConfig = (
         templateIdRef.current = nextTemplateId;
         nodeNameRef.current = getNodeDisplayName(nextNode, nodeId);
 
-        if (nextTemplateId && nextTemplateId !== zeroUUID) {
+        if (nextTemplateId) {
           const template = await workflowApi.getTemplate(nextTemplateId);
           if (!cancelled) {
             setSubject(template.subject || '');

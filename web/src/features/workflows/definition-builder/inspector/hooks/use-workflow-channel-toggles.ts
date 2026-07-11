@@ -5,7 +5,6 @@ import type {
   BuilderNodeDraft,
   WorkflowDefinitionIssue,
 } from '@/features/workflows/types/draft';
-import { zeroUUID } from '@/features/workflows/constants';
 
 export interface ChannelToggle {
   channel: string;
@@ -35,7 +34,7 @@ function extractChannelToggles(
     if (node.type !== 'notification') return;
     if (!node.channel) return;
 
-    const hasTemplate = node.templateId && node.templateId !== zeroUUID;
+    const hasTemplate = !!node.templateId;
     const hasIssues = nodesWithIssues.has(index);
     const isValid = !!hasTemplate && !hasIssues;
 
