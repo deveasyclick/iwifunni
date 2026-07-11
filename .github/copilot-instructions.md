@@ -23,6 +23,7 @@
 ## Validation
 
 - Use [Taskfile.yml](../Taskfile.yml) commands when possible for backend validation, especially `task build`, `task lint`, and `task sqlc` when relevant.
+- **Always run `go build ./...` and `go test ./internal/...` on the backend before marking any task as done.** This ensures no compilation errors or test regressions were introduced.
 
 ## Frontend Component Conventions
 
