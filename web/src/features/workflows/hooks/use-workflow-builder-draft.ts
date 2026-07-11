@@ -2,7 +2,6 @@
 
 import type { CreateWorkflowPayload, WorkflowItem } from '@/app/types/workflow';
 import { useProviders } from '@/features/integrations/queries';
-import { useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/features/workflows/api';
 import {
   builderDraftFromDefinition,
@@ -17,6 +16,7 @@ import type {
 import type { WorkflowAutosaveState } from '@/features/workflows/types/ui';
 import { validateWorkflowDefinitionDraft } from '@/features/workflows/utils';
 import { buildSaveSignature } from '@/features/workflows/utils/signature';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 function extractErrorMessage(error: unknown): string {
@@ -51,7 +51,10 @@ export const useWorkflowBuilderDraft = (
   });
 
   const lastSavedSignatureRef = useRef<string | null>(null);
-  const lastSyncedRef = useRef<{ workflowId: string; updatedAt: string } | null>(null);
+  const lastSyncedRef = useRef<{
+    workflowId: string;
+    updatedAt: string;
+  } | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -164,26 +167,27 @@ export const useWorkflowBuilderDraft = (
       definition,
     };
 
-    const timeoutId = globalThis.setTimeout(() => {
-      workflowApi
-        .updateWorkflow(workflow.id, payload)
-        .then((updatedWorkflow) => {
-          setWorkflow(updatedWorkflow);
-          lastSavedSignatureRef.current = saveSignature;
-          setAutosaveState({ status: 'saved', message: 'All changes saved' });
-          void queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
-        })
-        .catch((err: unknown) => {
-          setAutosaveState({
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Autosave failed',
-          });
+    const timeoutId = globalThis.setTimeout(async () => {
+      try {
+        const updatedWorkflow = await workflowApi.updateWorkflow(
+          workflow.id,
+          payload,
+        );
+        setWorkflow(updatedWorkflow);
+        lastSavedSignatureRef.current = saveSignature;
+        setAutosaveState({ status: 'saved', message: 'All changes saved' });
+        await queryClient.invalidateQueries({
+          queryKey: ['workflow', workflow.id],
         });
+      } catch (err: unknown) {
+        setAutosaveState({
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Autosave failed',
+        });
+      }
     }, 700);
 
     return () => globalThis.clearTimeout(timeoutId);
-    // definitionIssues.length is included so re-saving is triggered when
-    // issues change (e.g. a previously-invalid draft becomes valid)
   }, [definition, definitionIssues.length, saveSignature, workflow]);
 
   const onWorkflowSetupChange = (

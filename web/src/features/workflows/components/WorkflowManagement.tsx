@@ -67,7 +67,6 @@ const WorkflowManagement = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Key</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>

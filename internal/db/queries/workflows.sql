@@ -48,6 +48,8 @@ INSERT INTO workflows (
 	key,
 	name,
 	description,
+	channels,
+	template_ids,
 	status,
 	version,
 	trigger_event,
@@ -64,6 +66,8 @@ VALUES (
 	$7,
 	$8,
 	$9,
+	$10,
+	$11,
 	true
 )
 RETURNING *;
@@ -82,11 +86,13 @@ UPDATE workflows
 SET key = $3,
 	name = $4,
 	description = $5,
-	status = $6,
-	version = $7,
-	trigger_event = $8,
-	definition_json = $9,
-	is_active = CASE WHEN $6 = 'active' THEN true ELSE false END,
+	channels = $6,
+	template_ids = $7,
+	status = $8,
+	version = $9,
+	trigger_event = $10,
+	definition_json = $11,
+	is_active = CASE WHEN $8 = 'active' THEN true ELSE false END,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2
 RETURNING *;

@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	ErrInvalidWorkflow            = errors.New("invalid workflow")
-	ErrPublishedWorkflowImmutable = errors.New("published workflow is immutable")
-	ErrInvalidWorkflowEvent       = errors.New("invalid workflow event")
+	ErrInvalidWorkflow      = errors.New("invalid workflow")
+	ErrInvalidWorkflowEvent = errors.New("invalid workflow event")
 	workflowKeyPattern            = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 )
 
@@ -138,9 +137,6 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Workflow, erro
 		if err != nil {
 			return db.Workflow{}, err
 		}
-		if current.Status == string(WorkflowStatusActive) {
-			return db.Workflow{}, ErrPublishedWorkflowImmutable
-		}
 
 		params, err := buildUpdateDefinitionParams(current, in)
 		if err != nil {
@@ -158,42 +154,6 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Workflow, erro
 
 func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
 	return s.repo.Delete(ctx, id, environmentID)
-}
-
-func (s *Service) Publish(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
-	current, err := s.repo.GetByID(ctx, id, environmentID)
-	if err != nil {
-		return db.Workflow{}, err
-	}
-	if current.Status == string(WorkflowStatusActive) {
-		return current, nil
-	}
-
-	definition, err := parseDefinition(current.DefinitionJson)
-	if err != nil || definition == nil {
-		return db.Workflow{}, ErrInvalidWorkflow
-	}
-	if err := ValidateDefinition(*definition); err != nil {
-		return db.Workflow{}, err
-	}
-
-	triggerEvent := trimOptional(&definition.Trigger.Event)
-	definitionJSON, err := marshalDefinition(*definition)
-	if err != nil {
-		return db.Workflow{}, ErrInvalidWorkflow
-	}
-
-	return s.repo.UpdateDefinition(ctx, db.UpdateWorkflowDefinitionParams{
-		ID:             current.ID,
-		EnvironmentID:  current.EnvironmentID,
-		Key:            current.Key,
-		Name:           current.Name,
-		Description:    current.Description,
-		Status:         string(WorkflowStatusActive),
-		Version:        current.Version,
-		TriggerEvent:   triggerEvent,
-		DefinitionJson: definitionJSON,
-	})
 }
 
 func (s *Service) TriggerEvent(ctx context.Context, environmentID uuid.UUID, in TriggerEventInput) ([]db.WorkflowExecution, error) {
@@ -282,12 +242,20 @@ func buildCreateDefinitionParams(in CreateInput) (db.CreateWorkflowDefinitionPar
 		return db.CreateWorkflowDefinitionParams{}, err
 	}
 
+	channels := channelsFromDefinition(in.Definition)
+	normalizedChannels, err := normalizeChannels(channels)
+	if err != nil {
+		return db.CreateWorkflowDefinitionParams{}, err
+	}
+
 	return db.CreateWorkflowDefinitionParams{
 		ID:             uuid.New(),
 		EnvironmentID:  in.EnvironmentID,
 		Key:            key,
 		Name:           name,
 		Description:    description,
+		Channels:       normalizedChannels,
+		TemplateIds:    nil,
 		Status:         string(WorkflowStatusDraft),
 		Version:        1,
 		TriggerEvent:   triggerEvent,
@@ -318,9 +286,10 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 		return db.UpdateWorkflowDefinitionParams{}, err
 	}
 
-	status := current.Status
-	if status == "" {
-		status = string(WorkflowStatusDraft)
+	channels := channelsFromDefinition(in.Definition)
+	normalizedChannels, err := normalizeChannels(channels)
+	if err != nil {
+		return db.UpdateWorkflowDefinitionParams{}, err
 	}
 
 	return db.UpdateWorkflowDefinitionParams{
@@ -329,7 +298,9 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 		Key:            key,
 		Name:           name,
 		Description:    description,
-		Status:         status,
+		Channels:       normalizedChannels,
+		TemplateIds:    nil,
+		Status:         string(WorkflowStatusActive),
 		Version:        current.Version,
 		TriggerEvent:   triggerEvent,
 		DefinitionJson: definitionJSON,
@@ -374,6 +345,35 @@ func normalizeWorkflowDefinitionInput(key, name string, description *string, def
 	}
 
 	return normalizedKey, normalizedName, trimOptional(description), trimOptional(&definition.Trigger.Event), definitionJSON, nil
+}
+
+// channelsFromDefinition extracts unique channel names from notification
+// nodes in the workflow definition.
+func channelsFromDefinition(definition *Definition) []string {
+	if definition == nil {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var result []string
+	for _, node := range definition.Nodes {
+		if node.Type != WorkflowStepTypeNotification {
+			continue
+		}
+		var cfg NotificationConfig
+		if err := json.Unmarshal(node.Config, &cfg); err != nil {
+			continue
+		}
+		for _, ch := range cfg.Channels {
+			if ch == "" {
+				continue
+			}
+			if _, ok := seen[ch]; !ok {
+				seen[ch] = struct{}{}
+				result = append(result, ch)
+			}
+		}
+	}
+	return result
 }
 
 func normalizeChannels(channels []string) ([]string, error) {

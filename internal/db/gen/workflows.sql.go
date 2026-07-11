@@ -74,6 +74,8 @@ INSERT INTO workflows (
 	key,
 	name,
 	description,
+	channels,
+	template_ids,
 	status,
 	version,
 	trigger_event,
@@ -90,6 +92,8 @@ VALUES (
 	$7,
 	$8,
 	$9,
+	$10,
+	$11,
 	true
 )
 RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
@@ -101,6 +105,8 @@ type CreateWorkflowDefinitionParams struct {
 	Key            string    `db:"key" json:"key"`
 	Name           string    `db:"name" json:"name"`
 	Description    *string   `db:"description" json:"description"`
+	Channels       []string  `db:"channels" json:"channels"`
+	TemplateIds    []byte    `db:"template_ids" json:"template_ids"`
 	Status         string    `db:"status" json:"status"`
 	Version        int32     `db:"version" json:"version"`
 	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
@@ -114,6 +120,8 @@ func (q *Queries) CreateWorkflowDefinition(ctx context.Context, arg CreateWorkfl
 		arg.Key,
 		arg.Name,
 		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
 		arg.Status,
 		arg.Version,
 		arg.TriggerEvent,
@@ -719,11 +727,13 @@ UPDATE workflows
 SET key = $3,
 	name = $4,
 	description = $5,
-	status = $6,
-	version = $7,
-	trigger_event = $8,
-	definition_json = $9,
-	is_active = CASE WHEN $6 = 'active' THEN true ELSE false END,
+	channels = $6,
+	template_ids = $7,
+	status = $8,
+	version = $9,
+	trigger_event = $10,
+	definition_json = $11,
+	is_active = CASE WHEN $8 = 'active' THEN true ELSE false END,
 	updated_at = now()
 WHERE id = $1 AND environment_id = $2
 RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
@@ -735,6 +745,8 @@ type UpdateWorkflowDefinitionParams struct {
 	Key            string    `db:"key" json:"key"`
 	Name           string    `db:"name" json:"name"`
 	Description    *string   `db:"description" json:"description"`
+	Channels       []string  `db:"channels" json:"channels"`
+	TemplateIds    []byte    `db:"template_ids" json:"template_ids"`
 	Status         string    `db:"status" json:"status"`
 	Version        int32     `db:"version" json:"version"`
 	TriggerEvent   *string   `db:"trigger_event" json:"trigger_event"`
@@ -748,6 +760,8 @@ func (q *Queries) UpdateWorkflowDefinition(ctx context.Context, arg UpdateWorkfl
 		arg.Key,
 		arg.Name,
 		arg.Description,
+		arg.Channels,
+		arg.TemplateIds,
 		arg.Status,
 		arg.Version,
 		arg.TriggerEvent,

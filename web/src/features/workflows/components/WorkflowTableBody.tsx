@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Pencil, Trash2, Activity } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { formatCreatedAt } from '@/features/workflows/utils/dates';
@@ -19,7 +18,7 @@ const WorkflowTableBody = ({
     return (
       <TableBody>
         <TableRow>
-          <TableCell colSpan={5} className="text-center text-muted-foreground">
+          <TableCell colSpan={4} className="text-center text-muted-foreground">
             Loading workflows...
           </TableCell>
         </TableRow>
@@ -31,7 +30,7 @@ const WorkflowTableBody = ({
     return (
       <TableBody>
         <TableRow>
-          <TableCell colSpan={5} className="text-center text-muted-foreground">
+          <TableCell colSpan={4} className="text-center text-muted-foreground">
             No workflows configured yet.
           </TableCell>
         </TableRow>
@@ -42,12 +41,6 @@ const WorkflowTableBody = ({
   return (
     <TableBody>
       {visibleItems.map((item) => {
-        const statusBadgeVariant =
-          item.status === 'active'
-            ? ('lightSuccess' as const)
-            : ('secondary' as const);
-        const statusLabel =
-          item.status || (item.isActive ? 'active' : 'archived');
         const isDeleting = mutatingID === item.id;
 
         return (
@@ -63,9 +56,6 @@ const WorkflowTableBody = ({
               </div>
             </TableCell>
             <TableCell className="font-mono text-xs">{item.key}</TableCell>
-            <TableCell>
-              <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
-            </TableCell>
             <TableCell>{formatCreatedAt(item.createdAt)}</TableCell>
             <TableCell>
               <div className="flex gap-1">

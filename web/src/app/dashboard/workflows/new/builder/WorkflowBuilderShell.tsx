@@ -1,5 +1,6 @@
 'use client';
 
+import type { WorkflowChannel } from '@/app/types/workflow';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -11,7 +12,7 @@ import {
 import { useWorkflowQuery } from '@/features/workflows/queries';
 import { buildWorkflowBuilderHref } from '@/features/workflows/utils/urls';
 import { Code, Play, X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import CreateWorkflowBuilder from '../../../../../features/workflows/components/CreateWorkflowBuilder';
 import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
 import { IntegratePanelContent } from './IntegratePanelContent';
@@ -43,6 +44,29 @@ const WorkflowBuilderShell = ({ workflowId }: WorkflowBuilderShellProps) => {
     setDrawerTab(tab);
     setDrawerOpen(true);
   };
+
+  // Derive channels from workflow definition nodes as a fallback.
+  // The DB-level `channels` column is not always synced with the definition.
+  const selectedChannels = useMemo(() => {
+    const fromWorkflow = workflow?.channels;
+    if (fromWorkflow && fromWorkflow.length > 0) return fromWorkflow;
+
+    // Fallback: extract channels from notification nodes in the definition
+    const channels = new Set<WorkflowChannel>();
+    for (const node of workflow?.definition?.nodes ?? []) {
+      if (
+        node.type === 'notification' &&
+        Array.isArray(node.config?.channels)
+      ) {
+        for (const ch of node.config.channels as string[]) {
+          if (ch === 'email' || ch === 'sms' || ch === 'push') {
+            channels.add(ch);
+          }
+        }
+      }
+    }
+    return Array.from(channels);
+  }, [workflow?.channels, workflow?.definition?.nodes]);
 
   return (
     <Drawer direction="right" open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -108,7 +132,10 @@ const WorkflowBuilderShell = ({ workflowId }: WorkflowBuilderShellProps) => {
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {drawerTab === 'trigger' ? (
-            <TriggerPanelContent workflowId={workflowId} />
+            <TriggerPanelContent
+              workflowId={workflowId}
+              selectedChannels={selectedChannels}
+            />
           ) : (
             <IntegratePanelContent
               workflowId={workflowId}
