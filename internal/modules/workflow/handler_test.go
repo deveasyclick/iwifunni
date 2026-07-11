@@ -50,7 +50,11 @@ func (f *fakeWorkflowService) Delete(context.Context, uuid.UUID, uuid.UUID) erro
 	panic("unexpected call")
 }
 
-func (f *fakeWorkflowService) Publish(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error) {
+func (f *fakeWorkflowService) Pause(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error) {
+	panic("unexpected call")
+}
+
+func (f *fakeWorkflowService) Resume(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error) {
 	panic("unexpected call")
 }
 

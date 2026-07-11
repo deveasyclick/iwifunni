@@ -115,14 +115,14 @@ func TestWorkflows(t *testing.T) {
 		}
 	})
 
-	t.Run("publish a workflow with a valid definition", func(t *testing.T) {
-		email := fmt.Sprintf("wfpub-%s@test.com", randomHex(4))
+	t.Run("create a workflow with a valid definition is auto-activated", func(t *testing.T) {
+		email := fmt.Sprintf("wfauto-%s@test.com", randomHex(4))
 		tokens := signupAndLogin(t, email, "SecurePass123!")
 
 		createPayload := map[string]interface{}{
-			"name":        "Publish Test",
-			"key":         fmt.Sprintf("publish_test_%s", randomHex(4)),
-			"description": "Will be published",
+			"name":        "Auto Active Test",
+			"key":         fmt.Sprintf("auto_active_test_%s", randomHex(4)),
+			"description": "Should be active on creation",
 			"channels":    []string{"email"},
 			"templateIds": map[string]string{},
 			"definition": map[string]interface{}{
@@ -159,31 +159,13 @@ func TestWorkflows(t *testing.T) {
 		}
 
 		var created struct {
-			ID string `json:"id"`
+			ID     string `json:"id"`
+			Status string `json:"status"`
 		}
 		json.NewDecoder(resp.Body).Decode(&created)
 
-		pubReq, _ := http.NewRequest("POST", testApp.BaseURL+"/workflows/"+created.ID+"/publish", nil)
-		pubReq.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
-		pubResp, err := http.DefaultClient.Do(pubReq)
-		if err != nil {
-			t.Fatalf("POST /workflows/%s/publish: %v", created.ID, err)
-		}
-		defer pubResp.Body.Close()
-
-		if pubResp.StatusCode != http.StatusOK {
-			var errResp errorResponse
-			json.NewDecoder(pubResp.Body).Decode(&errResp)
-			t.Fatalf("expected 200, got %d: %s", pubResp.StatusCode, errResp.Error)
-		}
-
-		var published map[string]interface{}
-		if err := json.NewDecoder(pubResp.Body).Decode(&published); err != nil {
-			t.Fatalf("decode published workflow: %v", err)
-		}
-
-		if published["status"] != "active" {
-			t.Errorf("expected status 'active', got %v", published["status"])
+		if created.Status != "active" {
+			t.Errorf("expected status 'active', got %v", created.Status)
 		}
 	})
 
