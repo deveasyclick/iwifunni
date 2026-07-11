@@ -66,6 +66,7 @@ type workflowRepository interface {
 	ListStepExecutionsByExecution(context.Context, uuid.UUID) ([]db.WorkflowStepExecution, error)
 	Update(context.Context, db.UpdateWorkflowParams) (db.Workflow, error)
 	UpdateDefinition(context.Context, db.UpdateWorkflowDefinitionParams) (db.Workflow, error)
+	UpdateStatus(context.Context, db.UpdateWorkflowStatusParams) (db.Workflow, error)
 	Delete(context.Context, uuid.UUID, uuid.UUID) error
 }
 
@@ -154,6 +155,29 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (db.Workflow, erro
 
 func (s *Service) Delete(ctx context.Context, id, environmentID uuid.UUID) error {
 	return s.repo.Delete(ctx, id, environmentID)
+}
+
+func (s *Service) Pause(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
+	workflow, err := s.repo.GetByID(ctx, id, environmentID)
+	if err != nil {
+		return db.Workflow{}, err
+	}
+	if workflow.Status == string(WorkflowStatusPaused) {
+		return workflow, nil
+	}
+	return s.repo.UpdateStatus(ctx, db.UpdateWorkflowStatusParams{
+		ID:            id,
+		EnvironmentID: environmentID,
+		Status:        string(WorkflowStatusPaused),
+	})
+}
+
+func (s *Service) Resume(ctx context.Context, id, environmentID uuid.UUID) (db.Workflow, error) {
+	return s.repo.UpdateStatus(ctx, db.UpdateWorkflowStatusParams{
+		ID:            id,
+		EnvironmentID: environmentID,
+		Status:        string(WorkflowStatusActive),
+	})
 }
 
 func (s *Service) TriggerEvent(ctx context.Context, environmentID uuid.UUID, in TriggerEventInput) ([]db.WorkflowExecution, error) {

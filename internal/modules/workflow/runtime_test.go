@@ -164,6 +164,10 @@ func (f *fakeWorkflowRepo) UpdateDefinition(context.Context, db.UpdateWorkflowDe
 	panic("unexpected call to UpdateDefinition")
 }
 
+func (f *fakeWorkflowRepo) UpdateStatus(context.Context, db.UpdateWorkflowStatusParams) (db.Workflow, error) {
+	panic("unexpected call to UpdateStatus")
+}
+
 func (f *fakeWorkflowRepo) Delete(context.Context, uuid.UUID, uuid.UUID) error {
 	panic("unexpected call to Delete")
 }

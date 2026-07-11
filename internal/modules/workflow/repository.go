@@ -97,6 +97,10 @@ func (r *Repository) ListStepExecutionsByExecution(ctx context.Context, executio
 	return r.q.ListWorkflowStepExecutionsByExecution(ctx, executionID)
 }
 
+func (r *Repository) UpdateStatus(ctx context.Context, arg db.UpdateWorkflowStatusParams) (db.Workflow, error) {
+	return r.q.UpdateWorkflowStatus(ctx, arg)
+}
+
 func (r *Repository) Update(ctx context.Context, arg db.UpdateWorkflowParams) (db.Workflow, error) {
 	return r.q.UpdateWorkflow(ctx, arg)
 }

@@ -81,6 +81,14 @@ ORDER BY updated_at DESC;
 SELECT * FROM workflows
 WHERE id = $1 AND environment_id = $2;
 
+-- name: UpdateWorkflowStatus :one
+UPDATE workflows
+SET status = $3,
+	is_active = CASE WHEN $3 = 'active' OR $3 = 'draft' THEN true ELSE false END,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING *;
+
 -- name: UpdateWorkflowDefinition :one
 UPDATE workflows
 SET key = $3,

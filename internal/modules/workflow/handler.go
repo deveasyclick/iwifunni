@@ -29,6 +29,8 @@ type handlerService interface {
 	List(context.Context, uuid.UUID) ([]db.Workflow, error)
 	GetByID(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error)
 	Update(context.Context, UpdateInput) (db.Workflow, error)
+	Pause(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error)
+	Resume(context.Context, uuid.UUID, uuid.UUID) (db.Workflow, error)
 	Delete(context.Context, uuid.UUID, uuid.UUID) error
 	ListExecutions(context.Context, uuid.UUID, *uuid.UUID) ([]db.WorkflowExecution, error)
 	GetExecutionByID(context.Context, uuid.UUID, uuid.UUID) (ExecutionDetail, error)
@@ -48,6 +50,8 @@ func (h *Handler) RegisterDashboardRoutes(r chi.Router) {
 	r.Get("/workflows", h.list)
 	r.Get("/workflows/{workflowID}", h.get)
 	r.Put("/workflows/{workflowID}", h.update)
+	r.Post("/workflows/{workflowID}/pause", h.pause)
+	r.Post("/workflows/{workflowID}/resume", h.resume)
 	r.Delete("/workflows/{workflowID}", h.delete)
 	r.Get("/workflow-executions", h.listExecutions)
 	r.Get("/workflow-executions/{executionID}", h.getExecution)
@@ -309,7 +313,47 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
 }
 
+func (h *Handler) pause(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
 
+	item, err := h.service.Pause(r.Context(), id, environmentID)
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
+}
+
+func (h *Handler) resume(w http.ResponseWriter, r *http.Request) {
+	environmentID, ok := authctx.GetEnvironmentID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "workflowID"))
+	if err != nil {
+		http.Error(w, "invalid workflow id", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.Resume(r.Context(), id, environmentID)
+	if err != nil {
+		h.respondError(w, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, workflowFromRecord(item))
+}
 
 // @Summary      Delete workflow
 // @Description  Delete a workflow

@@ -787,6 +787,47 @@ func (q *Queries) UpdateWorkflowDefinition(ctx context.Context, arg UpdateWorkfl
 	return i, err
 }
 
+const updateWorkflowStatus = `-- name: UpdateWorkflowStatus :one
+UPDATE workflows
+SET status = $3,
+	is_active = CASE WHEN $3 = 'active' OR $3 = 'draft' THEN true ELSE false END,
+	updated_at = now()
+WHERE id = $1 AND environment_id = $2
+RETURNING id, environment_id, key, name, description, channels, template_ids, is_active, status, version, trigger_event, definition_json, created_at, updated_at
+`
+
+type UpdateWorkflowStatusParams struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	EnvironmentID uuid.UUID `db:"environment_id" json:"environment_id"`
+	Status        string    `db:"status" json:"status"`
+}
+
+func (q *Queries) UpdateWorkflowStatus(ctx context.Context, arg UpdateWorkflowStatusParams) (Workflow, error) {
+	row := q.db.QueryRow(ctx, updateWorkflowStatus,
+		arg.ID,
+		arg.EnvironmentID,
+		arg.Status,
+	)
+	var i Workflow
+	err := row.Scan(
+		&i.ID,
+		&i.EnvironmentID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Channels,
+		&i.TemplateIds,
+		&i.IsActive,
+		&i.Status,
+		&i.Version,
+		&i.TriggerEvent,
+		&i.DefinitionJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateWorkflowExecutionState = `-- name: UpdateWorkflowExecutionState :one
 UPDATE workflow_executions
 SET status = $3,
