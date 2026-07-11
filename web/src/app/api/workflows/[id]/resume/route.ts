@@ -10,7 +10,7 @@ type RouteContext = {
 export async function POST(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  return proxyBackend(req, `/workflows/${id}/publish`, {
+  return proxyBackend(req, `/workflows/${id}/resume`, {
     method: 'POST',
   });
 }
