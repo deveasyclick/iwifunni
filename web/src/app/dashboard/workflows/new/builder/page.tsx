@@ -15,8 +15,11 @@ const WorkflowBuilderPage = async ({
 }: WorkflowBuilderPageProps) => {
   const params = await searchParams;
   const workflowId = workflowIdFromRecord(params);
+  const openTrigger = params.trigger === 'true';
 
-  return <WorkflowBuilderShell workflowId={workflowId} />;
+  return (
+    <WorkflowBuilderShell workflowId={workflowId} openTrigger={openTrigger} />
+  );
 };
 
 export default WorkflowBuilderPage;

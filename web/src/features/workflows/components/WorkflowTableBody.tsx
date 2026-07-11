@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import {
@@ -43,6 +44,7 @@ const WorkflowTableBody = ({
   onRequestPause,
   onRequestDelete,
 }: WorkflowTableBodyProps) => {
+  const router = useRouter();
   if (loading) {
     return (
       <TableBody>
@@ -74,7 +76,13 @@ const WorkflowTableBody = ({
         const isPaused = item.status === 'paused';
 
         return (
-          <TableRow key={item.id}>
+          <TableRow
+            key={item.id}
+            className="cursor-pointer hover:bg-muted/50"
+            onClick={() => {
+              router.push(`/dashboard/workflows/new/builder?workflowId=${item.id}`);
+            }}
+          >
             <TableCell>
               <div>
                 <p className="font-medium">{item.name}</p>
@@ -88,16 +96,20 @@ const WorkflowTableBody = ({
             <TableCell className="font-mono text-xs">{item.key}</TableCell>
             <TableCell>
               <div className="flex gap-1.5">
-                {(item.channels ?? []).map((ch) => (
-                  <Badge
-                    key={ch}
-                    variant="outline"
-                    className="flex items-center gap-1 rounded-md text-xs capitalize"
-                  >
-                    <Icon icon={channelIcon(ch)} className="h-3 w-3" />
-                    {ch}
-                  </Badge>
-                ))}
+                {item.channels && item.channels.length > 0 ? (
+                  item.channels.map((ch) => (
+                    <Badge
+                      key={ch}
+                      variant="outline"
+                      className="flex items-center justify-center rounded-md p-1"
+                      title={ch}
+                    >
+                      <Icon icon={channelIcon(ch)} className="h-3.5 w-3.5" />
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </div>
             </TableCell>
             <TableCell>
@@ -106,7 +118,7 @@ const WorkflowTableBody = ({
               </Badge>
             </TableCell>
             <TableCell>{formatCreatedAt(item.createdAt)}</TableCell>
-            <TableCell>
+            <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" disabled={isMutating}>
@@ -123,6 +135,24 @@ const WorkflowTableBody = ({
                       Edit
                     </Link>
                   </DropdownMenuItem>
+                  {isPaused ? (
+                    <DropdownMenuItem
+                      disabled
+                      className="text-muted-foreground"
+                    >
+                      <Play className="h-4 w-4" />
+                      Trigger (paused)
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href={`/dashboard/workflows/new/builder?workflowId=${item.id}&trigger=true`}
+                      >
+                        <Play className="h-4 w-4" />
+                        Trigger
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link
                       href={`/dashboard/workflows/${item.id}/activities`}

@@ -12,7 +12,8 @@ import {
 import { useWorkflowQuery } from '@/features/workflows/queries';
 import { buildWorkflowBuilderHref } from '@/features/workflows/utils/urls';
 import { Code, Play, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CreateWorkflowBuilder from '../../../../../features/workflows/components/CreateWorkflowBuilder';
 import BreadcrumbComp from '../../../layout/shared/breadcrumb/BreadcrumbComp';
 import { IntegratePanelContent } from './IntegratePanelContent';
@@ -20,9 +21,14 @@ import { TriggerPanelContent } from './TriggerPanelContent';
 
 interface WorkflowBuilderShellProps {
   readonly workflowId: string;
+  readonly openTrigger?: boolean;
 }
 
-const WorkflowBuilderShell = ({ workflowId }: WorkflowBuilderShellProps) => {
+const WorkflowBuilderShell = ({
+  workflowId,
+  openTrigger,
+}: WorkflowBuilderShellProps) => {
+  const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState('trigger');
 
@@ -39,6 +45,18 @@ const WorkflowBuilderShell = ({ workflowId }: WorkflowBuilderShellProps) => {
       title: workflowName,
     },
   ];
+
+  // Auto-open trigger drawer when navigated from the workflow table
+  useEffect(() => {
+    if (openTrigger && searchParams.get('trigger') === 'true') {
+      setDrawerTab('trigger');
+      setDrawerOpen(true);
+      // Clean the URL param after opening
+      const url = new URL(window.location.href);
+      url.searchParams.delete('trigger');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [openTrigger, searchParams]);
 
   const openDrawer = (tab: string) => {
     setDrawerTab(tab);
