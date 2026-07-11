@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deveasyclick/iwifunni/internal/db/gen"
+	db "github.com/deveasyclick/iwifunni/internal/db/gen"
 	"github.com/deveasyclick/iwifunni/internal/types"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -17,7 +17,7 @@ import (
 var (
 	ErrInvalidWorkflow      = errors.New("invalid workflow")
 	ErrInvalidWorkflowEvent = errors.New("invalid workflow event")
-	workflowKeyPattern            = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	workflowKeyPattern      = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 )
 
 type CreateInput struct {
@@ -231,9 +231,9 @@ func (s *Service) TriggerEvent(ctx context.Context, environmentID uuid.UUID, in 
 		if s.producer != nil && nextStepID != nil {
 			if err := s.producer.EnqueueWorkflowStep(ctx, &types.WorkflowStepJob{
 				EnvironmentID: environmentID.String(),
-				ExecutionID: execution.ID.String(),
-				WorkflowID:  workflowRecord.ID.String(),
-				StepID:      *nextStepID,
+				ExecutionID:   execution.ID.String(),
+				WorkflowID:    workflowRecord.ID.String(),
+				StepID:        *nextStepID,
 			}); err != nil {
 				return nil, err
 			}
@@ -267,9 +267,8 @@ func buildCreateDefinitionParams(in CreateInput) (db.CreateWorkflowDefinitionPar
 	}
 
 	channels := channelsFromDefinition(in.Definition)
-	normalizedChannels, err := normalizeChannels(channels)
-	if err != nil {
-		return db.CreateWorkflowDefinitionParams{}, err
+	if channels == nil {
+		channels = []string{}
 	}
 
 	return db.CreateWorkflowDefinitionParams{
@@ -278,8 +277,8 @@ func buildCreateDefinitionParams(in CreateInput) (db.CreateWorkflowDefinitionPar
 		Key:            key,
 		Name:           name,
 		Description:    description,
-		Channels:       normalizedChannels,
-		TemplateIds:    nil,
+		Channels:       channels,
+		TemplateIds:    []byte("{}"),
 		Status:         string(WorkflowStatusDraft),
 		Version:        1,
 		TriggerEvent:   triggerEvent,
@@ -311,9 +310,8 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 	}
 
 	channels := channelsFromDefinition(in.Definition)
-	normalizedChannels, err := normalizeChannels(channels)
-	if err != nil {
-		return db.UpdateWorkflowDefinitionParams{}, err
+	if channels == nil {
+		channels = []string{}
 	}
 
 	return db.UpdateWorkflowDefinitionParams{
@@ -322,8 +320,8 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 		Key:            key,
 		Name:           name,
 		Description:    description,
-		Channels:       normalizedChannels,
-		TemplateIds:    nil,
+		Channels:       channels,
+		TemplateIds:    []byte("{}"),
 		Status:         string(WorkflowStatusActive),
 		Version:        current.Version,
 		TriggerEvent:   triggerEvent,
