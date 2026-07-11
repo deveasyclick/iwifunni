@@ -168,8 +168,8 @@ func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status stri
 	})
 }
 
-func (r *Repository) InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error {
-	return r.q.InsertDeliveryAttempt(ctx, arg)
+func (r *Repository) InsertDeliveryAttempt(ctx context.Context, arg db.UpsertDeliveryAttemptParams) error {
+	return r.q.UpsertDeliveryAttempt(ctx, arg)
 }
 
 func (r *Repository) ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error) {

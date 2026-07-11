@@ -45,7 +45,7 @@ type notificationStore interface {
 	GetByProject(ctx context.Context, id, projectID uuid.UUID) (db.Notification, error)
 	GetByJobID(ctx context.Context, jobID string) (db.Notification, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, updatedAt pgtype.Timestamptz) error
-	InsertDeliveryAttempt(ctx context.Context, arg db.InsertDeliveryAttemptParams) error
+	InsertDeliveryAttempt(ctx context.Context, arg db.UpsertDeliveryAttemptParams) error
 	ListDeliveryAttemptsByNotificationID(ctx context.Context, notificationID uuid.UUID) ([]db.DeliveryAttempt, error)
 }
 

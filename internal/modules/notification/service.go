@@ -32,6 +32,23 @@ type Service struct {
 	encryptionKey string
 }
 
+// notificationNodeCfg maps a notification node's config from the workflow definition.
+type notificationNodeCfg struct {
+	TemplateID string   `json:"template_id,omitempty"`
+	Channels   []string `json:"channels"`
+}
+
+// defNode represents a single node in the workflow definition JSON.
+type defNode struct {
+	Type   string          `json:"type"`
+	Config json.RawMessage `json:"config,omitempty"`
+}
+
+// workflowDef is the top-level definition structure holding the node list.
+type workflowDef struct {
+	Nodes []defNode `json:"nodes"`
+}
+
 type Stores struct {
 	Notifications notificationStore
 	Workflows     workflowStore
@@ -270,41 +287,96 @@ func deriveSubscriberChannels(email, phone, pushToken *string) []string {
 	return channels
 }
 
+// workflowJobIDs holds the parsed UUIDs extracted from a workflow notification job.
+type workflowJobIDs struct {
+	projectID    uuid.UUID
+	workflowID   uuid.UUID
+	subscriberID uuid.UUID
+}
+
 func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.NotificationJob) (*types.NotificationJob, error) {
-	if prepared.ProjectID == "" {
-		return nil, invalidSend("workflow-based sends require project-scoped authentication")
-	}
-
-	projectID, err := uuid.Parse(prepared.ProjectID)
+	ids, err := parseWorkflowJobIDs(prepared)
 	if err != nil {
-		return nil, invalidSend("invalid project_id")
-	}
-	workflowID, err := uuid.Parse(prepared.WorkflowID)
-	if err != nil {
-		return nil, invalidSend("invalid workflow_id")
-	}
-	subscriberID, err := uuid.Parse(prepared.SubscriberID)
-	if err != nil {
-		return nil, invalidSend("invalid subscriber_id")
-	}
-
-	workflowRecord, err := s.workflows.GetWorkflowByID(ctx, workflowID, projectID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("workflow not found: %w", err)
-		}
 		return nil, err
 	}
 
-	var subscriberRecord db.Subscriber
+	workflowRecord, err := s.getWorkflowByID(ctx, ids.workflowID, ids.projectID)
+	if err != nil {
+		return nil, err
+	}
 
+	subscriberRecord, err := s.resolveWorkflowSubscriber(ctx, prepared, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	channels, templateIDs := extractChannelsAndTemplatesFromWorkflow(workflowRecord)
+	channels = filterRequestedChannels(channels, prepared.Channels)
+
+	if len(templateIDs) > 0 {
+		templateIDsJSON, _ := json.Marshal(templateIDs)
+		workflowRecord.TemplateIds = templateIDsJSON
+	}
+
+	workflowRecord.Channels = channels
+	prepared.Channels = channels
+	prepared.Channels, prepared.ChannelContent, prepared.SkippedChannels, prepared.Recipient, err = s.prepareWorkflowDelivery(ctx, ids.projectID, workflowRecord, subscriberRecord, *prepared)
+	if err != nil {
+		return nil, err
+	}
+	prepared.Metadata = enrichMetadata(prepared.Metadata, workflowRecord, subscriberRecord)
+
+	return prepared, nil
+}
+
+// parseWorkflowJobIDs validates and parses the UUID fields from a workflow notification job.
+func parseWorkflowJobIDs(prepared *types.NotificationJob) (workflowJobIDs, error) {
+	if prepared.ProjectID == "" {
+		return workflowJobIDs{}, invalidSend("workflow-based sends require project-scoped authentication")
+	}
+	projectID, err := uuid.Parse(prepared.ProjectID)
+	if err != nil {
+		return workflowJobIDs{}, invalidSend("invalid project_id")
+	}
+	workflowID, err := uuid.Parse(prepared.WorkflowID)
+	if err != nil {
+		return workflowJobIDs{}, invalidSend("invalid workflow_id")
+	}
+	subscriberID, err := uuid.Parse(prepared.SubscriberID)
+	if err != nil {
+		return workflowJobIDs{}, invalidSend("invalid subscriber_id")
+	}
+	return workflowJobIDs{projectID: projectID, workflowID: workflowID, subscriberID: subscriberID}, nil
+}
+
+// getWorkflowByID fetches a workflow record and returns a friendly error if not found.
+func (s *Service) getWorkflowByID(ctx context.Context, workflowID, projectID uuid.UUID) (db.Workflow, error) {
+	workflowRecord, err := s.workflows.GetWorkflowByID(ctx, workflowID, projectID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.Workflow{}, fmt.Errorf("workflow not found: %w", err)
+		}
+		return db.Workflow{}, err
+	}
+	return workflowRecord, nil
+}
+
+// resolveWorkflowSubscriber resolves the subscriber for a workflow notification.
+// For system users it looks up the user record and builds a synthetic subscriber;
+// for regular sends it fetches the subscriber from the subscribers table.
+func (s *Service) resolveWorkflowSubscriber(ctx context.Context, prepared *types.NotificationJob, ids workflowJobIDs) (db.Subscriber, error) {
 	if prepared.IsSystemUser {
-		userRecord, err := s.users.GetUserByID(ctx, subscriberID)
+		userID, err := uuid.Parse(prepared.To.SubscriberID)
+		if err != nil {
+			return db.Subscriber{}, invalidSend("invalid subscriber_id for system user")
+		}
+
+		userRecord, err := s.users.GetUserByID(ctx, userID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, fmt.Errorf("user not found: %w", err)
+				return db.Subscriber{}, fmt.Errorf("user not found: %w", err)
 			}
-			return nil, err
+			return db.Subscriber{}, err
 		}
 
 		userEmail := userRecord.Email
@@ -313,43 +385,42 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 			userName = userEmail
 		}
 
-		subscriberRecord = db.Subscriber{
-			ID:    subscriberID,
+		prepared.SubscriberID = userID.String()
+
+		return db.Subscriber{
+			ID:    userID,
 			Name:  userName,
 			Email: &userEmail,
-		}
-	} else {
-		subscriberRecord, err = s.subscribers.GetSubscriberByID(ctx, subscriberID, projectID)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, fmt.Errorf("subscriber not found: %w", err)
-			}
-			return nil, err
-		}
+		}, nil
 	}
 
+	subscriberRecord, err := s.subscribers.GetSubscriberByID(ctx, ids.subscriberID, ids.projectID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.Subscriber{}, fmt.Errorf("subscriber not found: %w", err)
+		}
+		return db.Subscriber{}, err
+	}
+	return subscriberRecord, nil
+}
+
+// extractChannelsAndTemplatesFromWorkflow returns the channels and template-ID
+// map for a workflow. It first checks the workflow-level columns, then falls
+// back to reading notification nodes from the definition JSON.
+func extractChannelsAndTemplatesFromWorkflow(workflowRecord db.Workflow) ([]string, map[string]string) {
 	channels := workflowRecord.Channels
-	templateIDs, tmplErr := parseWorkflowTemplateIDs(workflowRecord.TemplateIds)
-	if tmplErr != nil {
+	templateIDs, err := parseWorkflowTemplateIDs(workflowRecord.TemplateIds)
+	if err != nil {
 		templateIDs = map[string]string{}
 	}
 
-	if len(channels) == 0 && len(workflowRecord.DefinitionJson) > 0 {
-		type notificationNodeCfg struct {
-			TemplateID string   `json:"template_id,omitempty"`
-			Channels   []string `json:"channels"`
-		}
-		type defNode struct {
-			Type   string          `json:"type"`
-			Config json.RawMessage `json:"config,omitempty"`
-		}
-		type workflowDef struct {
-			Nodes []defNode `json:"nodes"`
-		}
-
+	if len(workflowRecord.DefinitionJson) > 0 {
 		var def workflowDef
 		if parseErr := json.Unmarshal(workflowRecord.DefinitionJson, &def); parseErr == nil {
-			seen := make(map[string]bool)
+			seen := make(map[string]bool, len(channels))
+			for _, ch := range channels {
+				seen[ch] = true
+			}
 			for _, node := range def.Nodes {
 				if node.Type == "notification" && len(node.Config) > 0 {
 					var cfg notificationNodeCfg
@@ -359,7 +430,7 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 								channels = append(channels, ch)
 								seen[ch] = true
 							}
-							if cfg.TemplateID != "" {
+							if cfg.TemplateID != "" && templateIDs[ch] == "" {
 								templateIDs[ch] = cfg.TemplateID
 							}
 						}
@@ -369,36 +440,26 @@ func (s *Service) prepareWorkflowJob(ctx context.Context, prepared *types.Notifi
 		}
 	}
 
-	requestedChannels := prepared.Channels
+	return channels, templateIDs
+}
 
-	if len(templateIDs) > 0 {
-		templateIDsJSON, _ := json.Marshal(templateIDs)
-		workflowRecord.TemplateIds = templateIDsJSON
+// filterRequestedChannels returns only the channels present in the requested set.
+// If requestedChannels is nil, all channels are returned unchanged.
+func filterRequestedChannels(channels, requestedChannels []string) []string {
+	if requestedChannels == nil {
+		return channels
 	}
-
-	if requestedChannels != nil {
-		requested := make(map[string]bool, len(requestedChannels))
-		for _, ch := range requestedChannels {
-			requested[ch] = true
+	requested := make(map[string]bool, len(requestedChannels))
+	for _, ch := range requestedChannels {
+		requested[ch] = true
+	}
+	filtered := make([]string, 0, len(requestedChannels))
+	for _, ch := range channels {
+		if requested[ch] {
+			filtered = append(filtered, ch)
 		}
-		filtered := make([]string, 0, len(requestedChannels))
-		for _, ch := range channels {
-			if requested[ch] {
-				filtered = append(filtered, ch)
-			}
-		}
-		channels = filtered
 	}
-
-	workflowRecord.Channels = channels
-	prepared.Channels = channels
-	prepared.Channels, prepared.ChannelContent, prepared.SkippedChannels, prepared.Recipient, err = s.prepareWorkflowDelivery(ctx, projectID, workflowRecord, subscriberRecord, *prepared)
-	if err != nil {
-		return nil, err
-	}
-	prepared.Metadata = enrichMetadata(prepared.Metadata, workflowRecord, subscriberRecord)
-
-	return prepared, nil
+	return filtered
 }
 
 // SendSync delivers a notification synchronously and returns the
