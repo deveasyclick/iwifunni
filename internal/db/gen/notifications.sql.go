@@ -99,12 +99,18 @@ func (q *Queries) GetNotificationByJobID(ctx context.Context, jobID *string) (Ge
 	return i, err
 }
 
-const insertDeliveryAttempt = `-- name: InsertDeliveryAttempt :exec
+const upsertDeliveryAttempt = `-- name: UpsertDeliveryAttempt :exec
 INSERT INTO delivery_attempts (id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+ON CONFLICT (notification_id, channel) DO UPDATE
+SET status = EXCLUDED.status,
+    error_message = EXCLUDED.error_message,
+    destination = EXCLUDED.destination,
+    provider_message_id = EXCLUDED.provider_message_id,
+    attempted_at = EXCLUDED.attempted_at
 `
 
-type InsertDeliveryAttemptParams struct {
+type UpsertDeliveryAttemptParams struct {
 	ID                uuid.UUID          `db:"id" json:"id"`
 	NotificationID    uuid.UUID          `db:"notification_id" json:"notification_id"`
 	Channel           string             `db:"channel" json:"channel"`
@@ -115,8 +121,8 @@ type InsertDeliveryAttemptParams struct {
 	AttemptedAt       pgtype.Timestamptz `db:"attempted_at" json:"attempted_at"`
 }
 
-func (q *Queries) InsertDeliveryAttempt(ctx context.Context, arg InsertDeliveryAttemptParams) error {
-	_, err := q.db.Exec(ctx, insertDeliveryAttempt,
+func (q *Queries) UpsertDeliveryAttempt(ctx context.Context, arg UpsertDeliveryAttemptParams) error {
+	_, err := q.db.Exec(ctx, upsertDeliveryAttempt,
 		arg.ID,
 		arg.NotificationID,
 		arg.Channel,

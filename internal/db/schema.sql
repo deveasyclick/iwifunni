@@ -136,7 +136,8 @@ CREATE TABLE delivery_attempts (
     status TEXT NOT NULL,
     error_message TEXT,
     provider_message_id TEXT,
-    attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (notification_id, channel)
 );
 
 CREATE TABLE templates (

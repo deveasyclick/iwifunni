@@ -33,9 +33,15 @@ UPDATE notifications
 SET status = $1, updated_at = $2
 WHERE id = $3;
 
--- name: InsertDeliveryAttempt :exec
+-- name: UpsertDeliveryAttempt :exec
 INSERT INTO delivery_attempts (id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8);
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+ON CONFLICT (notification_id, channel) DO UPDATE
+SET status = EXCLUDED.status,
+    error_message = EXCLUDED.error_message,
+    destination = EXCLUDED.destination,
+    provider_message_id = EXCLUDED.provider_message_id,
+    attempted_at = EXCLUDED.attempted_at;
 
 -- name: ListDeliveryAttemptsByNotificationID :many
 SELECT id, notification_id, channel, destination, status, error_message, provider_message_id, attempted_at
