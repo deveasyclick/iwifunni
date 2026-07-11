@@ -89,8 +89,12 @@ func validateNode(node Node) error {
 		if err != nil || len(channels) != 1 {
 			return ErrInvalidWorkflow
 		}
-		if _, err := uuid.Parse(strings.TrimSpace(config.TemplateID)); err != nil {
-			return ErrInvalidWorkflow
+		// Template ID is optional at definition time. It is set when the user
+		// configures the channel editor and is required only at send time.
+		if id := strings.TrimSpace(config.TemplateID); id != "" {
+			if _, err := uuid.Parse(id); err != nil {
+				return ErrInvalidWorkflow
+			}
 		}
 		return nil
 	case WorkflowStepTypeDelay:
