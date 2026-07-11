@@ -16,11 +16,15 @@ import (
 )
 
 type fakeNotificationStore struct {
-	notifications     map[string]db.Notification
-	notificationCount int
-	statusUpdates     []string
-	attemptCount      int
-	providers         []db.Integration
+	notifications      map[string]db.Notification
+	notificationCount  int
+	statusUpdates      []string
+	attemptCount       int
+	providers          []db.Integration
+	workflow           db.Workflow
+	template           db.Template
+	subscriber         db.Subscriber
+	user               db.User
 }
 
 func newFakeNotificationStore() *fakeNotificationStore {
@@ -118,7 +122,7 @@ func (s *fakeNotificationStore) UpdateStatus(_ context.Context, id uuid.UUID, st
 	return pgx.ErrNoRows
 }
 
-func (s *fakeNotificationStore) InsertDeliveryAttempt(_ context.Context, _ db.InsertDeliveryAttemptParams) error {
+func (s *fakeNotificationStore) InsertDeliveryAttempt(_ context.Context, _ db.UpsertDeliveryAttemptParams) error {
 	s.attemptCount++
 	return nil
 }
@@ -128,6 +132,9 @@ func (s *fakeNotificationStore) ListDeliveryAttemptsByNotificationID(_ context.C
 }
 
 func (s *fakeNotificationStore) GetUserByID(_ context.Context, _ uuid.UUID) (db.User, error) {
+	if s.user.ID != uuid.Nil {
+		return s.user, nil
+	}
 	return db.User{}, pgx.ErrNoRows
 }
 
@@ -136,10 +143,16 @@ func (s *fakeNotificationStore) ListByChannel(_ context.Context, _ uuid.UUID, _ 
 }
 
 func (s *fakeNotificationStore) GetWorkflowByID(_ context.Context, _, _ uuid.UUID) (db.Workflow, error) {
+	if s.workflow.ID != uuid.Nil {
+		return s.workflow, nil
+	}
 	return db.Workflow{}, pgx.ErrNoRows
 }
 
 func (s *fakeNotificationStore) GetSubscriberByID(_ context.Context, _, _ uuid.UUID) (db.Subscriber, error) {
+	if s.subscriber.ID != uuid.Nil {
+		return s.subscriber, nil
+	}
 	return db.Subscriber{}, pgx.ErrNoRows
 }
 
@@ -180,6 +193,9 @@ func (s *fakeNotificationStore) UpdateSubscriber(_ context.Context, arg db.Updat
 }
 
 func (s *fakeNotificationStore) GetTemplateByID(_ context.Context, _, _ uuid.UUID) (db.Template, error) {
+	if s.template.ID != uuid.Nil {
+		return s.template, nil
+	}
 	return db.Template{}, pgx.ErrNoRows
 }
 
@@ -317,5 +333,102 @@ func TestServiceSendUsesDecryptedProjectProviderCredentials(t *testing.T) {
 	}
 	if config["from_email"] != "no-reply@example.com" {
 		t.Fatalf("config.from_email = %q, want no-reply@example.com", config["from_email"])
+	}
+}
+
+func TestPrepareJobResolvesTemplateFromDefinition(t *testing.T) {
+	t.Parallel()
+
+	templateID := uuid.New()
+	projectID := uuid.New()
+	subscriberID := uuid.New()
+
+	def := map[string]interface{}{
+		"trigger": map[string]interface{}{
+			"event": "test.event",
+		},
+		"nodes": []interface{}{
+			map[string]interface{}{
+				"id":   "email_1",
+				"type": "notification",
+				"config": map[string]interface{}{
+					"template_id": templateID.String(),
+					"channels":    []string{"email"},
+				},
+			},
+		},
+		"edges": []interface{}{},
+	}
+	defJSON, _ := json.Marshal(def)
+
+	store := newFakeNotificationStore()
+	store.workflow = db.Workflow{
+		ID:            uuid.New(),
+		EnvironmentID: projectID,
+		Channels:      []string{"email"},
+		TemplateIds:   []byte("{}"),
+		DefinitionJson: defJSON,
+		Name:           "Test Workflow",
+	}
+	store.subscriber = db.Subscriber{
+		ID:    subscriberID,
+		Email: &([]string{"user@example.com"}[0]),
+	}
+	store.template = db.Template{
+		ID:        templateID,
+		Channel:   "email",
+		IsActive:  true,
+		Subject:   &([]string{"Hello"}[0]),
+		Body:      "<p>{{.name}}</p>",
+	}
+	store.user = db.User{
+		ID:    subscriberID,
+		Email: "user@example.com",
+	}
+
+	service := NewService(Stores{
+		Notifications: store,
+		Workflows:     store,
+		Subscribers:   store,
+		Templates:     store,
+		Integrations:  store,
+		Users:         store,
+	}, "0123456789abcdef0123456789abcdef")
+
+	job := &types.NotificationJob{
+		ProjectID: projectID.String(),
+		WorkflowID: store.workflow.ID.String(),
+		Channels:  []string{"email"},
+		To: &types.SubscriberTo{
+			SubscriberID: subscriberID.String(),
+		},
+		IsSystemUser: true,
+		Metadata:     map[string]string{"name": "Ada"},
+	}
+
+	prepared, err := service.PrepareJob(context.Background(), job)
+	if err != nil {
+		t.Fatalf("PrepareJob() error = %v", err)
+	}
+
+	if len(prepared.SkippedChannels) > 0 {
+		for _, sc := range prepared.SkippedChannels {
+			t.Errorf("unexpected skipped channel %s: %s", sc.Channel, sc.Reason)
+		}
+	}
+
+	if len(prepared.Channels) == 0 {
+		t.Fatal("expected at least one deliverable channel, got none")
+	}
+
+	content, ok := prepared.ChannelContent["email"]
+	if !ok {
+		t.Fatal("expected channel content for 'email'")
+	}
+	if content.Title != "Hello" {
+		t.Errorf("content.Title = %q, want %q", content.Title, "Hello")
+	}
+	if content.Message != "<p>user@example.com</p>" {
+		t.Errorf("content.Message = %q, want %q", content.Message, "<p>user@example.com</p>")
 	}
 }
