@@ -25,41 +25,45 @@ func (s *Service) deliverProjectChannel(ctx context.Context, projectID, notifica
 		log.Error("delivery: failed to query active providers", "error", err, "channel", channel, "project_id", projectID.String())
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s: %w", channel, err))
 	}
-	if len(providerRecords) == 0 {
+
+	// Pick the first active + registered provider (primary comes first from the query).
+	// Sending through multiple providers for the same channel would produce
+	// duplicate delivery attempts.
+	var providerRecord *db.Integration
+	for i := range providerRecords {
+		if !providerRecords[i].IsActive {
+			continue
+		}
+		if _, ok := s.registry.Get(providerRecords[i].Name); ok {
+			providerRecord = &providerRecords[i]
+			break
+		}
+	}
+
+	if providerRecord == nil {
 		log.Warn("delivery: no active provider found", "channel", channel, "project_id", projectID.String())
 		return s.recordFailed(ctx, notificationID, channel, "", fmt.Errorf("no active provider for channel %s", channel))
 	}
 
-	var lastErr error
-	for _, providerRecord := range providerRecords {
-		p, ok := s.registry.Get(providerRecord.Name)
-		if !ok || p.Channel() != channel {
-			lastErr = fmt.Errorf("provider %s not registered for channel %s", providerRecord.Name, channel)
-			continue
-		}
-		providerConfig, cfgErr := s.buildProjectProviderConfig(providerRecord)
-		if cfgErr != nil {
-			lastErr = cfgErr
-			continue
-		}
+	p, _ := s.registry.Get(providerRecord.Name)
 
-		attempts, providerErr := p.Send(ctx, job, providerConfig)
-		for _, a := range attempts {
-			if a.Err != nil {
-				_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
-				continue
-			}
-			_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
-		}
-		if providerErr == nil {
-			return nil
-		}
-		lastErr = providerErr
+	providerConfig, cfgErr := s.buildProjectProviderConfig(*providerRecord)
+	if cfgErr != nil {
+		return s.recordFailed(ctx, notificationID, channel, "", cfgErr)
 	}
-	if lastErr == nil {
-		lastErr = fmt.Errorf("no active provider for channel %s", channel)
+
+	attempts, providerErr := p.Send(ctx, job, providerConfig)
+	for _, a := range attempts {
+		if a.Err != nil {
+			_ = s.recordFailed(ctx, notificationID, channel, a.Destination, a.Err)
+			continue
+		}
+		_ = s.recordSuccess(ctx, notificationID, channel, a.Destination)
 	}
-	return s.recordFailed(ctx, notificationID, channel, "", lastErr)
+	if providerErr != nil {
+		return s.recordFailed(ctx, notificationID, channel, "", providerErr)
+	}
+	return nil
 }
 
 func (s *Service) buildProjectProviderConfig(providerRecord db.Integration) ([]byte, error) {
@@ -109,7 +113,7 @@ func (s *Service) buildProjectProviderConfig(providerRecord db.Integration) ([]b
 
 func (s *Service) recordSkipped(ctx context.Context, notificationID uuid.UUID, channel, reason string) error {
 	message := reason
-	return s.repo.InsertDeliveryAttempt(ctx, db.InsertDeliveryAttemptParams{
+	return s.repo.InsertDeliveryAttempt(ctx, db.UpsertDeliveryAttemptParams{
 		ID:             uuid.New(),
 		NotificationID: notificationID,
 		Channel:        channel,
@@ -121,7 +125,7 @@ func (s *Service) recordSkipped(ctx context.Context, notificationID uuid.UUID, c
 }
 
 func (s *Service) recordSuccess(ctx context.Context, notificationID uuid.UUID, channel, destination string) error {
-	return s.repo.InsertDeliveryAttempt(ctx, db.InsertDeliveryAttemptParams{
+	return s.repo.InsertDeliveryAttempt(ctx, db.UpsertDeliveryAttemptParams{
 		ID:             uuid.New(),
 		NotificationID: notificationID,
 		Channel:        channel,
@@ -133,7 +137,7 @@ func (s *Service) recordSuccess(ctx context.Context, notificationID uuid.UUID, c
 
 func (s *Service) recordFailed(ctx context.Context, notificationID uuid.UUID, channel, destination string, attemptErr error) error {
 	msg := attemptErr.Error()
-	_ = s.repo.InsertDeliveryAttempt(ctx, db.InsertDeliveryAttemptParams{
+	_ = s.repo.InsertDeliveryAttempt(ctx, db.UpsertDeliveryAttemptParams{
 		ID:             uuid.New(),
 		NotificationID: notificationID,
 		Channel:        channel,
