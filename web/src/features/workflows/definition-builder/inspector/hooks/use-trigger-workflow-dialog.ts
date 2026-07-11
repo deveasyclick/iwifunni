@@ -163,19 +163,23 @@ export function useTriggerWorkflowDialog({
   );
 
   const isTriggering = triggerMutation.isPending;
-  const isPolling = !!notificationId && pollQuery.isFetching && !pollQuery.data;
   const pollData = pollQuery.data;
   const isDone =
     !!pollData?.notification?.status &&
     ['sent', 'failed', 'partial_failed', 'partial_skipped', 'skipped'].includes(
       pollData.notification.status,
     );
+  // isPolling stays true from when the notification is created until a
+  // terminal status is reached, ensuring the loading indicator persists.
+  const isPolling = !!notificationId && !isDone;
   const events = pollData?.delivery_attempts ?? [];
   const hasError = triggerMutation.isError;
   const triggerError = triggerMutation.error?.message;
 
+  // Disable the button while any operation is in progress.
+  const isProcessing = isTriggering || (!!notificationId && !isDone);
   const isValid =
-    selectedSubscriber !== null && !isTriggering && selectedChannels.length > 0;
+    selectedSubscriber !== null && !isProcessing && selectedChannels.length > 0;
 
   return {
     open,
