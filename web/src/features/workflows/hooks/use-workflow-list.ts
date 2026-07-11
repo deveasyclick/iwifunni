@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { workflowApi } from '../api';
-import { validateWorkflowDefinitionDraft } from '../utils';
 import type { WorkflowDefinition, WorkflowItem } from '@/app/types/workflow';
 
 const normalizeDefinition = (
@@ -22,13 +21,6 @@ const normalizeDefinition = (
   };
 };
 
-const getDefinitionIssues = (definition?: WorkflowDefinition) => {
-  const normalized = normalizeDefinition(definition);
-  if (!normalized) return [];
-
-  return validateWorkflowDefinitionDraft(normalized);
-};
-
 export type WorkflowListResult = {
   items: WorkflowItem[];
   loading: boolean;
@@ -37,7 +29,10 @@ export type WorkflowListResult = {
   setSearch: (value: string) => void;
   visibleItems: WorkflowItem[];
   mutatingID: string | null;
-  publishWorkflow: (item: WorkflowItem) => Promise<void>;
+  togglePause: (item: WorkflowItem) => Promise<void>;
+  pausingItem: WorkflowItem | null;
+  requestPause: (item: WorkflowItem) => void;
+  cancelPause: () => void;
   deleteWorkflow: (id: string) => Promise<void>;
   deletingItem: WorkflowItem | null;
   requestDelete: (item: WorkflowItem) => void;
@@ -51,6 +46,7 @@ export const useWorkflowList = (): WorkflowListResult => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [mutatingID, setMutatingID] = useState<string | null>(null);
+  const [pausingItem, setPausingItem] = useState<WorkflowItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<WorkflowItem | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
@@ -93,26 +89,42 @@ export const useWorkflowList = (): WorkflowListResult => {
     });
   }, [items, search]);
 
-  const publishWorkflow = async (item: WorkflowItem) => {
+  const togglePause = async (item: WorkflowItem) => {
     setError(null);
-
-    const publishIssues = getDefinitionIssues(item.definition);
-    if (publishIssues.length > 0) {
-      setError(`Cannot publish ${item.name}: ${publishIssues[0].message}`);
-      return;
-    }
-
-    setMutatingID(`publish:${item.id}`);
+    setMutatingID(item.id);
     try {
-      await workflowApi.publishWorkflow(item.id);
+      await workflowApi.pauseWorkflow(item.id);
       await fetchWorkflows();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to publish workflow',
+        err instanceof Error ? err.message : 'Failed to pause workflow',
       );
     } finally {
       setMutatingID(null);
+      setPausingItem(null);
     }
+  };
+
+  const requestPause = (item: WorkflowItem) => {
+    if (item.status === 'paused') {
+      // Resume directly without confirmation
+      setMutatingID(item.id);
+      workflowApi
+        .resumeWorkflow(item.id)
+        .then(() => fetchWorkflows())
+        .catch((err) =>
+          setError(
+            err instanceof Error ? err.message : 'Failed to resume workflow',
+          ),
+        )
+        .finally(() => setMutatingID(null));
+    } else {
+      setPausingItem(item);
+    }
+  };
+
+  const cancelPause = () => {
+    setPausingItem(null);
   };
 
   const deleteWorkflow = async (id: string) => {
@@ -147,7 +159,10 @@ export const useWorkflowList = (): WorkflowListResult => {
     setSearch,
     visibleItems,
     mutatingID,
-    publishWorkflow,
+    togglePause,
+    pausingItem,
+    requestPause,
+    cancelPause,
     deleteWorkflow,
     deletingItem,
     requestDelete,

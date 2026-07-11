@@ -5,6 +5,7 @@ import { useState } from 'react';
 import CardBox from '@/components/card/CardBox';
 import { useWorkflowList } from '../hooks/use-workflow-list';
 import { DeleteWorkflowDialog } from './dialogs/DeleteWorkflowDialog';
+import { PauseWorkflowDialog } from './dialogs/PauseWorkflowDialog';
 import WorkflowTableBody from './WorkflowTableBody';
 import CreateWorkflow from './CreateWorkflow';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,10 @@ const WorkflowManagement = () => {
     search,
     setSearch,
     mutatingID,
+    togglePause,
+    pausingItem,
+    requestPause,
+    cancelPause,
     deleteWorkflow,
     deletingItem,
     requestDelete,
@@ -67,6 +72,8 @@ const WorkflowManagement = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Key</TableHead>
+              <TableHead>Channels</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -75,10 +82,18 @@ const WorkflowManagement = () => {
             loading={loading}
             visibleItems={visibleItems}
             mutatingID={mutatingID}
+            onRequestPause={requestPause}
             onRequestDelete={requestDelete}
           />
         </Table>
       </div>
+
+      <PauseWorkflowDialog
+        pausingItem={pausingItem}
+        mutatingID={mutatingID}
+        onConfirm={togglePause}
+        onCancel={cancelPause}
+      />
 
       <DeleteWorkflowDialog
         deletingItem={deletingItem}

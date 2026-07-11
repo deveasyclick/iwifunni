@@ -53,8 +53,11 @@ export const workflowApi = {
       body: payload,
     });
   },
-  publishWorkflow(id: string) {
-    return request<void>(`/api/workflows/${id}/publish`, { method: 'POST' });
+  pauseWorkflow(id: string) {
+    return request<WorkflowItem>(`/api/workflows/${id}/pause`, { method: 'POST' });
+  },
+  resumeWorkflow(id: string) {
+    return request<WorkflowItem>(`/api/workflows/${id}/resume`, { method: 'POST' });
   },
   triggerEvent(payload: WorkflowEventPayload) {
     return request<void>('/api/events', {

@@ -125,6 +125,7 @@ export type WorkflowTableBodyProps = {
   loading: boolean;
   visibleItems: WorkflowItem[];
   mutatingID: string | null;
+  onRequestPause: (item: WorkflowItem) => void;
   onRequestDelete: (item: WorkflowItem) => void;
 };
 
