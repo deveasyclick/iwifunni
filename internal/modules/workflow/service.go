@@ -271,6 +271,11 @@ func buildCreateDefinitionParams(in CreateInput) (db.CreateWorkflowDefinitionPar
 		channels = []string{}
 	}
 
+	templateIDs := templateIDsFromDefinition(in.Definition)
+	if templateIDs == nil {
+		templateIDs = []byte("{}")
+	}
+
 	return db.CreateWorkflowDefinitionParams{
 		ID:             uuid.New(),
 		EnvironmentID:  in.EnvironmentID,
@@ -278,8 +283,8 @@ func buildCreateDefinitionParams(in CreateInput) (db.CreateWorkflowDefinitionPar
 		Name:           name,
 		Description:    description,
 		Channels:       channels,
-		TemplateIds:    []byte("{}"),
-		Status:         string(WorkflowStatusDraft),
+		TemplateIds:    templateIDs,
+		Status:         string(WorkflowStatusActive),
 		Version:        1,
 		TriggerEvent:   triggerEvent,
 		DefinitionJson: definitionJSON,
@@ -314,6 +319,11 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 		channels = []string{}
 	}
 
+	templateIDs := templateIDsFromDefinition(in.Definition)
+	if templateIDs == nil {
+		templateIDs = []byte("{}")
+	}
+
 	return db.UpdateWorkflowDefinitionParams{
 		ID:             current.ID,
 		EnvironmentID:  current.EnvironmentID,
@@ -321,7 +331,7 @@ func buildUpdateDefinitionParams(current db.Workflow, in UpdateInput) (db.Update
 		Name:           name,
 		Description:    description,
 		Channels:       channels,
-		TemplateIds:    []byte("{}"),
+		TemplateIds:    templateIDs,
 		Status:         string(WorkflowStatusActive),
 		Version:        current.Version,
 		TriggerEvent:   triggerEvent,
@@ -396,6 +406,43 @@ func channelsFromDefinition(definition *Definition) []string {
 		}
 	}
 	return result
+}
+
+// templateIDsFromDefinition extracts template IDs from notification nodes
+// in the workflow definition, returning a JSON-encoded map of channel -> templateID.
+func templateIDsFromDefinition(definition *Definition) []byte {
+	if definition == nil {
+		return nil
+	}
+	result := make(map[string]string)
+	for _, node := range definition.Nodes {
+		if node.Type != WorkflowStepTypeNotification {
+			continue
+		}
+		var cfg NotificationConfig
+		if err := json.Unmarshal(node.Config, &cfg); err != nil {
+			continue
+		}
+		if cfg.TemplateID == "" {
+			continue
+		}
+		for _, ch := range cfg.Channels {
+			if ch == "" {
+				continue
+			}
+			if _, exists := result[ch]; !exists {
+				result[ch] = cfg.TemplateID
+			}
+		}
+	}
+	if len(result) == 0 {
+		return []byte("{}")
+	}
+	data, err := json.Marshal(result)
+	if err != nil {
+		return []byte("{}")
+	}
+	return data
 }
 
 func normalizeChannels(channels []string) ([]string, error) {
