@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon } from '@iconify/react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,14 +12,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Play, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
 import { SubscriberSearch } from '@/features/workflows/configure/components/SubscriberSearch';
-import { SubscriberInfoEditor } from './components/SubscriberInfoEditor';
-import { PayloadEditor } from './components/PayloadEditor';
+import { Icon } from '@iconify/react';
+import { ExternalLink, Loader2, Play } from 'lucide-react';
+import Link from 'next/link';
 import { DeliveryEventCard } from './components/DeliveryEventCard';
+import { PayloadEditor } from './components/PayloadEditor';
+import { SubscriberInfoEditor } from './components/SubscriberInfoEditor';
 import { useTriggerWorkflowDialog } from './hooks/use-trigger-workflow-dialog';
 
 interface TriggerWorkflowDialogProps {
@@ -162,7 +162,7 @@ export function TriggerWorkflowDialog({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>
                   {events.length === 0
-                    ? 'Processing notification&hellip;'
+                    ? 'Processing notification'
                     : `Delivering via ${events.length} channel${
                         events.length > 1 ? 's' : ''
                       }&hellip;`}
