@@ -2,10 +2,10 @@
 
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { createWorkflowBuilderStore } from '../store/builder';
-import type { WorkflowDefinitionIssue } from '../types/draft';
 import type { WorkflowDefinitionBuilderProps } from '../definition-builder/types';
 import { buildDraftFromCanvas } from '../draft';
+import { createWorkflowBuilderStore } from '../store/builder';
+import type { WorkflowDefinitionIssue } from '../types/draft';
 import { getNodeDisplayName } from '../utils/display';
 
 export const useWorkflowBuilder = ({
@@ -16,6 +16,7 @@ export const useWorkflowBuilder = ({
 }: WorkflowDefinitionBuilderProps) => {
   const [store] = useState(() => createWorkflowBuilderStore(value));
   const lastDraftSignatureRef = useRef(JSON.stringify(value));
+  const lastExternalValueRef = useRef(JSON.stringify(value));
 
   const triggerEvent = useStore(store, (state) => state.triggerEvent);
   const nodes = useStore(store, (state) => state.nodes);
@@ -202,16 +203,18 @@ export const useWorkflowBuilder = ({
       )
     : '';
 
+  // Updates the Zustand store when parent's value prop changes
   useEffect(() => {
     const externalSignature = JSON.stringify(value);
-    if (externalSignature === lastDraftSignatureRef.current) {
+    if (externalSignature === lastExternalValueRef.current) {
       return;
     }
 
     store.getState().setCanvasFromDraft(value);
-    lastDraftSignatureRef.current = externalSignature;
+    lastExternalValueRef.current = externalSignature;
   }, [store, value]);
 
+  // Calls onChange when the canvas draft changes
   useEffect(() => {
     const nextSignature = JSON.stringify(currentDraft);
     if (nextSignature === lastDraftSignatureRef.current) {
