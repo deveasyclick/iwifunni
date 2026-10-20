@@ -14,15 +14,15 @@ interface FaqItem {
 const faqItems: FaqItem[] = [
   {
     id: 'faq-1',
-    question: 'Can I self-host Iwifunni on my own servers?',
+    question: 'Can I self-host DispatchKit on my own servers?',
     answer:
-      'Yes. Iwifunni is fully self-hostable. We provide a Docker Compose setup that includes the API server, worker, and database. Deploy on any VPS, Kubernetes cluster, or your own bare-metal infrastructure.',
+      'Yes. DispatchKit is fully self-hostable. We provide a Docker Compose setup that includes the API server, worker, and database. Deploy on any VPS, Kubernetes cluster, or your own bare-metal infrastructure.',
   },
   {
     id: 'faq-2',
     question: 'What channels do you support out of the box?',
     answer:
-      'Iwifunni ships with built-in support for in-app notifications (via WebSocket), email (SMTP / SendGrid / SES), and SMS (Twilio). The provider registry makes it straightforward to add custom channels like Slack, Push, or webhooks.',
+      'DispatchKit ships with built-in support for in-app notifications (via WebSocket), email (SMTP / SendGrid / SES), and SMS (Twilio). The provider registry makes it straightforward to add custom channels like Slack, Push, or webhooks.',
   },
   {
     id: 'faq-3',
@@ -58,7 +58,7 @@ export default function Faq() {
           Frequently asked questions
         </h2>
         <p className="text-muted-foreground">
-          Everything you need to know about Iwifunni.
+          Everything you need to know about DispatchKit.
         </p>
       </div>
 

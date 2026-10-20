@@ -59,7 +59,7 @@ export default function Features() {
         </h2>
         <p className="text-muted-foreground max-w-xl mx-auto">
           From simple transactional emails to complex multi-channel workflows —
-          Iwifunni handles the heavy lifting.
+          DispatchKit handles the heavy lifting.
         </p>
       </div>
 

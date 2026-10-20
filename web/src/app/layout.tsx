@@ -11,7 +11,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'Iwifunni',
+  title: 'DispatchKit',
   description: 'A multi-tenant notification platform',
 };
 

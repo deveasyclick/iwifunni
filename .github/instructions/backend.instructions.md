@@ -1,6 +1,6 @@
 ---
-description: "Use when editing Go backend code, API handlers, auth middleware, notification services, queue processing, repositories, SQL queries, migrations, or provider integrations in Iwifunni. Covers the current backend architecture, layering, auth rules, and validation expectations."
-name: "Iwifunni Backend Instructions"
+description: "Use when editing Go backend code, API handlers, auth middleware, notification services, queue processing, repositories, SQL queries, migrations, or provider integrations in DispatchKit. Covers the current backend architecture, layering, auth rules, and validation expectations."
+name: "DispatchKit Backend Instructions"
 applyTo:
   - "cmd/**/*.go"
   - "internal/**/*.go"

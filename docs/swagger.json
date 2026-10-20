@@ -2,7 +2,7 @@
     "swagger": "2.0",
     "info": {
         "description": "Multi-tenant notification platform API",
-        "title": "Iwifunni API",
+        "title": "DispatchKit API",
         "termsOfService": "https://iwifunni.com/terms",
         "contact": {
             "name": "API Support",

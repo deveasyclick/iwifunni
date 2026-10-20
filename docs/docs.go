@@ -3196,7 +3196,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Iwifunni API",
+	Title:            "DispatchKit API",
 	Description:      "Multi-tenant notification platform API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

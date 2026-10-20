@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Iwifunni',
-    short_name: 'Iwifunni',
+    name: 'DispatchKit',
+    short_name: 'DispatchKit',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

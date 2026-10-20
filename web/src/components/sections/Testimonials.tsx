@@ -11,21 +11,21 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      'We moved from SendGrid + custom in-app code to Iwifunni and cut our notification code by 70%. The workflow builder is a game-changer for our product team.',
+      'We moved from SendGrid + custom in-app code to DispatchKit and cut our notification code by 70%. The workflow builder is a game-changer for our product team.',
     name: 'Alex Rivera',
     role: 'CTO at Scaleable',
     initials: 'AR',
   },
   {
     quote:
-      'Self-hosting Iwifunni was dead simple. One docker-compose and we had a production-grade notification system running behind our own firewall.',
+      'Self-hosting DispatchKit was dead simple. One docker-compose and we had a production-grade notification system running behind our own firewall.',
     name: 'Sarah Chen',
     role: 'Engineering Lead, Finlytics',
     initials: 'SC',
   },
   {
     quote:
-      "The unified API means I don't have to think about which provider to use. I just send a notification and Iwifunni routes it to the right channel.",
+      "The unified API means I don't have to think about which provider to use. I just send a notification and DispatchKit routes it to the right channel.",
     name: 'Marcus Johnson',
     role: 'Full-stack Developer',
     initials: 'MJ',
@@ -61,7 +61,7 @@ export default function Testimonials() {
         <div className="text-center mb-14">
           <h2 className="text-2xl font-semibold mb-3">Loved by developers</h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            See what teams are saying about their experience with Iwifunni.
+            See what teams are saying about their experience with DispatchKit.
           </p>
         </div>
 

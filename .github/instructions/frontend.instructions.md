@@ -1,6 +1,6 @@
 ---
-description: "Use when editing Next.js frontend pages, route handlers, components, styling, dashboard screens, auth views, or backend API proxy code in the Iwifunni web app. Covers App Router structure, shared API access patterns, and styling rules."
-name: "Iwifunni Frontend Instructions"
+description: "Use when editing Next.js frontend pages, route handlers, components, styling, dashboard screens, auth views, or backend API proxy code in the DispatchKit web app. Covers App Router structure, shared API access patterns, and styling rules."
+name: "DispatchKit Frontend Instructions"
 applyTo:
   - "web/src/**/*.ts"
   - "web/src/**/*.tsx"

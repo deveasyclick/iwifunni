@@ -1,4 +1,6 @@
-# Iwifunni Notification Platform
+# DispatchKit — Multi-channel Notification Infrastructure
+
+Previously named Iwifunni. The repository URL, Go module path, and existing deployment identifiers retain their current names for compatibility.
 
 A multi-tenant, API-driven notification platform in Go. It lets you send email, SMS, and push notifications through a single REST API, processed asynchronously via a Redis-backed queue.
 

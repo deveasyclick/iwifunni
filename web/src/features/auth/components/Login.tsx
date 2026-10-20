@@ -136,7 +136,7 @@ export const Login = () => {
           </form>
           <div className="flex items center gap-2 justify-center mt-6 flex-wrap">
             <p className="text-base font-medium text-muted-foreground">
-              New to Iwifunni?
+              New to DispatchKit?
             </p>
             <Link
               href="/auth/register"

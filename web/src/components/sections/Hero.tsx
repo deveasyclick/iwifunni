@@ -15,7 +15,7 @@ export default function Hero() {
         </h1>
 
         <p className="text-muted-foreground mt-6">
-          Iwifunni helps you send, manage, and track notifications across
+          DispatchKit helps you send, manage, and track notifications across
           in-app, email, SMS, and more — all from a single API.
         </p>
 

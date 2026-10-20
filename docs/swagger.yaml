@@ -704,7 +704,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: https://iwifunni.com/terms
-  title: Iwifunni API
+  title: DispatchKit API
   version: "1.0"
 paths:
   /apikeys:

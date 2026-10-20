@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines how to take Iwifunni from its current mixed state into a coherent, shippable product.
+This document defines how to take DispatchKit from its current mixed state into a coherent, shippable product.
 
 The completion strategy is phased:
 
@@ -344,6 +344,6 @@ Verify:
 
 ## Summary
 
-Iwifunni should not be completed by treating its docs vision as if it already exists. It should be completed by first shipping the platform that the code already supports, then deliberately adding subscribers and workflows as real backend domains, and finally hardening the system for production.
+DispatchKit should not be completed by treating its docs vision as if it already exists. It should be completed by first shipping the platform that the code already supports, then deliberately adding subscribers and workflows as real backend domains, and finally hardening the system for production.
 
 That path keeps the product coherent, reduces churn, and makes the repo's backend, frontend, and docs converge on a single truthful system.

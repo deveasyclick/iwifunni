@@ -1,6 +1,6 @@
 ---
-description: "Use when updating README content, API docs, architecture docs, workflow docs, or planning notes for Iwifunni. Covers how to document the current implementation accurately, reconcile aspirational docs, and reflect backend and frontend behavior without inventing features."
-name: "Iwifunni Docs Instructions"
+description: "Use when updating README content, API docs, architecture docs, workflow docs, or planning notes for DispatchKit. Covers how to document the current implementation accurately, reconcile aspirational docs, and reflect backend and frontend behavior without inventing features."
+name: "DispatchKit Docs Instructions"
 applyTo:
   - "README.md"
   - "docs/**/*.md"

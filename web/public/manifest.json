@@ -1,6 +1,6 @@
 {
-  "name": "Iwifunni app",
-  "short_name": "Iwifunni",
+  "name": "DispatchKit app",
+  "short_name": "DispatchKit",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

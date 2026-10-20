@@ -4,7 +4,7 @@ import CardBox from '../card/CardBox';
 const steps = [
   {
     title: 'Integrate',
-    desc: 'Add Iwifunni SDK or REST API.',
+    desc: 'Add DispatchKit SDK or REST API.',
     icon: 'mdi:code-tags',
   },
   {

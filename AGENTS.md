@@ -1,4 +1,4 @@
-# Iwifunni — pi Agent Instructions
+# DispatchKit — pi Agent Instructions
 
 This project's canonical instructions live in the `.github/` folder. Load and follow them as follows:
 

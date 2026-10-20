@@ -10,7 +10,7 @@ export const PushPreview = ({
   <div className="rounded-3xl border border-border/40 bg-dark p-4">
     <div className="rounded-2xl border border-border/50 bg-card px-4 py-3 shadow-lg">
       <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        Iwifunni notification
+        DispatchKit notification
       </p>
       <p className="mt-2 text-sm font-semibold text-foreground">
         {previewSubject}

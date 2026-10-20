@@ -1,4 +1,4 @@
-# Iwifunni Project Guidelines
+# DispatchKit Project Guidelines
 
 ## Source Of Truth
 

@@ -1,4 +1,4 @@
-// @title           Iwifunni API
+// @title           DispatchKit API
 // @version         1.0
 // @description     Multi-tenant notification platform API
 // @termsOfService  https://iwifunni.com/terms
