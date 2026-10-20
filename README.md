@@ -2,6 +2,12 @@
 
 A multi-tenant, API-driven notification platform in Go. It lets you send email, SMS, and push notifications through a single REST API, processed asynchronously via a Redis-backed queue.
 
+[Website](https://iwifunni.cc) · [Engineering notes](docs/engineering-notes.md) · [MIT license](LICENSE)
+
+This is the notification-delivery project. The separate
+[Feature Flags repository](https://github.com/deveasyclick/feature-flags) also uses
+the Iwifunni name internally.
+
 Key features:
 
 - Multi-tenant project model — every resource is scoped  
